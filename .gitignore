@@ -1,0 +1,36 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Netlify build output
+public
+
+# Node dependencies
+node_modules
+
+# Lock files (using bun)
+package-lock.json
+
+# Logs
+logs
+*.log
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

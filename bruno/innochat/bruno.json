@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "innochat",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

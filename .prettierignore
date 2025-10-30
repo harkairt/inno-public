@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.output
+.nuxt
+.nitro
+.cache
+dist
+
+# Generated files
+*.min.js
+*.min.css
+
+# Config files that shouldn't be formatted
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Documentation
+*.md
+!README.md
+
+# Test coverage
+coverage/
+
+# Temporary files
+.DS_Store
+.vscode/
+.idea/

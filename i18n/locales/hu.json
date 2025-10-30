@@ -1,0 +1,134 @@
+{
+  "login": {
+    "title": "Üdvözöljük",
+    "subtitle": "Jelentkezzen be fiókjába",
+    "email": "E-mail cím",
+    "password": "Jelszó",
+    "rememberMe": "Emlékezzen rám",
+    "signIn": "Bejelentkezés",
+    "signingIn": "Bejelentkezés...",
+    "invalidCredentials": "Érvénytelen e-mail vagy jelszó. Kérjük, próbálja újra.",
+    "emailPlaceholder": "pelda{'@'}email.hu",
+    "passwordPlaceholder": "••••••••"
+  },
+  "sidebar": {
+    "users": "Felhasználók",
+    "chatSessions": "Korábbi beszélgetések",
+    "logout": "Kijelentkezés",
+    "searchUsers": "Felhasználók keresése...",
+    "searchSessions": "Munkamenetek keresése...",
+    "noUsersFound": "Nem található felhasználó",
+    "noSessionsFound": "Nem található chat munkamenet",
+    "justNow": "Most",
+    "hoursAgo": "{hours} órája",
+    "daysAgo": "{days} napja",
+    "agent": "Ügynök {id}",
+    "you": "Te"
+  },
+  "common": {
+    "loading": "Betöltés...",
+    "error": "Hiba történt"
+  },
+  "chat": {
+    "messageInput": {
+      "placeholder": "Írja be üzenetét...",
+      "askFromAgent": "Kérdezze {name}-t",
+      "send": "Küldés",
+      "retry": "Újra",
+      "failedToSend": "Nem sikerült elküldeni az üzenetet",
+      "anErrorOccurred": "Hiba történt az üzenet küldése közben",
+      "pressEnterToSend": "Enter a küldéshez, Shift+Enter új sorhoz"
+    },
+    "messages": {
+      "noMessages": "Még nincsenek üzenetek",
+      "emptyState": "Legyen Ön az első, aki mond valamit!",
+      "sending": "Küldés...",
+      "sent": "Elküldve",
+      "failedToSend": "Nem sikerült elküldeni"
+    },
+    "typing": {
+      "single": "{name} gépel",
+      "double": "{name1} és {name2} gépelnek",
+      "multiple": "{count} személy gépel"
+    },
+    "sessionList": {
+      "noConversations": "Még nincsenek beszélgetések",
+      "startConversation": "Kezdeményezzen új beszélgetést, hogy itt lássa",
+      "failedToLoad": "Nem sikerült betölteni a munkameneteket"
+    },
+    "manageUsers": {
+      "searchPlaceholder": "Keresés...",
+      "noUsers": "Nem állnak rendelkezésre felhasználók",
+      "noUsersDescription": "Nincsenek olyan felhasználók, akiket hozzáadhat ehhez a munkamenethez",
+      "noUsersFound": "Nem találhatóak felhasználók",
+      "tryDifferentSearch": "Próbáljon más keresési kifejezést"
+    },
+    "members": {
+      "remainingCount": "+{count}"
+    },
+    "newChat": {
+      "header": "Új beszélgetés:",
+      "subtitle": "Kezdjen új beszélgetést"
+    },
+    "selectUser": "Válasszon felhasználót a csevegéshez",
+    "header": "Chatek",
+    "selectChatInstruction": "Válasszon egy csetet az oldalsávról a üzenetküldéshez",
+    "sessionMenu": {
+      "editName": "Név szerkesztése",
+      "sessionNameLabel": "Munkamenet neve",
+      "sessionNamePlaceholder": "Add meg a munkamenet nevét...",
+      "save": "Mentés",
+      "cancel": "Mégse",
+      "saving": "Mentés...",
+      "editSuccess": "Munkamenet neve frissítve",
+      "editError": "Nem sikerült frissíteni a munkamenet nevét",
+      "delete": "Törlés",
+      "deleteConfirmTitle": "Munkamenet törlése",
+      "deleteConfirmMessage": "Biztosan törölni szeretné ezt a munkamenetet? Ez a művelet nem vonható vissza.",
+      "deleting": "Törlés...",
+      "deleteSuccess": "Munkamenet törölve",
+      "deleteError": "Nem sikerült törölni a munkamenetet"
+    }
+  },
+  "errors": {
+    "sessionNotFound": "Chat munkamenet nem található",
+    "accessDenied": "A keresett munkamenet nem létezik, vagy nincs hozzáférése.",
+    "unexpectedError": "Valami hiba történt",
+    "failedToSend": "Nem sikerült elküldeni az üzenetet",
+    "failedToUpdate": "Nem sikerült frissíteni a munkamenet tagjait",
+    "backToChats": "Vissza a csetekhez",
+    "tryAgain": "Próbálja újra",
+    "unexpectedCreateError": "Váratlan hiba történt a chat létrehozása közben."
+  },
+  "emptyStates": {
+    "noConversations": "Még nincsenek beszélgetések",
+    "startConversation": "Kezdeményezzen új beszélgetést, hogy itt lássa",
+    "noUsersAvailable": "Nincsenek olyan felhasználók, akiket hozzáadhat ehhez a munkamenethez",
+    "noUsersFound": "Nem találhatóak felhasználók",
+    "tryDifferentSearch": "Próbáljon más keresési kifejezést"
+  },
+  "emptyPage": {
+    "startConversation": "Beszélgetés indítása",
+    "unreadMessages": "Olvasatlan üzenetek",
+    "aiAssistant": "AI Asszisztens"
+  },
+  "time": {
+    "justNow": "Most",
+    "oneMinuteAgo": "1 perce",
+    "minutesAgo": "{count} perce",
+    "oneHourAgo": "1 órája",
+    "hoursAgo": "{count} órája",
+    "oneDayAgo": "1 napja",
+    "daysAgo": "{count} napja",
+    "today": "Ma",
+    "yesterday": "Tegnap"
+  },
+  "pwa": {
+    "appName": "InnoChat",
+    "description": "Intelligens AI-alapú csevegőplatform zökkenőmentes kommunikációhoz",
+    "newChatShortcut": "Új Chat",
+    "newChatDescription": "Indítson új cset munkamenetet",
+    "historyShortcut": "Előzmények",
+    "historyDescription": "Csevegési előzmények megtekintése"
+  }
+}

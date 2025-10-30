@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinia Persistence Test</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/pinia@2/dist/pinia.iife.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        button { margin: 5px; padding: 10px 15px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1>🧪 Pinia Persistence Test</h1>
+
+        <div class="card">
+            <h2>Test Store State</h2>
+            <p><strong>Counter:</strong> {{ store.counter }}</p>
+            <p><strong>Message:</strong> {{ store.message }}</p>
+            <p><strong>Last Updated:</strong> {{ new Date(store.timestamp).toLocaleString() }}</p>
+
+            <div>
+                <button @click="store.increment()">Increment Counter</button>
+                <button @click="store.setMessage('Updated at ' + new Date().toLocaleTimeString())">Update Message</button>
+                <button @click="store.reset()">Reset</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>LocalStorage Contents</h2>
+            <pre>{{ localStorageContents }}</pre>
+        </div>
+
+        <div class="card">
+            <h2>Persistence Status</h2>
+            <p :class="persistenceWorking ? 'success' : 'error'">
+                {{ persistenceWorking ? '✅ Persistence is working!' : '❌ Persistence is not working' }}
+            </p>
+            <p><small>Refresh the page to test persistence</small></p>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+        const { defineStore, createPinia } = Pinia;
+
+        // Create a test store
+        const useTestStore = defineStore('test', {
+            state: () => ({
+                counter: 0,
+                message: 'Hello World',
+                timestamp: new Date().toISOString()
+            }),
+            actions: {
+                increment() {
+                    this.counter++;
+                    this.timestamp = new Date().toISOString();
+                },
+                setMessage(msg) {
+                    this.message = msg;
+                    this.timestamp = new Date().toISOString();
+                },
+                reset() {
+                    this.counter = 0;
+                    this.message = 'Hello World';
+                    this.timestamp = new Date().toISOString();
+                }
+            },
+            persist: {
+                key: 'innochat-test-browser',
+                storage: localStorage,
+            }
+        });
+
+        const app = createApp({
+            setup() {
+                const store = useTestStore();
+
+                const localStorageContents = computed(() => {
+                    const contents = {};
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.includes('innochat')) {
+                            try {
+                                contents[key] = JSON.parse(localStorage.getItem(key) || '');
+                            } catch (e) {
+                                contents[key] = localStorage.getItem(key);
+                            }
+                        }
+                    }
+                    return JSON.stringify(contents, null, 2);
+                });
+
+                const persistenceWorking = ref(false);
+
+                onMounted(() => {
+                    // Check if data was restored from localStorage
+                    const persistedData = localStorage.getItem('innochat-test-browser');
+                    if (persistedData) {
+                        const data = JSON.parse(persistedData);
+                        // If we have data and it's not the initial state, persistence is working
+                        if (data.counter !== 0 || data.message !== 'Hello World') {
+                            persistenceWorking.value = true;
+                        }
+                    }
+
+                    console.log('Store state:', store.$state);
+                    console.log('LocalStorage data:', persistedData);
+                });
+
+                return {
+                    store,
+                    localStorageContents,
+                    persistenceWorking
+                };
+            }
+        });
+
+        const pinia = createPinia();
+        app.use(pinia);
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+- When a spec would span for more than 100 tasks then ask/propose a simplification of the feature.
+- This is a Nuxt 4 project (file-based routing, no SSR, no SSG) that connects to a separate backend.
+- We are using the latest packages. Pinia stores, neverthrow, SignalR, zod schema. TanStack Query Vue. vueuse utilities
+- Test coverage is NOT IMPORTANT, but writing testable code for actual business logic is CRUCIAL. (IGNORE test coverage, especially no need to test 3rd party packages, like how a zod schema parses an object). 
+- Code clarity and cleanness is KEY, code should be easily picked up by a developer.
+- KEEP IT SIMPLE STUPID
+- Design should be simple, but sleek using `shadcdn` and `tailwind`.
+- At the end of a code change consult with `@agent-syntax-qa` about the syntactical correctness
+- IGNORE performance metrics, IGNORE vague "succession rate" and such metrics IGNORE aspects that are controlled by the backend (like latency) 
+- All work starts from `develop`, Feature branches: `feat/[name]` - Bugfix branches: `fix/[name]`, MUST follow Conventional Commits format (feat:, fix:, docs:, refactor:, perf:, test:)

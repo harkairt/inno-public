@@ -1,0 +1,134 @@
+{
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Sign in to your account",
+    "email": "Email Address",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "invalidCredentials": "Invalid email or password. Please try again.",
+    "emailPlaceholder": "you{'@'}example.com",
+    "passwordPlaceholder": "••••••••"
+  },
+  "sidebar": {
+    "users": "Users",
+    "chatSessions": "Chat Sessions",
+    "logout": "Logout",
+    "searchUsers": "Search users...",
+    "searchSessions": "Search sessions...",
+    "noUsersFound": "No users found",
+    "noSessionsFound": "No chat sessions found",
+    "justNow": "Just now",
+    "hoursAgo": "{hours}h ago",
+    "daysAgo": "{days}d ago",
+    "agent": "Agent {id}",
+    "you": "You"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred"
+  },
+  "chat": {
+    "messageInput": {
+      "placeholder": "Type your message...",
+      "askFromAgent": "Ask from {name}",
+      "send": "Send",
+      "retry": "Retry",
+      "failedToSend": "Failed to send message",
+      "anErrorOccurred": "An error occurred while sending your message",
+      "pressEnterToSend": "Press Enter to send, Shift+Enter for new line"
+    },
+    "messages": {
+      "noMessages": "No messages yet",
+      "emptyState": "Be the first to say something!",
+      "sending": "Sending...",
+      "sent": "Sent",
+      "failedToSend": "Failed to send"
+    },
+    "typing": {
+      "single": "{name} is typing",
+      "double": "{name1} and {name2} are typing",
+      "multiple": "{count} people are typing"
+    },
+    "sessionList": {
+      "noConversations": "No conversations yet",
+      "startConversation": "Start a new conversation to see it here",
+      "failedToLoad": "Failed to load sessions"
+    },
+    "manageUsers": {
+      "searchPlaceholder": "Search users by name or email...",
+      "noUsers": "No users available",
+      "noUsersDescription": "There are no users you can add to this session",
+      "noUsersFound": "No users found",
+      "tryDifferentSearch": "Try a different search term"
+    },
+    "members": {
+      "remainingCount": "+{count}"
+    },
+    "newChat": {
+      "header": "New Chat with",
+      "subtitle": "Start a new conversation"
+    },
+    "selectUser": "Select a user to start chatting",
+    "header": "Chats",
+    "selectChatInstruction": "Select a chat from the sidebar to start messaging",
+    "sessionMenu": {
+      "editName": "Edit name",
+      "sessionNameLabel": "Session name",
+      "sessionNamePlaceholder": "Enter session name...",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "editSuccess": "Session name updated",
+      "editError": "Failed to update session name",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete session",
+      "deleteConfirmMessage": "Are you sure you want to delete this session? This action cannot be undone.",
+      "deleting": "Deleting...",
+      "deleteSuccess": "Session deleted",
+      "deleteError": "Failed to delete session"
+    }
+  },
+  "errors": {
+    "sessionNotFound": "Chat session not found",
+    "accessDenied": "The session you're looking for doesn't exist or you don't have access to it.",
+    "unexpectedError": "Something went wrong",
+    "failedToSend": "Failed to send message",
+    "failedToUpdate": "Failed to update session members",
+    "backToChats": "Back to Chats",
+    "tryAgain": "Try Again",
+    "unexpectedCreateError": "An unexpected error occurred while creating the chat."
+  },
+  "emptyStates": {
+    "noConversations": "No conversations yet",
+    "startConversation": "Start a new conversation to see it here",
+    "noUsersAvailable": "There are no users you can add to this session",
+    "noUsersFound": "No users found",
+    "tryDifferentSearch": "Try a different search term"
+  },
+  "emptyPage": {
+    "startConversation": "Start a conversation",
+    "unreadMessages": "Unread messages",
+    "aiAssistant": "AI Assistant"
+  },
+  "time": {
+    "justNow": "Just now",
+    "oneMinuteAgo": "1m ago",
+    "minutesAgo": "{count}m ago",
+    "oneHourAgo": "1h ago",
+    "hoursAgo": "{count}h ago",
+    "oneDayAgo": "1d ago",
+    "daysAgo": "{count}d ago",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "pwa": {
+    "appName": "InnoChat",
+    "description": "Intelligent AI-powered chat platform for seamless communication",
+    "newChatShortcut": "New Chat",
+    "newChatDescription": "Start a new chat session",
+    "historyShortcut": "History",
+    "historyDescription": "View chat history"
+  }
+}

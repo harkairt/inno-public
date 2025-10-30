@@ -1,0 +1,369 @@
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { err, ok, type Result } from "neverthrow";
+import { authService } from "@/lib/api/services/AuthService";
+import { normalizeApiError } from "@/lib/errors/normalize";
+import { AppError } from "@/lib/errors/types";
+import type { User } from "@/types/domain/models";
+import type { LoginRequestDTO, UserDTO } from "@/types/api/schemas";
+import { ErrorCode } from "@/types/enums";
+import { sha512 } from 'js-sha512'
+import { extractTokensFromResponse } from "@/lib/api/utils/tokens";
+import { useSignalR } from '@/app/composables/useSignalR'
+
+// Manual localStorage persistence functions (fallback for Pinia persistence issues)
+const AUTH_STORAGE_KEY = "innochat-auth";
+const REMEMBERED_EMAIL_KEY = "innochat-remembered-email";
+
+// Remember Me helpers - stores only email (not sensitive data)
+// SSR-safe: check for window/localStorage availability
+export function saveRememberedEmail(email: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+}
+
+export function getRememberedEmail(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REMEMBERED_EMAIL_KEY);
+}
+
+export function clearRememberedEmail(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+}
+
+function saveAuthStateToStorage(user: User | null, accessToken: string | null, refreshToken: string | null): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const authData = {
+        user,
+        accessToken,
+        refreshToken,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+      resolve();
+    } catch (error) {
+      console.warn("Failed to save auth state to localStorage:", error);
+      reject(error);
+    }
+  });
+}
+
+function loadAuthStateFromStorage(): { user: User | null; accessToken: string | null; refreshToken: string | null } {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!stored) return { user: null, accessToken: null, refreshToken: null };
+
+    const authData = JSON.parse(stored);
+    return {
+      user: authData.user || null,
+      accessToken: authData.accessToken || null,
+      refreshToken: authData.refreshToken || null
+    };
+  } catch (error) {
+    console.warn("Failed to load auth state from localStorage:", error);
+    return { user: null, accessToken: null, refreshToken: null };
+  }
+}
+
+function clearAuthStateFromStorage() {
+  try {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Failed to clear auth state from localStorage:", error);
+  }
+}
+
+export const useAuthStore = defineStore(
+  "auth",
+  () => {
+    // State
+    const user = ref<User | null>(null);
+    const accessToken = ref<string | null>(null);
+    const refreshToken = ref<string | null>(null);
+    const isLoading = ref(false);
+    const lastError = ref<AppError | null>(null);
+
+    // Initialize auth state from localStorage on store creation
+    const initializeAuthState = () => {
+      const storedAuth = loadAuthStateFromStorage();
+      if (storedAuth.user && storedAuth.accessToken) {
+        user.value = storedAuth.user;
+        accessToken.value = storedAuth.accessToken;
+        refreshToken.value = storedAuth.refreshToken;
+      }
+    };
+
+    // Initialize on store creation
+    initializeAuthState();
+
+    // Computed
+    const isAuthenticated = computed(() => user.value !== null);
+    const isAdmin = computed(
+      () => user.value?.roles.includes("admin") ?? false
+    );
+    const isAgent = computed(
+      () => user.value?.roles.includes("agent") ?? false
+    );
+    const userDisplayName = computed(() => user.value?.name || "Unknown User");
+    const userAvatar = computed(
+      () => user.value?.avatarUrl || "/images/default-avatar.png"
+    );
+    const userDarkAvatar = computed(
+      () => user.value?.darkAvatarUrl || "/images/default-avatar-dark.png"
+    );
+    const getAccessToken = computed(() => accessToken.value);
+
+    // Expose direct access properties for response interceptor compatibility
+    const _accessToken = computed(() => accessToken.value);
+    const _refreshToken = computed(() => refreshToken.value);
+
+    // Actions
+    async function login(
+      credentials: LoginRequestDTO
+    ): Promise<Result<User, AppError>> {
+      isLoading.value = true;
+      lastError.value = null;
+
+      try {
+        // Validate password before hashing - sha512 requires a string input
+        if (typeof credentials.Password !== 'string') {
+          return err(new AppError(ErrorCode.VALIDATION_ERROR, 'Password is required'));
+        }
+        credentials.Password = sha512(credentials.Password);
+        const result = await authService.login(credentials);
+
+        if (result.isErr()) {
+          lastError.value = result.error;
+          return err(result.error);
+        }
+        console.log(JSON.stringify(result.value, null, 2));
+
+        // Extract and store tokens
+        const tokens = extractTokensFromResponse(result.value.data);
+
+        if (result.value.data.user) {
+          // Convert UserDTO to User domain model
+          user.value = mapUserDTOToUser(result.value.data.user);
+
+          // Use setTokens to ensure atomic storage
+          await setTokens(tokens.accessToken, tokens.refreshToken);
+
+          // Initialize SignalR connection after successful login
+          try {
+            console.log('🔗 Login successful, connecting to SignalR...')
+            const { connect } = useSignalR()
+            await connect(tokens.accessToken || undefined)
+            console.log('✅ SignalR connected after login')
+          } catch (error) {
+            console.error('⚠️ SignalR connection failed after login:', error)
+            // Don't block login flow if SignalR fails - it's not critical
+            // User can still use the app, SignalR will retry on next action
+          }
+
+          return ok(user.value);
+        }
+
+        return err(
+          new AppError(
+            ErrorCode.UNAUTHORIZED,
+            "Login response missing user data"
+          )
+        );
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    async function logout(): Promise<void> {
+      isLoading.value = true;
+
+      // Disconnect SignalR before clearing auth state (best-effort)
+      try {
+        console.log('🔌 Disconnecting SignalR before logout...')
+        const { disconnect } = useSignalR()
+        await disconnect()
+        console.log('✅ SignalR disconnected successfully')
+      } catch (error) {
+        console.error('⚠️ Error disconnecting SignalR during logout:', error)
+        // Continue with logout even if SignalR disconnect fails
+      }
+
+      // Clear auth state - no API call needed
+      user.value = null;
+      accessToken.value = null;
+      refreshToken.value = null;
+      lastError.value = null;
+      isLoading.value = false;
+
+      // Clear auth state from localStorage
+      clearAuthStateFromStorage();
+    }
+
+    async function refreshAuthToken(): Promise<Result<void, AppError>> {
+      if (!isAuthenticated.value) {
+        return err(
+          new AppError(ErrorCode.UNAUTHORIZED, "No user to refresh token for")
+        );
+      }
+
+      if (!accessToken.value || !refreshToken.value) {
+        return err(
+          new AppError(ErrorCode.UNAUTHORIZED, "No tokens available for refresh")
+        );
+      }
+
+      try {
+        const result = await authService.refreshToken(accessToken.value, refreshToken.value);
+
+        if (result.isErr()) {
+          // Refresh failed - clear auth state
+          user.value = null;
+          accessToken.value = null;
+          refreshToken.value = null;
+          lastError.value = result.error;
+          return err(result.error);
+        }
+
+        // Extract and store new tokens
+        const tokens = extractTokensFromResponse(result.value);
+        await setTokens(tokens.accessToken, tokens.refreshToken);
+
+        // Token refreshed successfully, user remains the same
+        return ok(undefined);
+      } catch (error) {
+        // Unexpected error - clear auth state
+        user.value = null;
+        accessToken.value = null;
+        refreshToken.value = null;
+        lastError.value = normalizeApiError(error);
+        return err(normalizeApiError(error));
+      }
+    }
+
+    async function fetchProfile(
+      email: string
+    ): Promise<Result<User, AppError>> {
+      isLoading.value = true;
+
+      try {
+        const result = await authService.getProfile(email);
+
+        if (result.isErr()) {
+          lastError.value = result.error;
+          return err(result.error);
+        }
+
+        user.value = mapUserDTOToUser(result.value);
+        return ok(user.value);
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    function clearAuth(): void {
+      user.value = null;
+      accessToken.value = null;
+      refreshToken.value = null;
+      lastError.value = null;
+      isLoading.value = false;
+
+      // Clear auth state from localStorage
+      clearAuthStateFromStorage();
+    }
+
+    function setTokens(access: string | null, refresh: string | null): Promise<void> {
+      console.log('🔄 setTokens called with:', {
+        hasAccessToken: !!access,
+        accessTokenLength: access?.length || 0,
+        hasRefreshToken: !!refresh,
+        refreshTokenLength: refresh?.length || 0
+      });
+
+      // Validate tokens before storing
+      const validatedAccessToken = access && access.trim() !== '' ? access : null;
+      const validatedRefreshToken = refresh && refresh.trim() !== '' ? refresh : null;
+
+      console.log('🔄 setTokens validated:', {
+        validatedAccessToken: !!validatedAccessToken,
+        validatedRefreshToken: !!validatedRefreshToken
+      });
+
+      // Update reactive state immediately
+      accessToken.value = validatedAccessToken;
+      refreshToken.value = validatedRefreshToken;
+
+      console.log('🔄 setTokens updated reactive state:', {
+        accessTokenValue: !!accessToken.value,
+        refreshTokenValue: !!refreshToken.value
+      });
+
+      // Save auth state to localStorage when tokens are updated and return Promise
+      return saveAuthStateToStorage(user.value, accessToken.value, refreshToken.value)
+        .then(() => {
+          console.log('✅ setTokens: localStorage saved successfully');
+        })
+        .catch((error) => {
+          console.error('❌ setTokens: localStorage save failed:', error);
+          throw error;
+        });
+    }
+
+    function clearError(): void {
+      lastError.value = null;
+    }
+
+    // Helper function to convert UserDTO to User domain model
+    function mapUserDTOToUser(userDTO: UserDTO): User {
+      return {
+        id: userDTO.id,
+        name: userDTO.name,
+        email: userDTO.email,
+        roles: userDTO.roles,
+        isVirtual: userDTO.isVirtual,
+        isAvailable: userDTO.isAvailable,
+        avatarUrl: userDTO.image || undefined,
+        darkAvatarUrl: userDTO.darkImage || undefined,
+        status: userDTO.status,
+        lastSeen: null, // Could be added from DTO if available
+        invitationAccepted: userDTO.invitationAccepted,
+        userIds: userDTO.userIds,
+      };
+    }
+
+    return {
+      // State
+      user,
+      accessToken,
+      refreshToken,
+      isLoading,
+      lastError,
+
+      // Computed
+      isAuthenticated,
+      isAdmin,
+      isAgent,
+      userDisplayName,
+      userAvatar,
+      userDarkAvatar,
+      getAccessToken,
+
+      // Actions
+      login,
+      logout,
+      refreshAuthToken,
+      fetchProfile,
+      clearAuth,
+      setTokens,
+      clearError,
+      mapUserDTOToUser,
+    };
+  },
+  {
+    persist: {
+      key: "innochat-auth",
+      pick: ["user", "accessToken", "refreshToken"], // Persist user and auth tokens in localStorage
+    },
+  }
+);
