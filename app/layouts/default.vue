@@ -73,7 +73,7 @@ v-else
         >
           <!-- Users content slot -->
           <template #users>
-            <div class="p-2 space-y-2">
+            <div class="p-1 space-y-1">
               <UInput
                 v-model="userSearchQuery"
                 icon="i-heroicons-magnifying-glass"
@@ -139,7 +139,7 @@ v-else
 
           <!-- Sessions content slot -->
           <template #sessions>
-            <div class="p-2 space-y-2">
+            <div class="space-y-4">
               <UInput
                 v-model="sessionSearchQuery"
                 icon="i-heroicons-magnifying-glass"
