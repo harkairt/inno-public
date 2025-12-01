@@ -423,7 +423,7 @@ watch(scrollY, (newY) => {
 
 // Handle user click for new conversation
 function handleUserClick(userId: string | number) {
-  navigateTo(`/chats/new?userId=${userId}`)
+  navigateTo(`/chats/new/${userId}`)
   if (isMobile.value) {
     closeSidebarForNavigation()
   }

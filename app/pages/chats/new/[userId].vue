@@ -101,7 +101,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 
-const userId = computed(() => route.query.userId as string)
+const userId = computed(() => route.params.userId as string)
 const sessionId = ref(crypto.randomUUID())
 
 const { data: users, isLoading: isLoadingUsers } = useSelectableUsers()
@@ -205,6 +205,7 @@ function getUserFriendlyMessage(error: any): string {
 
 definePageMeta({
   description: 'Start a new conversation',
+  key: route => route.fullPath,
 })
 
 useSeoMeta({

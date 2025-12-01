@@ -9,7 +9,7 @@
 
     <!-- Main content area -->
     <div class="flex-1 overflow-y-auto">
-      <div class="max-w-4xl w-full mx-auto px-4 pt-24 pb-8 space-y-8">
+      <div class="max-w-4xl w-full mx-auto px-4 pt-6 sm:pt-24 pb-8 space-y-8">
 
         <!-- Virtual Agents Section -->
         <section v-if="virtualAgents.length > 0" class="space-y-4">
@@ -133,7 +133,7 @@ const unreadChats = computed(() => {
 
 // Actions
 function startChatWithAgent(agent: UserDTO) {
-  router.push({ path: '/chats/new', query: { agentId: agent.id.toString() } })
+  navigateTo(`/chats/new/${agent.id}`)
 }
 
 function navigateToChat(sessionId: string) {
