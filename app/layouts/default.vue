@@ -73,7 +73,7 @@ v-else
         >
           <!-- Users content slot -->
           <template #users>
-            <div class="p-1 space-y-1">
+            <div class="space-y-4">
               <UInput
                 v-model="userSearchQuery"
                 icon="i-heroicons-magnifying-glass"
@@ -103,35 +103,32 @@ v-else
                   class="sidebar-item"
                   @click="navigateToNewChat(user.id)"
                 >
-                  <!-- User name as primary -->
-                  <p class="font-display text-sm font-medium tracking-tight truncate">
-                    {{ user.name || user.email }}
-                  </p>
-
-                  <!-- Email as secondary -->
-                  <p
-                    v-if="user.email && user.email !== user.name"
-                    class="text-xs text-muted truncate mt-0.5"
-                  >
-                    {{ user.email }}
-                  </p>
-
-                  <!-- Avatar and status row -->
-                  <div class="flex items-center justify-between mt-2">
+                  <!-- Row 1: Avatar + Name -->
+                  <div class="flex items-center gap-2">
                     <UserAvatar
                       :alt="user.name || user.email"
                       :image="user.image"
                       :dark-image="user.darkImage"
-                      size="xs"
+                      size="2xs"
+                      class="flex-shrink-0"
                     >
                       {{ getInitials(user.name || user.email) }}
                     </UserAvatar>
+                    <p class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0">
+                      {{ user.name || user.email }}
+                    </p>
+                  </div>
 
+                  <!-- Row 2: Available-indicator + Email -->
+                  <p class="flex items-center gap-1.5 text-xs text-muted tracking-wide mt-1">
                     <span
                       v-if="user.status === 'active'"
-                      class="w-2 h-2 rounded-full bg-[hsl(var(--success,142_71%_45%))]"
+                      class="w-2 h-2 rounded-full bg-[hsl(var(--success,142_71%_45%))] shrink-0"
                     />
-                  </div>
+                    <span class="line-clamp-1">
+                      {{ user.email }}
+                    </span>
+                  </p>
                 </div>
               </div>
             </div>
