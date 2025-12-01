@@ -106,6 +106,8 @@ export default defineNuxtConfig({
     workbox: {
       navigateFallback: undefined,
       globPatterns: ['**/*.{js,css,html,png,svg,ico,txt}'],
+      skipWaiting: true,
+      clientsClaim: true,
 
       runtimeCaching: [
         {
@@ -135,7 +137,7 @@ export default defineNuxtConfig({
 
     client: {
       installPrompt: true,
-      periodicSyncForUpdates: 60 * 60 * 24 // 24 hours
+      periodicSyncForUpdates: 60 * 60 // 1 hour
     },
 
     manifest: {
