@@ -285,6 +285,7 @@ const activeSessionId = computed(() => route.params.sessionId as string)
 const collapsed = ref(false)
 const open = ref(false)
 const { registerSidebarState, isMobile, handleResize, cleanupBackButtonHandler, closeSidebarForNavigation, navigateToNewChat } = useSidebar()
+const { formatRelativeDate } = useRelativeDate()
 
 // Logout functionality
 const { mutate: logout, isPending: isLoggingOut } = useLogout()
@@ -308,16 +309,31 @@ const sessionSearchQuery = ref('')
 // Filtered users using client-side search composable
 const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
 
-// Filtered sessions computed
+// Filtered sessions computed - sorted with unread messages first
 const filteredSessions = computed(() => {
   if (!sessions.value) return []
-  const query = sessionSearchQuery.value.toLowerCase()
-  if (!query) return sessions.value
 
-  return sessions.value.filter(session =>
-    session.sessionName.toLowerCase().includes(query) ||
-    session.agentId.toString().includes(query)
-  )
+  // Filter by search query
+  const query = sessionSearchQuery.value.toLowerCase()
+  const filtered = query
+    ? sessions.value.filter(session =>
+        session.sessionName.toLowerCase().includes(query) ||
+        session.agentId.toString().includes(query)
+      )
+    : [...sessions.value]
+
+  // Sort: unread messages first, then by insertDate (newest first)
+  return filtered.sort((a, b) => {
+    const unreadA = getUnreadCount(a.sessionId)
+    const unreadB = getUnreadCount(b.sessionId)
+
+    // If one has unread and the other doesn't, prioritize the one with unread
+    if (unreadA > 0 && unreadB === 0) return -1
+    if (unreadB > 0 && unreadA === 0) return 1
+
+    // If both have unread or both don't, sort by date (newest first)
+    return new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime()
+  })
 })
 
 // Helper: Get unread count for a session
@@ -358,25 +374,6 @@ const getInitials = (name: string) => {
     .join('')
     .toUpperCase()
     .slice(0, 2)
-}
-
-// Helper: Format relative date
-const formatRelativeDate = (date: string | Date) => {
-  const now = new Date()
-  const messageDate = new Date(date)
-  const diffInMs = now.getTime() - messageDate.getTime()
-  const diffInHours = diffInMs / (1000 * 60 * 60)
-
-  if (diffInHours < 24) {
-    const hours = Math.floor(diffInHours)
-    if (hours <= 0) return t('time.justNow')
-    if (hours === 1) return t('time.oneHourAgo')
-    return t('time.hoursAgo', { count: hours })
-  } else {
-    const days = Math.floor(diffInHours / 24)
-    if (days === 1) return t('time.oneDayAgo')
-    return t('time.daysAgo', { count: days })
-  }
 }
 
 // Toggle locale function
