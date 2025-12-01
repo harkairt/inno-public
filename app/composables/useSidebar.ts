@@ -112,6 +112,14 @@ export const useSidebar = () => {
     globalCollapsedRef.value = value
   }
 
+  // Navigate to a new chat with an agent, handling sidebar close on mobile
+  const navigateToNewChat = (agentId: string | number) => {
+    navigateTo(`/chats/new/${agentId}`)
+    if (isMobile.value) {
+      closeSidebarForNavigation()
+    }
+  }
+
   // Handle resize transition: when going to desktop, always expand
   const handleResize = () => {
     if (!isMobile.value) {
@@ -130,6 +138,7 @@ export const useSidebar = () => {
     setCollapsed,
     handleResize,
     registerSidebarState,
-    cleanupBackButtonHandler
+    cleanupBackButtonHandler,
+    navigateToNewChat
   }
 }

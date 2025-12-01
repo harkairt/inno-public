@@ -101,7 +101,7 @@ v-else
                   v-for="user in filteredUsers"
                   :key="user.id"
                   class="sidebar-item"
-                  @click="handleUserClick(user.id)"
+                  @click="navigateToNewChat(user.id)"
                 >
                   <!-- User name as primary -->
                   <p class="font-display text-sm font-medium tracking-tight truncate">
@@ -177,30 +177,29 @@ v-else
                     :class="{ 'sidebar-item-active': session.sessionId === activeSessionId }"
                     @click="session.sessionId === activeSessionId && closeSidebarForNavigation()"
                   >
-                    <!-- Session name with unread indicator -->
+                    <!-- Row 1: Avatars + Session name -->
                     <div class="flex items-center gap-2">
-                      <h3 class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1">
-                        {{ session.sessionName }}
-                      </h3>
-                      <span
-                        v-if="getUnreadCount(session.sessionId) > 0"
-                        class="unread-dot"
-                      />
-                    </div>
-
-                    <!-- Meta: member names + time -->
-                    <p class="text-xs text-muted mt-1 tracking-wide">
-                      {{ getMemberNames(session.members) }} · {{ formatRelativeDate(session.insertDate) }}
-                    </p>
-
-                    <!-- Compact avatars below -->
-                    <div class="mt-2">
                       <SessionMembers
                         :members="getOtherMembers(session.members)"
                         :selectable-users="users || []"
                         size="2xs"
+                        class="flex-shrink-0"
                       />
+                      <h3 class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0">
+                        {{ session.sessionName }}
+                      </h3>
                     </div>
+
+                    <!-- Row 2: unread dot (if any) + time · member names -->
+                    <p class="flex items-center gap-1.5 text-xs text-muted tracking-wide mt-1">
+                      <span
+                        v-if="getUnreadCount(session.sessionId) > 0"
+                        class="unread-dot"
+                      />
+                      <span class="line-clamp-1">
+                        {{ formatRelativeDate(session.insertDate) }} · {{ getMemberNames(session.members) }}
+                      </span>
+                    </p>
                   </NuxtLink>
 
                   <!-- 3-dot menu - appears on hover -->
@@ -285,7 +284,7 @@ const activeSessionId = computed(() => route.params.sessionId as string)
 // Sidebar state - use shared composable
 const collapsed = ref(false)
 const open = ref(false)
-const { registerSidebarState, isMobile, handleResize, closeSidebarForNavigation, cleanupBackButtonHandler } = useSidebar()
+const { registerSidebarState, isMobile, handleResize, cleanupBackButtonHandler, closeSidebarForNavigation, navigateToNewChat } = useSidebar()
 
 // Logout functionality
 const { mutate: logout, isPending: isLoggingOut } = useLogout()
@@ -420,14 +419,6 @@ const { y: scrollY } = useScroll(sessionsScrollContainer)
 watch(scrollY, (newY) => {
   sessionStorage.setItem('chat-sessions-scroll-position', newY.toString())
 })
-
-// Handle user click for new conversation
-function handleUserClick(userId: string | number) {
-  navigateTo(`/chats/new/${userId}`)
-  if (isMobile.value) {
-    closeSidebarForNavigation()
-  }
-}
 
 // Handle logout
 const handleLogout = async () => {

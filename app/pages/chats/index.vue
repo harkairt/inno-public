@@ -23,7 +23,7 @@
               :agent="agent"
               :style="{ animationDelay: `${index * 100}ms` }"
               class="animate-fade-in-up"
-              @click="startChatWithAgent(agent)"
+              @click="navigateToNewChat(agent.id)"
             />
           </div>
         </section>
@@ -83,13 +83,12 @@ import { computed, onMounted } from 'vue'
 import { useSidebar } from '~/composables/useSidebar'
 import { useSelectableUsers } from '~/composables/useUsers'
 import { useChatSessions, useUnreadMessageCounts } from '~/composables/useChatQueries'
-import type { UserDTO } from '@/types/api/schemas'
 import AgentTile from '~/components/chat/AgentTile.vue'
 import UnreadChatCard from '~/components/chat/UnreadChatCard.vue'
 
 const { t } = useI18n()
 const router = useRouter()
-const { setSidebarOpen, isMobile } = useSidebar()
+const { setSidebarOpen, isMobile, navigateToNewChat } = useSidebar()
 
 definePageMeta({
   title: 'Chat History',
@@ -132,10 +131,6 @@ const unreadChats = computed(() => {
 })
 
 // Actions
-function startChatWithAgent(agent: UserDTO) {
-  navigateTo(`/chats/new/${agent.id}`)
-}
-
 function navigateToChat(sessionId: string) {
   router.push(`/chats/${sessionId}`)
 }
