@@ -28,6 +28,14 @@ function generateTempId(): string {
   return `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
+function isEmptyResponse(message: AISessionMessageDTO): boolean {
+  return (
+    message.messageType === AIAnswerType.Empty ||
+    !message.messageText ||
+    message.messageText.trim() === ''
+  );
+}
+
 // Look up agent from cached selectable users
 function getAgentFromCache(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -160,28 +168,9 @@ export function useSendMessage() {
         operations.notifyMessageSent(request.members, request.sessionId, request.agentId)
       }
 
-      // Note: We keep the temp user message - background refetch will replace it with server version
-
-      const serverMessageAsMessage: Message = {
-        id: serverMessage.messageID,
-        sessionId: request.sessionId,
-        type: serverMessage.messageType,
-        content: serverMessage.messageText || '',
-        sender: {
-          userCode: serverMessage.senderUserCode,
-          name: serverMessage.senderName,
-          isCurrentUser: false, // This is the AI response
-          isAgent: true,
-        },
-        sentAt: new Date(serverMessage.sendDate),
-        isRated: serverMessage.isRated,
-        rating: serverMessage.rating,
-        readBy: serverMessage.readByUsers || [],
-        status: MessageStatus.SENT,
-      };
-
       // Update Vue Query cache with server response for existing sessions
-      if (!context?.isNewSession) {
+      // Skip adding empty responses to the cache
+      if (!context?.isNewSession && !isEmptyResponse(serverMessage)) {
         queryClient.setQueryData<AISessionDTO>(
           chatQueryKeys.session(request.sessionId),
           (old) => {
@@ -219,7 +208,9 @@ export function useSendMessage() {
         members: request.members,
         sessionName: '', // Will be filled by background refetch
         insertDate: userMessageTimestamp,
-        messages: [syntheticUserMessage, serverMessage]
+        messages: isEmptyResponse(serverMessage)
+          ? [syntheticUserMessage]  // Only user message, no empty response
+          : [syntheticUserMessage, serverMessage]  // Both messages
       };
 
       // Set session cache ONLY for new consultations (prevents loading state on navigation from /chats/new)

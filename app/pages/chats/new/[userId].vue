@@ -120,7 +120,7 @@ watchEffect(() => {
 const agentId = computed(() => selectedUser.value?.id || 1)
 
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
-  enabled: computed(() => !!selectedUser.value),
+  enabled: computed(() => !!selectedUser.value && selectedUser.value.isVirtual === true),
   sessionId: ''
 })
 
@@ -139,7 +139,10 @@ const members = computed(() => {
 })
 
 // Get messages from cache (mutation adds optimistic messages here)
-const { data: sessionData } = useChatSession(sessionId.value)
+// Session doesn't exist on server until first message is sent, so disable the query
+const { data: sessionData } = useChatSession(sessionId.value, {
+  enabled: false
+})
 
 const messages = computed(() => {
   const queryMessages = sessionData.value?.messages || []
