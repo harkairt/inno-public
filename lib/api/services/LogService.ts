@@ -11,7 +11,7 @@ export class LogService {
   async log(logInfo: LogInfoDTO): Promise<void> {
     try {
       // Fire and forget - don't await or throw errors
-      apiClient.post('/api/logs/Log', logInfo).catch(() => {
+      apiClient.post('/api/Log/log', logInfo).catch(() => {
         // Silently fail - logging errors shouldn't crash app
       })
     } catch {
@@ -290,7 +290,7 @@ export class LogService {
   async logBatch(events: LogInfoDTO[]): Promise<void> {
     try {
       // Fire and forget - don't await or throw errors
-      apiClient.post('/api/logs/LogBatch', { events }).catch(() => {
+      apiClient.post('/api/Log/logBatch', { events }).catch(() => {
         // Silently fail - logging errors shouldn't crash app
       })
     } catch {

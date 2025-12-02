@@ -253,7 +253,7 @@ export class ChatService {
     request: SetSessionMessageRatingRequestDTO,
   ): Promise<Result<void, AppError>> {
     try {
-      await apiClient.post('/api/AIWebAPI/Set_SessionMessageRating', request)
+      await apiClient.post('/api/AIWebAPI/SetSessionMessageRating', request)
       return ok(undefined)
     } catch (error) {
       return err(normalizeApiError(error))
@@ -325,7 +325,7 @@ export class ChatService {
     reaction: string,
   ): Promise<Result<void, AppError>> {
     try {
-      await apiClient.post('/api/AIWebAPI/React', {
+      await apiClient.post('/api/AIWebAPI/react', {
         sessionId,
         messageId,
         agentId,
