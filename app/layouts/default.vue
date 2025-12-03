@@ -173,7 +173,7 @@ v-else
                     :to="`/chats/${session.sessionId}`"
                     class="sidebar-item block pr-10"
                     :class="{ 'sidebar-item-active': session.sessionId === activeSessionId }"
-                    @click="session.sessionId === activeSessionId && closeSidebarForNavigation()"
+                    @click="isMobile && closeSidebarForNavigation()"
                   >
                     <!-- Row 1: Avatars + Session name -->
                     <div class="flex items-center gap-2">
