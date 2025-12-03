@@ -12,6 +12,7 @@
       :default-size="25"
       :max-size="35"
       :min-size="20"
+      data-testid="sidebar"
       :menu="{
         ui: {
           content: 'w-3/4 sm:w-full sm:max-w-md'

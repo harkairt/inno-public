@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4" data-testid="messages-container">
     <!-- Message Groups -->
     <div
       v-for="group in messageGroups"
@@ -24,6 +24,7 @@
         <div
           v-for="(message, index) in group.messages"
           :key="message.messageID"
+          :data-testid="`message-${message.messageID}`"
           :data-index="group.messages.length - 1 - index"
           class="flex"
           :class="{

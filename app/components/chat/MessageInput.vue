@@ -47,6 +47,7 @@
               autoresize
               size="lg"
               class="w-full"
+              data-testid="message-input"
               :ui="{ root: 'relative flex items-center' }"
               @keydown="handleKeyDown"
             />
@@ -60,6 +61,7 @@
             size="lg"
             color="primary"
             class="shrink-0"
+            data-testid="send-button"
           />
         </div>
 

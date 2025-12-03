@@ -21,6 +21,7 @@ const relativeTime = computed(() => formatRelativeDate(props.session.insertDate)
     variant="subtle"
     class="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] hover:outline hover:outline-1 hover:outline-[oklch(76.06%_0.090_119.68)] group"
     :ui="{ body: 'p-4' }"
+    :data-testid="`unread-card-${session.sessionId}`"
   >
     <!-- Row 1: Avatars with badge + Session Name -->
     <div class="flex items-center gap-3">

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
 import { toValue, type MaybeRefOrGetter } from 'vue'
-import type { AISessionHeaderDTO, AISessionDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
+import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
 
 // Query keys
@@ -11,7 +11,9 @@ export const chatQueryKeys = {
   sessions: () => [...chatQueryKeys.all, 'sessions'] as const,
   session: (id: string) => [...chatQueryKeys.sessions(), id] as const,
   messages: (sessionId: string) => [...chatQueryKeys.session(sessionId), 'messages'] as const,
+  message: (messageId: string) => [...chatQueryKeys.all, 'message', messageId] as const,
   unread: () => [...chatQueryKeys.all, 'unread'] as const,
+  sessionUnread: (sessionId: string) => [...chatQueryKeys.all, 'sessionUnread', sessionId] as const,
   welcome: (agentId: number) => [...chatQueryKeys.all, 'welcome', agentId] as const,
   search: (query: string) => [...chatQueryKeys.all, 'search', query] as const,
 }
@@ -200,5 +202,109 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: 1,
+  })
+}
+
+/**
+ * Single message query composable
+ * Fetches a specific message by ID
+ */
+export function useMessage(
+  messageId: MaybeRefOrGetter<string>,
+  agentId: MaybeRefOrGetter<number>,
+  options?: {
+    enabled?: MaybeRefOrGetter<boolean>
+    staleTime?: number
+  }
+) {
+  const authStore = useAuthStore()
+
+  return useQuery({
+    queryKey: computed(() => chatQueryKeys.message(toValue(messageId))),
+    queryFn: async (): Promise<AISessionMessageDTO> => {
+      if (!authStore.user) {
+        throw new Error('User not authenticated')
+      }
+
+      const unwrappedMessageId = toValue(messageId)
+      if (!unwrappedMessageId) {
+        throw new Error('Message ID is required')
+      }
+
+      const result = await chatService.getMessage({
+        messageID: unwrappedMessageId,
+        agentId: toValue(agentId),
+      })
+
+      if (result.isErr()) {
+        throw result.error
+      }
+
+      return result.value
+    },
+    enabled: computed(() => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(messageId))),
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: (failureCount, error) => {
+      // Don't retry on not found errors
+      if (error && typeof error === 'object' && 'code' in error) {
+        const appError = error as AppError
+        if (appError.code === 'NOT_FOUND') {
+          return false
+        }
+      }
+      return failureCount < 2
+    },
+  })
+}
+
+/**
+ * Session unread count query composable
+ * Fetches unread message count for a specific session
+ */
+export function useSessionUnreadCount(
+  sessionId: MaybeRefOrGetter<string>,
+  agentId: MaybeRefOrGetter<number>,
+  options?: {
+    enabled?: MaybeRefOrGetter<boolean>
+    staleTime?: number
+    refetchInterval?: number
+  }
+) {
+  const authStore = useAuthStore()
+
+  return useQuery({
+    queryKey: computed(() => chatQueryKeys.sessionUnread(toValue(sessionId))),
+    queryFn: async (): Promise<number> => {
+      if (!authStore.user) {
+        throw new Error('User not authenticated')
+      }
+
+      const unwrappedSessionId = toValue(sessionId)
+      if (!unwrappedSessionId) {
+        throw new Error('Session ID is required')
+      }
+
+      const result = await chatService.getSessionUnreadMessages({
+        userEmail: authStore.user.email,
+        sessionId: unwrappedSessionId,
+        agentId: toValue(agentId),
+      })
+
+      if (result.isErr()) {
+        throw result.error
+      }
+
+      return result.value
+    },
+    enabled: computed(() => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(sessionId))),
+    staleTime: options?.staleTime ?? 15 * 1000, // 15 seconds
+    gcTime: 3 * 60 * 1000, // 3 minutes
+    refetchInterval: options?.refetchInterval ?? 30 * 1000, // Poll every 30 seconds
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 2,
   })
 }

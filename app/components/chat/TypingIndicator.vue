@@ -1,5 +1,5 @@
 <template>
-  <div class="h-6 px-4">
+  <div class="h-6 px-4" data-testid="typing-indicator">
     <Transition name="typing-indicator">
       <span v-if="typingText" class="text-xs text-gray-400 italic">
         {{ typingText }}{{ animatedDots }}

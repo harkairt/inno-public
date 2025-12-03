@@ -9,13 +9,14 @@
       <div v-if="session" class="min-w-0 flex-1 group">
         <!-- View mode: title + pencil icon -->
         <div v-if="!isEditingTitle" class="flex items-center gap-2">
-          <h1 class="text-xl font-semibold text-foreground truncate">
+          <h1 class="text-xl font-semibold text-foreground truncate" data-testid="session-title">
             {{ session.sessionName }}
           </h1>
           <button
             type="button"
             class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground flex-shrink-0"
             :aria-label="t('chat.sessionMenu.editName')"
+            data-testid="edit-title-button"
             @click="startEditingTitle"
           >
             <UIcon name="i-lucide-pencil" class="size-4" />
@@ -29,6 +30,7 @@
           v-model="editedTitle"
           type="text"
           class="text-xl font-semibold text-foreground bg-transparent border-none outline-none w-full p-0 m-0 focus:ring-0"
+          data-testid="session-title-input"
           :disabled="isUpdatingTitle"
           @keydown="handleTitleKeydown"
           @blur="saveTitle"

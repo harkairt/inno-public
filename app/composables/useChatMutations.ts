@@ -17,6 +17,8 @@ import type {
   AISessionHeaderDTO,
   GetUnreadMessagesDTO,
   UserDTO,
+  StartPublicChatrequestDTO,
+  AIPublicChatStartDTO,
 } from "@/types/api/schemas";
 import type { MutationSuccess } from "@/types/api/base";
 import type { AppError } from "@/lib/errors/types";
@@ -591,3 +593,33 @@ export function useRemoveUserFromSession() {
   });
 }
 
+/**
+ * Start public chat mutation composable
+ * Initializes a public/anonymous chat session
+ */
+export function useStartPublicChat() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      params: StartPublicChatrequestDTO
+    ): Promise<AIPublicChatStartDTO> => {
+      const result = await chatService.startPublicChat(params);
+
+      if (result.isErr()) {
+        throw result.error;
+      }
+
+      return result.value;
+    },
+
+    onSuccess: () => {
+      // Invalidate sessions to include new public chat session
+      queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() });
+    },
+
+    onError: (error: AppError) => {
+      console.error("Start public chat failed:", error);
+    },
+  });
+}
