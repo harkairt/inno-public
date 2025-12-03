@@ -118,7 +118,7 @@ const handleLogin = async () => {
   loginError.value = null
 
   login(
-    { Email: email.value, Password: password.value, Mode: AuthenticationMode.Basic },
+    { email: email.value, password: password.value, mode: AuthenticationMode.Basic },
     {
       onSuccess: async () => {
         // Save or clear remembered email based on checkbox

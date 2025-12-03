@@ -128,10 +128,10 @@ export const useAuthStore = defineStore(
 
       try {
         // Validate password before hashing - sha512 requires a string input
-        if (typeof credentials.Password !== 'string') {
+        if (typeof credentials.password !== 'string') {
           return err(new AppError(ErrorCode.VALIDATION_ERROR, 'Password is required'));
         }
-        credentials.Password = sha512(credentials.Password);
+        credentials.password = sha512(credentials.password);
         const result = await authService.login(credentials);
 
         if (result.isErr()) {

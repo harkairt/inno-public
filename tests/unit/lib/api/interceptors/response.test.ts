@@ -49,8 +49,8 @@ describe('Token Refresh in Response Interceptor', () => {
     const mockRefreshResponse: AxiosResponse = {
       data: {
         data: {
-          AccessToken: 'new-access-token',
-          RefreshToken: 'new-refresh-token'
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token'
         }
       },
       status: 200,
@@ -112,8 +112,8 @@ describe('Token Refresh in Response Interceptor', () => {
     const mockRefreshResponse: AxiosResponse = {
       data: {
         data: {
-          AccessToken: 'new-access-token',
-          RefreshToken: 'new-refresh-token'
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token'
         }
       },
       status: 200,
@@ -167,8 +167,8 @@ describe('Token Refresh in Response Interceptor', () => {
     const mockRefreshResponse: AxiosResponse = {
       data: {
         data: {
-          AccessToken: 'new-access-token',
-          RefreshToken: 'new-refresh-token'
+          accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token'
         }
       },
       status: 200,
@@ -315,8 +315,8 @@ describe('Token Refresh in Response Interceptor', () => {
       const mockRefreshResponse: AxiosResponse = {
         data: {
           data: {
-            AccessToken: 'new-access-token',
-            RefreshToken: 'new-refresh-token'
+            accessToken: 'new-access-token',
+            refreshToken: 'new-refresh-token'
           }
         },
         status: 200,

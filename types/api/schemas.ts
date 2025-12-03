@@ -63,25 +63,19 @@ const authenticationModeMap: Record<typeof AUTHENTICATION_MODE_VALUES[number], A
   'ibsystem': AuthenticationMode.IBSystem
 }
 
-// LogLevel: Backend sends lowercase strings
+// LogLevel: Backend sends lowercase strings - simplified to match API docs
 const LOG_LEVEL_VALUES = [
-  'trace',
   'debug',
-  'information',
+  'info',
   'warning',
-  'error',
-  'critical',
-  'none'
+  'error'
 ] as const
 
 const logLevelMap: Record<typeof LOG_LEVEL_VALUES[number], LogLevel> = {
-  'trace': LogLevel.Trace,
   'debug': LogLevel.Debug,
-  'information': LogLevel.Information,
+  'info': LogLevel.Info,
   'warning': LogLevel.Warning,
-  'error': LogLevel.Error,
-  'critical': LogLevel.Critical,
-  'none': LogLevel.None
+  'error': LogLevel.Error
 }
 
 // ============================================================================
@@ -149,9 +143,9 @@ export const UserDTOSchema = z.object({
 // ============================================================================
 
 export const LoginRequestDTOSchema = z.object({
-  Email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'),
-  Password: z.string().min(1, 'Password is required'),
-  Mode: AuthenticationModeSchema
+  email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
+  mode: AuthenticationModeSchema
 })
 
 export const LoginResponseDTOSchema = ApiResponseSchema(z.object({
@@ -163,8 +157,8 @@ export const LoginResponseDTOSchema = ApiResponseSchema(z.object({
 export const RefreshTokenRequestDTOSchema = z.object({}).optional()
 
 export const RefreshTokenResponseDTOSchema = z.object({
-  AccessToken: z.string().nullable().optional(),
-  RefreshToken: z.string().nullable().optional()
+  accessToken: z.string().nullable().optional(),
+  refreshToken: z.string().nullable().optional()
 })
 
 
@@ -205,6 +199,19 @@ export const AIAnswerDTOSchema = z.object({
   answerType: AIAnswerTypeSchema
 })
 
+// DataTable structure (for messageType = 'dataTable')
+export const DataTableSchema = z.object({
+  columns: z.array(z.string()),
+  rows: z.array(z.array(z.unknown()))
+})
+
+// Options structure (for messageType = 'options')
+export const MessageOptionSchema = z.object({
+  column: z.string(),
+  orginalValue: z.string(),
+  selectedValue: z.string()
+})
+
 export const AISessionMessageDTOSchema = z.object({
   isRated: z.boolean(),
   messageID: z.string(),
@@ -215,7 +222,17 @@ export const AISessionMessageDTOSchema = z.object({
   sendDate: z.string(), // ISO date string
   senderName: z.string(),
   senderUserCode: z.string(),
-  sessionId: z.string()
+  sessionId: z.string(),
+  // Discriminated union fields - present based on messageType
+  dataTable: DataTableSchema.nullable().optional(),
+  options: z.array(MessageOptionSchema).nullable().optional()
+})
+
+// Session member details schema
+export const SessionMemberSchema = z.object({
+  email: z.string(),
+  name: z.string(),
+  isVirtual: z.boolean()
 })
 
 // Session header without messages (for list queries)
@@ -225,6 +242,7 @@ export const AISessionHeaderDTOSchema = z.object({
   agentImage: z.string().nullable().optional(),
   insertDate: z.string(), // ISO date string
   members: z.array(z.string()),
+  memberDetails: z.array(SessionMemberSchema).nullable().optional(),
   sessionId: z.string(),
   sessionName: z.string(),
   userCode: z.string(),
@@ -237,6 +255,7 @@ export const AISessionDTOSchema = z.object({
   agentImage: z.string().nullable().optional(),
   insertDate: z.string(), // ISO date string
   members: z.array(z.string()),
+  memberDetails: z.array(SessionMemberSchema).nullable().optional(),
   messages: z.array(AISessionMessageDTOSchema).nullable().optional(),
   sessionId: z.string(),
   sessionName: z.string(),
@@ -253,7 +272,7 @@ export const AIWelcomeMessageDTOSchema = z.object({
 
 export const GetSessionHeadersByUserIdRequestDTOSchema = z.object({
   userCode: z.string(),
-  agents: z.array(z.string()),
+  agents: z.array(z.number()),
   filterText: z.string()
 })
 
@@ -290,13 +309,13 @@ export const RemoveUserFromSessionRequestDTOSchema = z.object({
 // ============================================================================
 
 export const GetMessageRequestDTOSchema = z.object({
-  messageId: z.string(),
+  messageID: z.string(),
   agentId: z.number()
 })
 
 export const SetSessionMessageRatingRequestDTOSchema = z.object({
   sessionId: z.string(),
-  messageId: z.string(),
+  messageID: z.string(),
   rating: z.boolean(),
   agentId: z.number()
 })
@@ -352,30 +371,6 @@ export const StartPublicChatrequestDTOSchema = z.object({
 })
 
 // ============================================================================
-// LEGACY/SESSION SCHEMAS (for compatibility)
-// ============================================================================
-
-export const SessionHeaderDTOSchema = z.object({
-  sessionID: z.string().optional(),
-  sessionName: z.string().optional(),
-  insertDate: z.string().optional(),
-  members: z.array(z.number()).optional()
-})
-
-export const SessionObjectDTOSchema = z.object({
-  sessionID: z.string().optional(),
-  sessionName: z.string().optional(),
-  messageID: z.string().optional(),
-  senderUser: z.number(),
-  sendDate: z.string(),
-  isCorrect: z.boolean(),
-  messageType: AIAnswerTypeSchema,
-  messageText: z.string().optional(),
-  members: z.array(z.number()).optional(),
-  readByUsers: z.array(z.number()).optional()
-})
-
-// ============================================================================
 // LOGGING SCHEMAS
 // ============================================================================
 
@@ -414,22 +409,28 @@ export const LogInfoDTOSchema = z.object({
 // ============================================================================
 
 export const InnoChatConfigSchema = z.object({
-  apiVersion: z.string().optional(),
-  features: z.object({
-    fileUpload: z.boolean().optional(),
-    reactions: z.boolean().optional(),
-    typingIndicators: z.boolean().optional(),
-    publicChat: z.boolean().optional()
-  }).optional(),
-  limits: z.object({
-    maxMessageLength: z.number().optional(),
-    maxFileSize: z.number().optional(),
-    maxSessionMembers: z.number().optional()
-  }).optional(),
-  signalR: z.object({
-    hubUrl: z.string().optional(),
-    reconnectDelay: z.array(z.number()).optional()
-  }).optional()
+  mainColor: z.string(),
+  backgroundColor: z.string(),
+  watermarkEnabled: z.boolean(),
+  partnerMessageBackgroundColor: z.string(),
+  ownMessageBackgroundColor: z.string(),
+  messageBorderThickness: z.number(),
+  messageBorderColor: z.string(),
+  messageBorderStyle: z.enum(['dotted', 'solid', 'dashed', 'double']),
+  messageBorderRounded: z.number(),
+  messageTextOwnItalic: z.boolean(),
+  messageTextOwnBold: z.boolean(),
+  messageTextOwnSize: z.number(),
+  messageTextPartnerItalic: z.boolean(),
+  messageTextPartnerBold: z.boolean(),
+  messageTextPartnerSize: z.number(),
+  backendUrl: z.string(),
+  baseUrl: z.string(),
+  axiosTimeout: z.number(),
+  publicMode: z.union([z.literal(0), z.literal(1)]),
+  publicLoginEmail: z.string(),
+  publicLoginPassword: z.string(),
+  publicAgent: z.union([z.literal(-1), z.number()])
 })
 
 
@@ -496,9 +497,12 @@ export type RefreshTokenRequestDTO = z.infer<typeof RefreshTokenRequestDTOSchema
 export type RefreshTokenResponseDTO = z.infer<typeof RefreshTokenResponseDTOSchema>
 export type UserDTO = z.infer<typeof UserDTOSchema>
 export type AiQuestionRequestDTO = z.infer<typeof AiQuestionRequestDTOSchema>
+export type SessionMember = z.infer<typeof SessionMemberSchema>
 export type AISessionHeaderDTO = z.infer<typeof AISessionHeaderDTOSchema>
 export type AISessionDTO = z.infer<typeof AISessionDTOSchema>
 export type AISessionMessageDTO = z.infer<typeof AISessionMessageDTOSchema>
+export type DataTable = z.infer<typeof DataTableSchema>
+export type MessageOption = z.infer<typeof MessageOptionSchema>
 export type AIWelcomeMessageDTO = z.infer<typeof AIWelcomeMessageDTOSchema>
 export type GetSessionHeadersByUserIdRequestDTO = z.infer<typeof GetSessionHeadersByUserIdRequestDTOSchema>
 export type GetSessionByIdRequestDTO = z.infer<typeof GetSessionByIdRequestDTOSchema>

@@ -1,6 +1,6 @@
 /**
  * Token extraction utilities
- * Handles flexible token extraction from API responses with varying casing conventions
+ * Extracts tokens from API responses with camelCase field names
  */
 
 export interface TokenPair {
@@ -10,14 +10,13 @@ export interface TokenPair {
 
 /**
  * Extracts access and refresh tokens from an API response
- * Handles both camelCase (accessToken) and PascalCase (AccessToken) fields
  *
- * @param data - Response data object that may contain token fields
- * @returns TokenPair object with normalized camelCase field names
+ * @param data - Response data object containing token fields (camelCase)
+ * @returns TokenPair object with token values
  */
 export function extractTokensFromResponse(data: any): TokenPair {
-  const accessToken = data?.accessToken ?? data?.AccessToken ?? null
-  const refreshToken = data?.refreshToken ?? data?.RefreshToken ?? null
+  const accessToken = data?.accessToken ?? null
+  const refreshToken = data?.refreshToken ?? null
 
   // Validate tokens are not empty strings
   const validatedAccessToken = accessToken && accessToken.trim() !== '' ? accessToken : null

@@ -36,7 +36,7 @@ export class LogService {
    */
   async info(message: string, data?: unknown, context?: Record<string, unknown>): Promise<void> {
     await this.log({
-      loglevel: LogLevel.Information,
+      loglevel: LogLevel.Info,
       title: message,
       details: data || context ? JSON.stringify({ data, context }) : undefined,
       source: 'client',
@@ -93,7 +93,7 @@ export class LogService {
     context?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
-      loglevel: LogLevel.Information,
+      loglevel: LogLevel.Info,
       title: `User action: ${action}`,
       details: JSON.stringify({
         action,
@@ -116,7 +116,7 @@ export class LogService {
     error?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: statusCode && statusCode >= 400 ? LogLevel.Error : LogLevel.Information,
+      loglevel: statusCode && statusCode >= 400 ? LogLevel.Error : LogLevel.Info,
       title: `API ${method} ${url}`,
       details: JSON.stringify({
         method,
@@ -143,7 +143,7 @@ export class LogService {
     context?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
-      loglevel: LogLevel.Information,
+      loglevel: LogLevel.Info,
       title: `Performance: ${metric}`,
       details: JSON.stringify({
         metric,
@@ -164,7 +164,7 @@ export class LogService {
     data?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: LogLevel.Information,
+      loglevel: LogLevel.Info,
       title: `Chat ${action}`,
       details: JSON.stringify({
         sessionId,
@@ -185,7 +185,7 @@ export class LogService {
     data?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: event.includes('failed') || event.includes('expired') ? LogLevel.Warning : LogLevel.Information,
+      loglevel: event.includes('failed') || event.includes('expired') ? LogLevel.Warning : LogLevel.Info,
       title: `Auth ${event}`,
       details: JSON.stringify({
         event,
@@ -205,7 +205,7 @@ export class LogService {
     data?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: event === 'error' ? LogLevel.Error : LogLevel.Information,
+      loglevel: event === 'error' ? LogLevel.Error : LogLevel.Info,
       title: `SignalR ${event}`,
       details: JSON.stringify({
         event,
@@ -254,7 +254,7 @@ export class LogService {
     context?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
-      loglevel: LogLevel.Information,
+      loglevel: LogLevel.Info,
       title: `Feature usage: ${feature} - ${action}`,
       details: JSON.stringify({
         feature,
@@ -274,7 +274,7 @@ export class LogService {
     context?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
-      loglevel: LogLevel.Information,
+      loglevel: LogLevel.Info,
       title: 'System information',
       details: JSON.stringify({
         ...info,

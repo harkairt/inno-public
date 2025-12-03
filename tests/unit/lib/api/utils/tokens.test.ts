@@ -2,20 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { extractTokensFromResponse } from '@/lib/api/utils/tokens'
 
 describe('extractTokensFromResponse', () => {
-  describe('PascalCase tokens', () => {
-    it('should extract tokens with PascalCase keys', () => {
-      const data = {
-        AccessToken: 'access-123',
-        RefreshToken: 'refresh-456'
-      }
-      const result = extractTokensFromResponse(data)
-      expect(result).toEqual({
-        accessToken: 'access-123',
-        refreshToken: 'refresh-456'
-      })
-    })
-  })
-
   describe('camelCase tokens', () => {
     it('should extract tokens with camelCase keys', () => {
       const data = {
@@ -32,14 +18,14 @@ describe('extractTokensFromResponse', () => {
 
   describe('missing tokens', () => {
     it('should return null for missing accessToken', () => {
-      const data = { RefreshToken: 'refresh-only' }
+      const data = { refreshToken: 'refresh-only' }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBeNull()
       expect(result.refreshToken).toBe('refresh-only')
     })
 
     it('should return null for missing refreshToken', () => {
-      const data = { AccessToken: 'access-only' }
+      const data = { accessToken: 'access-only' }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBe('access-only')
       expect(result.refreshToken).toBeNull()
@@ -73,8 +59,8 @@ describe('extractTokensFromResponse', () => {
   describe('empty string tokens', () => {
     it('should return null for empty string accessToken', () => {
       const data = {
-        AccessToken: '',
-        RefreshToken: 'valid-refresh'
+        accessToken: '',
+        refreshToken: 'valid-refresh'
       }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBeNull()
@@ -83,8 +69,8 @@ describe('extractTokensFromResponse', () => {
 
     it('should return null for whitespace-only accessToken', () => {
       const data = {
-        AccessToken: '   ',
-        RefreshToken: 'valid-refresh'
+        accessToken: '   ',
+        refreshToken: 'valid-refresh'
       }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBeNull()
@@ -92,26 +78,12 @@ describe('extractTokensFromResponse', () => {
 
     it('should return null for empty string refreshToken', () => {
       const data = {
-        AccessToken: 'valid-access',
-        RefreshToken: ''
+        accessToken: 'valid-access',
+        refreshToken: ''
       }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBe('valid-access')
       expect(result.refreshToken).toBeNull()
-    })
-  })
-
-  describe('mixed case priority', () => {
-    it('should prefer camelCase over PascalCase when both exist', () => {
-      const data = {
-        accessToken: 'camel-access',
-        AccessToken: 'pascal-access',
-        refreshToken: 'camel-refresh',
-        RefreshToken: 'pascal-refresh'
-      }
-      const result = extractTokensFromResponse(data)
-      expect(result.accessToken).toBe('camel-access')
-      expect(result.refreshToken).toBe('camel-refresh')
     })
   })
 })

@@ -43,8 +43,8 @@ describe('Auth Store Token Refresh', () => {
     const { authService } = await import('@/lib/api/services/AuthService')
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
-      AccessToken: 'new-access-token',
-      RefreshToken: 'new-refresh-token'
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token'
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
@@ -85,8 +85,8 @@ describe('Auth Store Token Refresh', () => {
     const { authService } = await import('@/lib/api/services/AuthService')
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
-      AccessToken: 'refreshed-token',
-      RefreshToken: 'refreshed-refresh-token'
+      accessToken: 'refreshed-token',
+      refreshToken: 'refreshed-refresh-token'
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
@@ -120,8 +120,8 @@ describe('Auth Store Token Refresh', () => {
     const { authService } = await import('@/lib/api/services/AuthService')
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
-      AccessToken: 'pascal-access-token',
-      RefreshToken: 'pascal-refresh-token'
+      accessToken: 'pascal-access-token',
+      refreshToken: 'pascal-refresh-token'
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
@@ -189,8 +189,8 @@ describe('Auth Store Token Refresh', () => {
     const { authService } = await import('@/lib/api/services/AuthService')
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
-      AccessToken: 'new-token',
-      RefreshToken: 'new-refresh'
+      accessToken: 'new-token',
+      refreshToken: 'new-refresh'
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
