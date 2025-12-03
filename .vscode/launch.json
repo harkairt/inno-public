@@ -9,7 +9,10 @@
       "name": "client: chrome",
       "url": "http://localhost:3000",
       // this should point to your Nuxt `srcDir`, which is `app` by default
-      "webRoot": "${workspaceFolder}/app"
+      "webRoot": "${workspaceFolder}/app",
+      "runtimeArgs": [
+        "--remote-debugging-port=9222"
+      ]
     },
     {
       "type": "node",
