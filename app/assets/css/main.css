@@ -32,8 +32,8 @@
    LIGHT MODE - Warm & Refined Palette
    ============================================ */
 :root {
-  /* Force Nuxt UI primary to dark warm green (#283618) */
-  --ui-primary: oklch(0.28 0.06 125);
+  /* Force Nuxt UI primary to deep teal (#005f73) */
+  --ui-primary: oklch(0.40 0.09 210);
 
   /* Warmer backgrounds with subtle cream undertone */
   --background: 40 20% 99%;
@@ -47,8 +47,8 @@
   --popover: 40 15% 99%;
   --popover-foreground: 220 15% 15%;
 
-  /* Dark warm green - earthy, sophisticated */
-  --primary: 87 44% 15%;
+  /* Deep teal - modern, refined */
+  --primary: 189 100% 23%;
   --primary-foreground: 0 0% 100%;
 
   /* Warm neutrals */
@@ -68,7 +68,7 @@
   /* Softer borders and inputs */
   --border: 35 10% 88%;
   --input: 35 10% 90%;
-  --ring: 87 44% 15%;
+  --ring: 189 100% 23%;
 
   /* Refined radius - soft but professional */
   --radius: 0.625rem;
@@ -76,20 +76,20 @@
   /* Sidebar - warm variation */
   --sidebar: hsl(35 15% 97%);
   --sidebar-foreground: hsl(220 12% 30%);
-  --sidebar-primary: hsl(87 44% 15%);
+  --sidebar-primary: hsl(189 100% 23%);
   --sidebar-primary-foreground: hsl(0 0% 100%);
   --sidebar-accent: hsl(35 12% 94%);
   --sidebar-accent-foreground: hsl(220 12% 20%);
   --sidebar-border: hsl(35 10% 90%);
-  --sidebar-ring: hsl(87 50% 20%);
+  --sidebar-ring: hsl(189 100% 30%);
 }
 
 /* ============================================
    DARK MODE - Warm Dark Palette
    ============================================ */
 .dark {
-  /* Force Nuxt UI primary to soft sage green (#ccd5ae) */
-  --ui-primary: oklch(0.85 0.06 118);
+  /* Force Nuxt UI primary to light teal */
+  --ui-primary: oklch(0.73 0.08 210);
 
   /* Warm dark backgrounds */
   --background: 220 15% 8%;
@@ -103,8 +103,8 @@
   --popover: 220 12% 10%;
   --popover-foreground: 40 10% 95%;
 
-  /* Soft sage green for dark mode */
-  --primary: 78 29% 76%;
+  /* Light teal for dark mode */
+  --primary: 189 50% 65%;
   --primary-foreground: 220 15% 8%;
 
   /* Warm dark neutrals */
@@ -124,17 +124,17 @@
   /* Borders and inputs */
   --border: 220 10% 20%;
   --input: 220 10% 18%;
-  --ring: 78 29% 76%;
+  --ring: 189 50% 65%;
 
   /* Sidebar - dark warm */
   --sidebar: hsl(220 12% 10%);
   --sidebar-foreground: hsl(40 10% 90%);
-  --sidebar-primary: hsl(78 29% 76%);
+  --sidebar-primary: hsl(189 50% 65%);
   --sidebar-primary-foreground: hsl(220 15% 8%);
   --sidebar-accent: hsl(220 10% 15%);
   --sidebar-accent-foreground: hsl(40 10% 90%);
   --sidebar-border: hsl(220 10% 18%);
-  --sidebar-ring: hsl(78 29% 76%);
+  --sidebar-ring: hsl(189 50% 65%);
 }
 
 
@@ -208,7 +208,7 @@
 
   /* Message bubble styles */
   .bubble-sent {
-    @apply bg-[oklch(88.07%_0.043_117.32)] text-black rounded-2xl rounded-br-md;
+    @apply bg-[#94d2bd] text-black rounded-2xl rounded-br-md;
   }
 
   .bubble-received {
