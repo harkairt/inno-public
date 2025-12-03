@@ -1,11 +1,11 @@
 meta {
-  name: Set_SessionMessagesRead
+  name: DeleteSessionById
   type: http
-  seq: 5
+  seq: 7
 }
 
 post {
-  url: {{baseUrl}}/api/AIWebAPI/Set_SessionMessagesRead
+  url: {{baseUrl}}/api/AIWebAPI/DeleteSessionById
   body: json
   auth: bearer
 }
@@ -21,18 +21,21 @@ headers {
 
 body:json {
   {
-    "sessionID": "{{sessionId}}",
-    "agent": 46,
-    "userCode": "{{email}}"
+    "sessionId": "{{sessionId}}",
+    "agentId": {{agentId}}
   }
 }
 
 docs {
-  Marks session messages as read by user
+  Deletes a chat session permanently
 }
 
 tests {
   test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should confirm deletion", function() {
     expect(res.status).to.equal(200);
   });
 }

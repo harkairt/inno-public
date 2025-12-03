@@ -1,0 +1,33 @@
+meta {
+  name: welcomeText
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/welcomeText?agentId={{agentId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  Gets AI agent's welcome message for chat initialization
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return welcome message", function() {
+    expect(res.body.data).to.have.property("message");
+  });
+}

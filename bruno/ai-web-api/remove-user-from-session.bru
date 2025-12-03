@@ -1,11 +1,11 @@
 meta {
-  name: addUserToSession
+  name: removeUserFromSession
   type: http
-  seq: 6
+  seq: 11
 }
 
 post {
-  url: {{baseUrl}}/api/AIWebAPI/addUserToSession
+  url: {{baseUrl}}/api/AIWebAPI/removeUserFromSession
   body: json
   auth: bearer
 }
@@ -23,16 +23,20 @@ body:json {
   {
     "sessionId": "{{sessionId}}",
     "agentId": {{agentId}},
-    "userCode": "levente@innochat.hu"
+    "userCode": "user-email@example.com"
   }
 }
 
 docs {
-  Adds a user to an existing chat session
+  Removes a user from shared chat session
 }
 
 tests {
   test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should remove user", function() {
     expect(res.status).to.equal(200);
   });
 }

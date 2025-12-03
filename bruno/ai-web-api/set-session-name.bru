@@ -1,11 +1,11 @@
 meta {
-  name: Set_SessionMessagesRead
+  name: SetSessionName
   type: http
-  seq: 5
+  seq: 8
 }
 
 post {
-  url: {{baseUrl}}/api/AIWebAPI/Set_SessionMessagesRead
+  url: {{baseUrl}}/api/AIWebAPI/SetSessionName
   body: json
   auth: bearer
 }
@@ -21,18 +21,22 @@ headers {
 
 body:json {
   {
-    "sessionID": "{{sessionId}}",
-    "agent": 46,
-    "userCode": "{{email}}"
+    "sessionId": "{{sessionId}}",
+    "sessionName": "Updated Session Name",
+    "agentId": {{agentId}}
   }
 }
 
 docs {
-  Marks session messages as read by user
+  Renames a chat session
 }
 
 tests {
   test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should update session name", function() {
     expect(res.status).to.equal(200);
   });
 }

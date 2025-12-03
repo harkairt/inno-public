@@ -1,0 +1,38 @@
+meta {
+  name: startPublicChat
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/startPublicChat
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "userEmail": "public-user@example.com",
+    "agentId": {{agentId}}
+  }
+}
+
+docs {
+  Initializes unauthenticated public chat session
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return public chat data", function() {
+    expect(res.body.data).to.have.property("user");
+    expect(res.body.data).to.have.property("agent");
+  });
+}

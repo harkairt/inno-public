@@ -1,5 +1,5 @@
 meta {
-  name: Get Config
+  name: config.json
   type: http
   seq: 1
 }
@@ -12,4 +12,19 @@ get {
 
 headers {
   Accept: application/json
+}
+
+docs {
+  Retrieves application configuration settings
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should have config properties", function() {
+    expect(res.body).to.have.property("baseUrl");
+    expect(res.body).to.have.property("mainColor");
+  });
 }

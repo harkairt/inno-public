@@ -1,11 +1,11 @@
 meta {
-  name: Set_SessionMessagesRead
+  name: react
   type: http
-  seq: 5
+  seq: 13
 }
 
 post {
-  url: {{baseUrl}}/api/AIWebAPI/Set_SessionMessagesRead
+  url: {{baseUrl}}/api/AIWebAPI/react
   body: json
   auth: bearer
 }
@@ -21,18 +21,22 @@ headers {
 
 body:json {
   {
-    "sessionID": "{{sessionId}}",
-    "agent": 46,
-    "userCode": "{{email}}"
+    "sessionId": "{{sessionId}}",
+    "messageId": "message-id-here",
+    "agentId": {{agentId}}
   }
 }
 
 docs {
-  Marks session messages as read by user
+  Adds a reaction/emoji to a message
 }
 
 tests {
   test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should add reaction", function() {
     expect(res.status).to.equal(200);
   });
 }

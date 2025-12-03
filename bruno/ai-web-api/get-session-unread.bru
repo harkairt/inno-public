@@ -1,11 +1,11 @@
 meta {
-  name: addUserToSession
+  name: GetSessionUnreadMessages
   type: http
-  seq: 6
+  seq: 12
 }
 
 post {
-  url: {{baseUrl}}/api/AIWebAPI/addUserToSession
+  url: {{baseUrl}}/api/AIWebAPI/GetSessionUnreadMessages
   body: json
   auth: bearer
 }
@@ -21,18 +21,22 @@ headers {
 
 body:json {
   {
+    "userEmail": "{{email}}",
     "sessionId": "{{sessionId}}",
-    "agentId": {{agentId}},
-    "userCode": "levente@innochat.hu"
+    "agentId": {{agentId}}
   }
 }
 
 docs {
-  Adds a user to an existing chat session
+  Gets unread message count for specific session
 }
 
 tests {
   test("should return 200", function() {
     expect(res.status).to.equal(200);
+  });
+
+  test("should return number", function() {
+    expect(res.body.data).to.be.a("number");
   });
 }

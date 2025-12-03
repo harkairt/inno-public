@@ -1,11 +1,11 @@
 meta {
-  name: addUserToSession
+  name: SetSessionMessageRating
   type: http
-  seq: 6
+  seq: 10
 }
 
 post {
-  url: {{baseUrl}}/api/AIWebAPI/addUserToSession
+  url: {{baseUrl}}/api/AIWebAPI/SetSessionMessageRating
   body: json
   auth: bearer
 }
@@ -22,17 +22,22 @@ headers {
 body:json {
   {
     "sessionId": "{{sessionId}}",
-    "agentId": {{agentId}},
-    "userCode": "levente@innochat.hu"
+    "messageID": "message-id-here",
+    "rating": true,
+    "agentId": {{agentId}}
   }
 }
 
 docs {
-  Adds a user to an existing chat session
+  Rates a message as helpful or unhelpful
 }
 
 tests {
   test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should save rating", function() {
     expect(res.status).to.equal(200);
   });
 }

@@ -1,5 +1,5 @@
 meta {
-  name: Send Text Message
+  name: question/text
   type: http
   seq: 4
 }
@@ -29,4 +29,18 @@ body:json {
     "group": "",
     "pquestionType": 0
   }
+}
+
+docs {
+  Sends a text message to a chat session
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return messageID", function() {
+    expect(res.body.data).to.have.property("messageID");
+  });
 }
