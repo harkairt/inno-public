@@ -1,5 +1,3 @@
-import type { Message } from '@/types/domain/models'
-
 export type ConnectionState =
   | 'disconnected'
   | 'connecting'
@@ -82,12 +80,6 @@ export interface SignalREventRegistry {
    * @param data - Message and user information
    */
   MessageRead: [{ sessionId: string; messageId: string; userCode: string }]
-
-  /**
-   * Fired when a message is updated (edited, reactions, etc.)
-   * @param data - Message ID and partial updates
-   */
-  MessageUpdated: [{ sessionId: string; messageId: string; updates: Partial<Message> }]
 
   /**
    * Fired when session metadata is updated

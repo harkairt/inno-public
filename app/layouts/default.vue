@@ -272,6 +272,7 @@ import SignalRConnectionStatus from '@/app/components/chat/SignalRConnectionStat
 import SessionItemMenu from '@/app/components/chat/SessionItemMenu.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
 import { getSessionDisplayName, checkIsPrimarySession, getPrimarySessionForUser } from '@/app/composables/usePrimarySession'
+import { useRelativeDate } from '~/composables/useRelativeDate'
 
 // i18n
 const { t, locale, setLocale } = useI18n()

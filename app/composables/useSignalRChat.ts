@@ -4,7 +4,6 @@ import { useChatStore } from '@/app/stores/chat'
 import { useAuthStore } from '@/app/stores/auth'
 import { useQueryClient } from '@tanstack/vue-query'
 import { chatQueryKeys } from './useChatQueries'
-import type { Message } from '@/types/domain/models'
 
 // SignalR event types for chat
 interface _ChatSignalREvents {
@@ -14,7 +13,6 @@ interface _ChatSignalREvents {
   UserTyping: [{ sessionId: string; userCode: string; userName: string }]
   UserStoppedTyping: [{ sessionId: string; userCode: string; userName: string }]
   MessageRead: [{ sessionId: string; messageId: string; userCode: string }]
-  MessageUpdated: [{ sessionId: string; messageId: string; updates: Partial<Message> }]
   SessionUpdated: [{ sessionId: string; updates: Record<string, unknown> }]
   UnreadCountUpdated: [{ sessionId: string; count: number }]
 }
@@ -163,20 +161,6 @@ export function useSignalRChat(options?: {
       })
     })
 
-    // Message updated
-    const unsubscribeMessageUpdated = signalr.onEvent('MessageUpdated', (data: {
-      sessionId: string
-      messageId: string
-      updates: Partial<Message>
-    }) => {
-      console.log('✏️  Message updated:', data)
-
-      // Invalidate queries (will refetch with updated message)
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.messages(data.sessionId),
-      })
-    })
-
     // Session updated
     const unsubscribeSessionUpdated = signalr.onEvent('SessionUpdated', (data: {
       sessionId: string
@@ -213,7 +197,6 @@ export function useSignalRChat(options?: {
       unsubscribeUserTyping,
       unsubscribeUserStoppedTyping,
       unsubscribeMessageRead,
-      unsubscribeMessageUpdated,
       unsubscribeSessionUpdated,
       unsubscribeUnreadCountUpdated
     )

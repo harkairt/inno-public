@@ -22,7 +22,6 @@ import type {
 } from "@/types/api/schemas";
 import type { MutationSuccess } from "@/types/api/base";
 import type { AppError } from "@/lib/errors/types";
-import type { Message } from "@/types/domain/models";
 import { AIAnswerType, MessageStatus } from "@/types/enums";
 
 // Create a temporary message ID generator
@@ -88,22 +87,17 @@ export function useSendMessage() {
       // Create optimistic message
       const tempMessageId = generateTempId();
       const userMessageTimestamp = new Date();
-      const tempMessage: Message = {
-        id: tempMessageId,
+      const tempMessage: AISessionMessageDTO = {
+        messageID: tempMessageId,
         sessionId: request.sessionId,
-        type: AIAnswerType.Text,
-        content: request.question,
-        sender: {
-          userCode: authStore.user?.email || "unknown",
-          name: authStore.user?.name || "You",
-          isCurrentUser: true,
-          isAgent: false,
-        },
-        sentAt: userMessageTimestamp,
+        messageType: AIAnswerType.Text,
+        messageText: request.question,
+        senderUserCode: authStore.user?.email || "unknown",
+        senderName: authStore.user?.name || "You",
+        sendDate: userMessageTimestamp.toISOString(),
         isRated: false,
         rating: null,
-        readBy: [authStore.user?.email || "unknown"],
-        status: MessageStatus.SENDING,
+        readByUsers: [authStore.user?.email || "unknown"],
       };
 
       // Add synthetic typing indicator for virtual agents

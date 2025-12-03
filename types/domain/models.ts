@@ -56,22 +56,6 @@ export interface UserStatistics {
 // CHAT DOMAIN MODELS
 // ============================================================================
 
-export interface ChatSession {
-  id: string
-  name: string
-  createdBy: string
-  createdAt: Date
-  agentId: number
-  agentAvatar: string
-  agentDarkAvatar: string
-  members: string[]
-  messages: Message[]
-  unreadCount: number
-  isActive: boolean
-  lastActivity?: Date | null
-  metadata?: SessionMetadata
-}
-
 export interface Message {
   id: string
   sessionId: string
@@ -83,7 +67,6 @@ export interface Message {
   rating?: number | null
   readBy: string[]
   status: MessageStatus
-  metadata?: MessageMetadata
 }
 
 export interface MessageSender {
@@ -99,14 +82,6 @@ export interface SessionMetadata {
   tags?: string[]
   isPublic?: boolean
   priority?: 'low' | 'normal' | 'high'
-}
-
-export interface MessageMetadata {
-  edited?: boolean
-  editedAt?: Date
-  attachments?: MessageAttachment[]
-  reactions?: MessageReaction[]
-  options?: MessageOption[]
 }
 
 export interface MessageAttachment {

@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { ChatSession, Message, MessageSender } from '@/types/domain/models'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { AIAnswerType, MessageStatus } from '@/types/enums'
 
@@ -26,53 +25,6 @@ export const useChatStore = defineStore('chat', () => {
 
   function clearError() {
     error.value = null
-  }
-
-  // Helper functions for creating domain objects
-  function createMessage(
-    id: string,
-    sessionId: string,
-    content: string,
-    sender: MessageSender,
-    type: AIAnswerType = AIAnswerType.Text
-  ): Message {
-    return {
-      id,
-      sessionId,
-      type,
-      content,
-      sender,
-      sentAt: new Date(),
-      isRated: false,
-      rating: null,
-      readBy: [sender.userCode], // Sender has read their own message
-      status: MessageStatus.SENDING,
-    }
-  }
-
-  function createSession(
-    id: string,
-    name: string,
-    createdBy: string,
-    agentId: number,
-    agentAvatar: string,
-    agentDarkAvatar: string,
-    members: string[] = []
-  ): ChatSession {
-    return {
-      id,
-      name,
-      createdBy,
-      createdAt: new Date(),
-      agentId,
-      agentAvatar,
-      agentDarkAvatar,
-      members,
-      messages: [],
-      unreadCount: 0,
-      isActive: true,
-      lastActivity: new Date(),
-    }
   }
 
   // Failed messages management
@@ -121,10 +73,6 @@ export const useChatStore = defineStore('chat', () => {
     setActiveSession,
     setError,
     clearError,
-
-    // Helper functions
-    createMessage,
-    createSession,
 
     // Failed messages
     addFailedMessage,

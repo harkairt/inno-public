@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AISessionHeaderDTO, UserDTO } from '@/types/api/schemas'
 import SessionMembers from '~/components/chat/SessionMembers.vue'
+import { useRelativeDate } from '~/composables/useRelativeDate';
 
 interface UnreadChatSession extends AISessionHeaderDTO {
   unreadCount: number
