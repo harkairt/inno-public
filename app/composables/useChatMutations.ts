@@ -497,13 +497,11 @@ export function useReactToMessage() {
       sessionId: string;
       messageId: string;
       agentId: number;
-      reaction: string;
     }): Promise<void> => {
       const result = await chatService.reactToMessage(
         params.sessionId,
         params.messageId,
         params.agentId,
-        params.reaction
       );
 
       if (result.isErr()) {
@@ -514,9 +512,6 @@ export function useReactToMessage() {
     },
 
     onSuccess: (_, params) => {
-      // TODO: Update message with reaction in store when reaction support is added
-      // chatStore.updateMessage(params.sessionId, params.messageId, { reaction: params.reaction })
-
       // Invalidate related queries
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.messages(params.sessionId),
@@ -596,45 +591,3 @@ export function useRemoveUserFromSession() {
   });
 }
 
-/**
- * Forward message mutation composable
- */
-export function useForwardMessage() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      messageId: string;
-      targetSessionId: string;
-      agentId: number;
-    }): Promise<void> => {
-      const result = await chatService.forwardMessage(
-        params.messageId,
-        params.agentId,
-        params.targetSessionId,
-        params.agentId,
-        params.messageId
-      );
-
-      if (result.isErr()) {
-        throw result.error;
-      }
-
-      return result.value;
-    },
-
-    onSuccess: (_, params) => {
-      // Invalidate target session to show forwarded message
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.messages(params.targetSessionId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.session(params.targetSessionId),
-      });
-    },
-
-    onError: (error: AppError) => {
-      console.error("Forward message failed:", error);
-    },
-  });
-}

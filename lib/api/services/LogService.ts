@@ -285,20 +285,6 @@ export class LogService {
   }
 
   /**
-   * Batch log multiple events
-   */
-  async logBatch(events: LogInfoDTO[]): Promise<void> {
-    try {
-      // Fire and forget - don't await or throw errors
-      apiClient.post('/api/Log/logBatch', { events }).catch(() => {
-        // Silently fail - logging errors shouldn't crash app
-      })
-    } catch {
-      // Silently fail
-    }
-  }
-
-  /**
    * Create a child logger with additional context
    */
   createChild(context: Record<string, unknown>): LogService {

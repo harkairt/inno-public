@@ -18,14 +18,18 @@ import type {
   GetUnreadMessagesDTO,
   AddUserToSessionRequestDTO,
   RemoveUserFromSessionRequestDTO,
+  GetMessageRequestDTO,
+  GetSessionUnreadMessagesRequestDTO,
+  StartPublicChatrequestDTO,
+  AIPublicChatStartDTO,
 } from '@/types/api/schemas'
-import type { SessionStats } from '@/types/api/admin-types'
 import {
   AISessionHeaderDTOSchema,
   AISessionMessageDTOSchema,
   AISessionDTOSchema,
   AIWelcomeMessageDTOSchema,
   GetUnreadMessagesDTOSchema,
+  AIPublicChatStartDTOSchema,
   validateMutationSuccess,
 } from '@/types/api/schemas'
 import type { ApiResponse, MutationSuccess } from '@/types/api/base'
@@ -41,40 +45,6 @@ export class ChatService {
     try {
       const response = await apiClient.post<ApiResponse<AISessionMessageDTO>>(
         '/api/AIWebAPI/question/text',
-        request,
-      )
-
-      if (!response.data.data) {
-        return err(new AppError(ErrorCode.EMPTY_RESPONSE, 'No response from AI'))
-      }
-
-      // Validate response with Zod
-      const parseResult = AISessionMessageDTOSchema.safeParse(response.data.data)
-
-      if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid AI response format',
-          undefined,
-          parseResult.error,
-        ))
-      }
-
-      return ok(parseResult.data)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
-   * Send option selection to AI
-   */
-  async sendOption(
-    request: AiQuestionRequestDTO,
-  ): Promise<Result<AISessionMessageDTO, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AISessionMessageDTO>>(
-        '/api/AIWebAPI/QuestionOption',
         request,
       )
 
@@ -316,20 +286,18 @@ export class ChatService {
   }
 
   /**
-   * React to message (emoji/reaction)
+   * React to message
    */
   async reactToMessage(
     sessionId: string,
     messageId: string,
     agentId: number,
-    reaction: string,
   ): Promise<Result<void, AppError>> {
     try {
       await apiClient.post('/api/AIWebAPI/react', {
         sessionId,
         messageId,
         agentId,
-        reaction,
       })
       return ok(undefined)
     } catch (error) {
@@ -366,23 +334,52 @@ export class ChatService {
   }
 
   /**
-   * Get session statistics
+   * Get a specific message by ID
    */
-  async getSessionStats(
-    sessionId: string,
-    agentId: number,
-  ): Promise<Result<SessionStats, AppError>> {
+  async getMessage(
+    request: GetMessageRequestDTO,
+  ): Promise<Result<AISessionMessageDTO, AppError>> {
     try {
-      const response = await apiClient.post<ApiResponse<SessionStats>>(
-        '/api/AIWebAPI/Get_SessionStats',
-        {
-          sessionId,
-          agentId,
-        },
+      const response = await apiClient.post<ApiResponse<AISessionMessageDTO>>(
+        '/api/AIWebAPI/getMessage',
+        request,
       )
 
       if (!response.data.data) {
-        return err(new AppError(ErrorCode.NOT_FOUND, 'Session statistics not found'))
+        return err(new AppError(ErrorCode.NOT_FOUND, 'Message not found'))
+      }
+
+      const parseResult = AISessionMessageDTOSchema.safeParse(response.data.data)
+
+      if (!parseResult.success) {
+        return err(new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          'Invalid message data format',
+          undefined,
+          parseResult.error,
+        ))
+      }
+
+      return ok(parseResult.data)
+    } catch (error) {
+      return err(normalizeApiError(error))
+    }
+  }
+
+  /**
+   * Get unread message count for a specific session
+   */
+  async getSessionUnreadMessages(
+    request: GetSessionUnreadMessagesRequestDTO,
+  ): Promise<Result<number, AppError>> {
+    try {
+      const response = await apiClient.post<ApiResponse<number>>(
+        '/api/AIWebAPI/GetSessionUnreadMessages',
+        request,
+      )
+
+      if (response.data.data === undefined || response.data.data === null) {
+        return err(new AppError(ErrorCode.EMPTY_RESPONSE, 'No unread count returned'))
       }
 
       return ok(response.data.data)
@@ -392,94 +389,33 @@ export class ChatService {
   }
 
   /**
-   * Export session data
+   * Start a public chat session
    */
-  async exportSession(
-    sessionId: string,
-    agentId: number,
-    format: 'json' | 'csv' | 'pdf' = 'json',
-  ): Promise<Result<Blob, AppError>> {
+  async startPublicChat(
+    request: StartPublicChatrequestDTO,
+  ): Promise<Result<AIPublicChatStartDTO, AppError>> {
     try {
-      const response = await apiClient.post(
-        '/api/AIWebAPI/Export_Session',
-        {
-          sessionId,
-          agentId,
-          format,
-        },
-        {
-          responseType: 'blob',
-        },
+      const response = await apiClient.post<ApiResponse<AIPublicChatStartDTO>>(
+        '/api/AIWebAPI/startPublicChat',
+        request,
       )
 
-      return ok(response.data)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
-   * Search messages in session
-   */
-  async searchMessages(
-    sessionId: string,
-    agentId: number,
-    query: string,
-    limit: number = 50,
-  ): Promise<Result<AISessionMessageDTO[], AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AISessionMessageDTO[]>>(
-        '/api/AIWebAPI/Search_Messages',
-        {
-          sessionId,
-          agentId,
-          query,
-          limit,
-        },
-      )
-
-      const messages = response.data.data || []
-
-      // Validate each message with Zod
-      const validatedMessages = []
-      for (const message of messages) {
-        const parseResult = AISessionMessageDTOSchema.safeParse(message)
-        if (!parseResult.success) {
-          return err(new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid message data format',
-            undefined,
-            parseResult.error,
-          ))
-        }
-        validatedMessages.push(parseResult.data)
+      if (!response.data.data) {
+        return err(new AppError(ErrorCode.EMPTY_RESPONSE, 'No public chat data returned'))
       }
 
-      return ok(validatedMessages)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
+      const parseResult = AIPublicChatStartDTOSchema.safeParse(response.data.data)
 
-  /**
-   * Forward message to another session
-   */
-  async forwardMessage(
-    fromSessionId: string,
-    fromAgentId: number,
-    toSessionId: string,
-    toAgentId: number,
-    messageId: string,
-  ): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/AIWebAPI/Forward_Message', {
-        fromSessionId,
-        fromAgentId,
-        toSessionId,
-        toAgentId,
-        messageId,
-      })
-      return ok(undefined)
+      if (!parseResult.success) {
+        return err(new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          'Invalid public chat data format',
+          undefined,
+          parseResult.error,
+        ))
+      }
+
+      return ok(parseResult.data)
     } catch (error) {
       return err(normalizeApiError(error))
     }

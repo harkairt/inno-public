@@ -56,12 +56,11 @@ const aiQuestionTypeMap: Record<typeof AI_QUESTION_TYPE_VALUES[number], AIQuesti
 }
 
 // AuthenticationMode: Backend sends lowercase strings
-const AUTHENTICATION_MODE_VALUES = ['basic', 'windows', 'saml'] as const
+const AUTHENTICATION_MODE_VALUES = ['basic', 'ibsystem'] as const
 
 const authenticationModeMap: Record<typeof AUTHENTICATION_MODE_VALUES[number], AuthenticationMode> = {
   'basic': AuthenticationMode.Basic,
-  'windows': AuthenticationMode.Windows,
-  'saml': AuthenticationMode.SAML
+  'ibsystem': AuthenticationMode.IBSystem
 }
 
 // LogLevel: Backend sends lowercase strings
@@ -386,7 +385,28 @@ export const LogInfoDTOSchema = z.object({
   description: z.string().optional(),
   loglevel: LogLevelSchema.optional(),
   user: z.string().optional(),
-  details: z.string().optional()
+  details: z.union([
+    z.string(),
+    z.object({
+      stack: z.object({
+        minifiedTrace: z.string().optional(),
+        cause: z.unknown(),
+        name: z.string(),
+      }).optional(),
+      validationIssues: z.array(z.object({
+        code: z.string(),
+        message: z.string(),
+        path: z.array(z.union([z.string(), z.number()])),
+      })).optional(),
+      chatDetails: z.object({
+        sessionId: z.string(),
+        userDetails: z.object({
+          id: z.number(),
+          email: z.string(),
+        }),
+      }).optional(),
+    }),
+  ]).optional(),
 })
 
 // ============================================================================
@@ -492,6 +512,10 @@ export type GetUnreadMessagesDTO = z.infer<typeof GetUnreadMessagesDTOSchema>
 export type ReactDTO = z.infer<typeof ReactDTOSchema>
 export type LogInfoDTO = z.infer<typeof LogInfoDTOSchema>
 export type InnoChatConfig = z.infer<typeof InnoChatConfigSchema>
+export type GetMessageRequestDTO = z.infer<typeof GetMessageRequestDTOSchema>
+export type GetSessionUnreadMessagesRequestDTO = z.infer<typeof GetSessionUnreadMessagesRequestDTOSchema>
+export type StartPublicChatrequestDTO = z.infer<typeof StartPublicChatrequestDTOSchema>
+export type AIPublicChatStartDTO = z.infer<typeof AIPublicChatStartDTOSchema>
 
 // ============================================================================
 // VALIDATION HELPERS

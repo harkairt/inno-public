@@ -73,18 +73,6 @@ export class AuthService {
   }
 
   /**
-   * Logout (clears cookies on backend)
-   */
-  async logout(): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/authentication/logout')
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
    * Get current user profile
    */
   async getProfile(email: string): Promise<Result<UserDTO, AppError>> {
@@ -117,66 +105,11 @@ export class AuthService {
   }
 
   /**
-   * Update user profile
+   * Request forgotten password reset
    */
-  async updateProfile(
-    email: string,
-    updates: Partial<UserDTO>,
-  ): Promise<Result<UserDTO, AppError>> {
+  async forgottenPassword(email: string): Promise<Result<void, AppError>> {
     try {
-      const response = await apiClient.put<ApiResponse<UserDTO>>(
-        '/api/authentication/profile',
-        { email, ...updates },
-      )
-
-      if (!response.data.data) {
-        return err(new AppError(ErrorCode.NOT_FOUND, 'User not found'))
-      }
-
-      // Validate response with Zod
-      const parseResult = UserDTOSchema.safeParse(response.data.data)
-
-      if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid user data from server',
-          undefined,
-          parseResult.error,
-        ))
-      }
-
-      return ok(parseResult.data)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
-   * Change password
-   */
-  async changePassword(
-    email: string,
-    currentPassword: string,
-    newPassword: string,
-  ): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/authentication/change-password', {
-        email,
-        currentPassword,
-        newPassword,
-      })
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
-   * Request password reset
-   */
-  async requestPasswordReset(email: string): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/authentication/request-password-reset', {
+      await apiClient.patch('/api/authentication/forgotten-password', {
         email,
       })
       return ok(undefined)
@@ -186,63 +119,18 @@ export class AuthService {
   }
 
   /**
-   * Reset password with token
+   * Set new password (after forgotten password flow)
    */
-  async resetPassword(
+  async setPassword(
     token: string,
     newPassword: string,
   ): Promise<Result<void, AppError>> {
     try {
-      await apiClient.post('/api/authentication/reset-password', {
+      await apiClient.patch('/api/authentication/set-password', {
         token,
         newPassword,
       })
       return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
-   * Verify email address
-   */
-  async verifyEmail(token: string): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/authentication/verify-email', {
-        token,
-      })
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
-  }
-
-  /**
-   * Check if user is authenticated (validates current session)
-   */
-  async checkAuth(): Promise<Result<UserDTO, AppError>> {
-    try {
-      const response = await apiClient.get<ApiResponse<UserDTO>>(
-        '/api/authentication/check',
-      )
-
-      if (!response.data.data) {
-        return err(new AppError(ErrorCode.UNAUTHORIZED, 'Not authenticated'))
-      }
-
-      // Validate response with Zod
-      const parseResult = UserDTOSchema.safeParse(response.data.data)
-
-      if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid user data from server',
-          undefined,
-          parseResult.error,
-        ))
-      }
-
-      return ok(parseResult.data)
     } catch (error) {
       return err(normalizeApiError(error))
     }

@@ -26,8 +26,7 @@ export enum AIQuestionType {
 // Authentication modes (referenced in LoginRequestDTO)
 export enum AuthenticationMode {
   Basic = 0,
-  Windows = 1,
-  SAML = 2
+  IBSystem = 1
 }
 
 // Log levels (referenced in LogInfoDTO)

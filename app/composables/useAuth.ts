@@ -42,14 +42,13 @@ export function useLogin() {
       console.error('Login failed:', error)
       // Clear any existing user data on failed login
       queryClient.setQueryData(authQueryKeys.current(), null)
-      queryClient.removeQueries({ queryKey: authQueryKeys.profile('TODO') })
     },
   })
 }
 
 /**
  * Logout mutation composable
- * Wraps auth store logout with proper cache cleanup
+ * Clears client-side auth state (no backend logout endpoint)
  */
 export function useLogout() {
   const authStore = useAuthStore()
@@ -57,7 +56,8 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async (): Promise<void> => {
-      await authStore.logout()
+      // Clear auth store (client-side only)
+      authStore.clearAuth()
     },
     onSuccess: () => {
       // Clear all auth-related queries
@@ -71,7 +71,7 @@ export function useLogout() {
     },
     onError: (error: AppError) => {
       console.error('Logout failed:', error)
-      // Even if logout API fails, clear local data
+      // Even if something fails, clear local data
       queryClient.removeQueries({ queryKey: authQueryKeys.all })
       queryClient.setQueryData(authQueryKeys.current(), null)
     },
@@ -80,7 +80,7 @@ export function useLogout() {
 
 /**
  * Current user query composable
- * Provides reactive access to the current authenticated user
+ * Provides reactive access to the current authenticated user from store
  */
 export function useCurrentUser(options?: {
   enabled?: boolean
@@ -92,20 +92,7 @@ export function useCurrentUser(options?: {
   return useQuery({
     queryKey: authQueryKeys.current(),
     queryFn: async (): Promise<User | null> => {
-      // If user is already in store, return it immediately
-      if (authStore.user) {
-        return authStore.user
-      }
-
-      // If not authenticated, try to check with server
-      const result = await authService.checkAuth()
-
-      if (result.isErr()) {
-        throw result.error
-      }
-
-      // Update store with fresh user data
-      await authStore.fetchProfile(result.value.email)
+      // Return user from store
       return authStore.user
     },
     enabled: options?.enabled ?? authStore.isAuthenticated,
@@ -113,16 +100,6 @@ export function useCurrentUser(options?: {
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: options?.refetchOnWindowFocus ?? false,
     refetchOnReconnect: options?.refetchOnReconnect ?? true,
-    retry: (failureCount, error) => {
-      // Don't retry on auth errors
-      if (error && typeof error === 'object' && 'code' in error) {
-        const appError = error as AppError
-        if (appError.code === 'UNAUTHORIZED' || appError.code === 'FORBIDDEN') {
-          return false
-        }
-      }
-      return failureCount < 2
-    },
   })
 }
 
@@ -195,71 +172,13 @@ export function useRefreshToken() {
 }
 
 /**
- * Update profile mutation composable
- * Handles user profile updates
+ * Forgotten password mutation composable
+ * Handles forgotten password requests
  */
-export function useUpdateProfile() {
-  const _authStore = useAuthStore()
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (params: { email: string; updates: Partial<User> }): Promise<User> => {
-      const result = await authService.updateProfile(params.email, params.updates)
-
-      if (result.isErr()) {
-        throw result.error
-      }
-
-      return _authStore.mapUserDTOToUser(result.value)
-    },
-    onSuccess: (updatedUser, params) => {
-      // Invalidate and refetch current user data
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.current() })
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.profile(params.email) })
-    },
-    onError: (error: AppError) => {
-      console.error('Profile update failed:', error)
-    },
-  })
-}
-
-/**
- * Change password mutation composable
- * Handles password changes
- */
-export function useChangePassword() {
-  return useMutation({
-    mutationFn: async (params: {
-      email: string
-      currentPassword: string
-      newPassword: string
-    }): Promise<void> => {
-      const result = await authService.changePassword(
-        params.email,
-        params.currentPassword,
-        params.newPassword
-      )
-
-      if (result.isErr()) {
-        throw result.error
-      }
-
-      return result.value
-    },
-    onError: (error: AppError) => {
-      console.error('Password change failed:', error)
-    },
-  })
-}
-
-/**
- * Password reset request mutation composable
- * Handles password reset requests
- */
-export function useRequestPasswordReset() {
+export function useForgottenPassword() {
   return useMutation({
     mutationFn: async (email: string): Promise<void> => {
-      const result = await authService.requestPasswordReset(email)
+      const result = await authService.forgottenPassword(email)
 
       if (result.isErr()) {
         throw result.error
@@ -268,19 +187,19 @@ export function useRequestPasswordReset() {
       return result.value
     },
     onError: (error: AppError) => {
-      console.error('Password reset request failed:', error)
+      console.error('Forgotten password request failed:', error)
     },
   })
 }
 
 /**
- * Password reset mutation composable
+ * Set password mutation composable
  * Handles password reset with token
  */
-export function useResetPassword() {
+export function useSetPassword() {
   return useMutation({
     mutationFn: async (params: { token: string; newPassword: string }): Promise<void> => {
-      const result = await authService.resetPassword(params.token, params.newPassword)
+      const result = await authService.setPassword(params.token, params.newPassword)
 
       if (result.isErr()) {
         throw result.error
@@ -289,33 +208,7 @@ export function useResetPassword() {
       return result.value
     },
     onError: (error: AppError) => {
-      console.error('Password reset failed:', error)
-    },
-  })
-}
-
-/**
- * Email verification mutation composable
- * Handles email verification
- */
-export function useVerifyEmail() {
-  return useMutation({
-    mutationFn: async (token: string): Promise<void> => {
-      const result = await authService.verifyEmail(token)
-
-      if (result.isErr()) {
-        throw result.error
-      }
-
-      return result.value
-    },
-    onSuccess: () => {
-      // Invalidate current user query to refresh verification status
-      const queryClient = useQueryClient()
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.current() })
-    },
-    onError: (error: AppError) => {
-      console.error('Email verification failed:', error)
+      console.error('Set password failed:', error)
     },
   })
 }
