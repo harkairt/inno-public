@@ -1,0 +1,32 @@
+meta {
+  name: Send Text Message
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/question/text
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "userCode": "{{email}}",
+    "sessionId": "{{sessionId}}",
+    "members": ["dev@innochat.hu", "{{email}}"],
+    "agentId": {{agentId}},
+    "question": "Hello!",
+    "group": "",
+    "pquestionType": 0
+  }
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Add User To Session
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/addUserToSession
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "sessionId": "{{sessionId}}",
+    "agentId": {{agentId}},
+    "userCode": "levente@innochat.hu"
+  }
+}

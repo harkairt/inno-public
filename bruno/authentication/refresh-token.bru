@@ -1,0 +1,35 @@
+meta {
+  name: Refresh Token
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/authentication/refresh-token
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "refreshToken": "{{refreshToken}}",
+    "accessToken": "{{accessToken}}"
+  }
+}
+
+script:post-response {
+  if (res.body.data && res.body.data.accessToken) {
+    bru.setVar("accessToken", res.body.data.accessToken);
+    bru.setVar("refreshToken", res.body.data.refreshToken);
+    console.log("Tokens refreshed and stored!");
+  }
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Get Session By Id
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/GetSessionById
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "sessionId": "{{sessionId}}",
+    "agentId": {{agentId}}
+  }
+}

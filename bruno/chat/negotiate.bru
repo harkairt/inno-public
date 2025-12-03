@@ -1,0 +1,21 @@
+meta {
+  name: SignalR Negotiate
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/chatHub/negotiate?negotiateVersion=1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Accept: */*
+  X-Requested-With: XMLHttpRequest
+  X-SignalR-User-Agent: Microsoft SignalR/8.0 (8.0.7; Unknown OS; Browser; Unknown Runtime Version)
+}

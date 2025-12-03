@@ -1,0 +1,32 @@
+meta {
+  name: Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/authentication/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "mode": 0,
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
+}
+
+script:post-response {
+  if (res.body.data && res.body.data.accessToken) {
+    bru.setVar("accessToken", res.body.data.accessToken);
+    bru.setVar("refreshToken", res.body.data.refreshToken);
+    console.log("Tokens stored successfully!");
+  }
+}

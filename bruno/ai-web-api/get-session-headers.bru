@@ -1,0 +1,28 @@
+meta {
+  name: Get Session Headers By User Id
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/GetSessionHeadersByUserId
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "userCode": "{{email}}",
+    "agents": [],
+    "filterText": ""
+  }
+}
