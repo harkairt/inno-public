@@ -30,11 +30,24 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
     },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "⚡ e2e: preview server",
+      "program": "${workspaceFolder}/.output/server/index.mjs",
+      "env": {
+        "PORT": "3333",
+        "NITRO_PORT": "3333"
+      },
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "nuxt-build"
+    },
   ],
   "compounds": [
     {
       "stopAll": true,
-      "name": "fullstack: nuxt",
+      "name": "🚧 fullstack: nuxt",
       "configurations": [
         "server: nuxt",
         "client: chrome"

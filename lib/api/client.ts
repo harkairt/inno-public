@@ -22,9 +22,8 @@ function getApiBaseUrl(): string {
     return (window as any).__NUXT__.config.public.apiBaseUrl
   }
 
-  // Fallback to environment variable or default for production
-  return import.meta.env.NUXT_PUBLIC_API_BASE_URL || 'http://172.22.4.22:8082'
-  // return import.meta.env.NUXT_PUBLIC_API_BASE_URL || 'https://www.innochat.hu'
+  // Fallback to environment variable or empty string (use relative URLs for proxy)
+  return import.meta.env.NUXT_PUBLIC_API_BASE_URL || ''
 }
 
 export function createApiClient(): AxiosInstance {

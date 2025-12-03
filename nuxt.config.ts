@@ -94,7 +94,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8082',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '',
       devLoginEmail: '',
     },
   },
@@ -248,13 +248,13 @@ export default defineNuxtConfig({
   // Route rules for API proxy (works in both dev and production)
   routeRules: {
     '/api/**': {
-      proxy: `${process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8082'}/api/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET || 'http://localhost:8082'}/api/**`
     },
     '/chatHub/**': {
-      proxy: `${process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8082'}/chatHub/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET || 'http://localhost:8082'}/chatHub/**`
     },
     '/assets/**': {
-      proxy: `${process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:8082'}/assets/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET || 'http://localhost:8082'}/assets/**`
     }
   }
 })
