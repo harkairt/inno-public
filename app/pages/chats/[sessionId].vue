@@ -99,7 +99,7 @@
     </div>
 
     <!-- Chat Content -->
-    <div v-else-if="session" class="flex flex-col h-full min-h-0 overflow-y-auto">
+    <div v-else-if="session" class="flex flex-col h-full min-h-0">
       <div class="relative flex-1 overflow-hidden min-h-0">
         <div ref="messagesContainer" class="h-full overflow-y-auto p-4 flex flex-col">
           <div class="flex-1" />
@@ -203,6 +203,7 @@ import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useSidebar } from '@/app/composables/useSidebar'
+import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
 import ManageSessionUsers from '@/app/components/chat/ManageSessionUsers.vue'
@@ -221,6 +222,16 @@ const { toggleSidebar } = useSidebar()
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// Chat auto-scroll composable
+const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(
+  messagesContainer,
+  { bottomThreshold: 50, smooth: true }
+)
+
+// Track if user was at bottom when they sent their message
+// Used to decide scroll behavior when AI responds
+const wasAtBottomWhenUserSentMessage = ref(true)
 
 // Inline edit state
 const isEditingTitle = ref(false)
@@ -523,18 +534,10 @@ function formatDate(dateString: string): string {
   }
 }
 
-// Scroll to bottom function
-function scrollToBottom() {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
-}
-
 // Handle message sent event
 function handleMessageSent() {
-  // Optionally show a toast or perform other actions
+  // Scroll to bottom to show the sent message
+  scrollToBottom()
   console.log('Message sent successfully')
 }
 
@@ -543,17 +546,49 @@ function dismissFailedMessage(messageId: string) {
   chatStore.removeFailedMessage(sessionId, messageId)
 }
 
-// Auto-scroll to bottom when messages change (new message arrives)
-watch(messages, () => {
-  if (isMessagesReady.value) {
-    scrollToBottom()
-  }
-}, { deep: true })
+// Auto-scroll when messages change (new message arrives)
+// NOTE: We check isAtBottom BEFORE DOM updates (default flush),
+// then scroll functions use nextTick to wait for DOM
+watch(
+  messages,
+  (newMessages, oldMessages) => {
+    const oldCount = oldMessages?.length ?? 0
+    const newCount = newMessages?.length ?? 0
+
+    if (!isMessagesReady.value) return
+    if (newCount <= oldCount) return
+
+    const latestMessage = newMessages[newMessages.length - 1]
+    const userEmail = authStore.user?.email
+    const isUserMessage = latestMessage?.senderUserCode === userEmail
+
+    if (isUserMessage) {
+      // Capture scroll state BEFORE scrolling - used when AI responds
+      wasAtBottomWhenUserSentMessage.value = isAtBottom.value
+      // User sent a message - always scroll to bottom to show their message
+      scrollToBottom()
+    } else if (wasAtBottomWhenUserSentMessage.value) {
+      // AI responded - only scroll if user was at bottom when they sent message
+      const userMessageIndex = newMessages.length - 2
+      const userMessage = newMessages[userMessageIndex]
+
+      if (userMessage) {
+        scrollToElement(`[data-testid="message-${userMessage.messageID}"]`)
+      } else {
+        scrollToBottom()
+      }
+    }
+    // If user scrolled up before sending, don't auto-scroll on AI response
+  },
+  { deep: true }
+)
 
 // Scroll to bottom when messages become ready (after welcome message loads)
+// Use instant scroll (no animation) for initial load
+// Use immediate: true to handle cached data that's already ready on mount
 watch(isMessagesReady, (ready) => {
   if (ready) {
-    scrollToBottom()
+    scrollToBottom(true)
   }
-})
+}, { immediate: true })
 </script>

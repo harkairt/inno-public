@@ -193,6 +193,9 @@ async function handleSubmit() {
     options: [], // No options for text messages
   }
 
+  // Scroll to bottom immediately when user sends message
+  emit('scrollToBottom')
+
   try {
     // Send message
     await mutation.mutateAsync(request)
@@ -200,9 +203,8 @@ async function handleSubmit() {
     // Clear failed message tracking on success
     lastFailedMessage.value = ''
 
-    // Emit events
+    // Emit message sent event after successful send
     emit('messageSent')
-    emit('scrollToBottom')
   } catch (error) {
     // Error is handled by mutation error state
     console.error('Failed to send message:', error)

@@ -13,19 +13,12 @@
         </div>
       </div>
 
-      <!-- Messages in this group with staggered animation -->
-      <TransitionGroup
-        appear
-        class="space-y-3"
-        tag="div"
-        @before-enter="onBeforeEnter"
-        @enter="onEnter"
-      >
+      <!-- Messages in this group -->
+      <div class="space-y-3">
         <div
-          v-for="(message, index) in group.messages"
+          v-for="message in group.messages"
           :key="message.messageID"
           :data-testid="`message-${message.messageID}`"
-          :data-index="group.messages.length - 1 - index"
           class="flex"
           :class="{
             'justify-end': isUserMessage(message),
@@ -85,7 +78,7 @@
             </div>
           </div>
         </div>
-      </TransitionGroup>
+      </div>
     </div>
 
     <!-- Empty State (only show if no messages AND no welcome message) -->
@@ -255,23 +248,4 @@ function formatTime(dateString: string): string {
   }
 }
 
-// Staggered animation hooks for TransitionGroup
-function onBeforeEnter(el: Element) {
-  const element = el as HTMLElement
-  element.style.opacity = '0'
-  element.style.transform = 'translateY(12px)'
-}
-
-function onEnter(el: Element, done: () => void) {
-  const element = el as HTMLElement
-  const index = Number(element.dataset.index) || 0
-  const delay = index * 50
-
-  setTimeout(() => {
-    element.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out'
-    element.style.opacity = '1'
-    element.style.transform = 'translateY(0)'
-    setTimeout(done, 200)
-  }, delay)
-}
 </script>
