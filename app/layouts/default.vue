@@ -102,7 +102,7 @@ v-else
                   v-for="user in filteredUsers"
                   :key="user.id"
                   class="sidebar-item"
-                  @click="navigateToNewChat(user.id)"
+                  @click="handleUserClick(user.id)"
                 >
                   <!-- Row 1: Avatar + Name -->
                   <div class="flex items-center gap-2">
@@ -184,7 +184,7 @@ v-else
                         class="flex-shrink-0"
                       />
                       <h3 class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0">
-                        {{ session.sessionName }}
+                        {{ getDisplayName(session) }}
                       </h3>
                     </div>
 
@@ -206,6 +206,7 @@ v-else
                       :session-id="session.sessionId"
                       :session-name="session.sessionName"
                       :agent-id="session.agentId"
+                      :is-primary-session="isPrimarySessionCheck(session)"
                     />
                   </div>
                 </div>
@@ -270,6 +271,7 @@ import { useAuthStore } from '~/stores/auth'
 import SignalRConnectionStatus from '@/app/components/chat/SignalRConnectionStatus.vue'
 import SessionItemMenu from '@/app/components/chat/SessionItemMenu.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
+import { getSessionDisplayName, checkIsPrimarySession, getPrimarySessionForUser } from '@/app/composables/usePrimarySession'
 
 // i18n
 const { t, locale, setLocale } = useI18n()
@@ -290,6 +292,7 @@ const { mutate: logout, isPending: isLoggingOut } = useLogout()
 
 // Auth store for current user
 const authStore = useAuthStore()
+const currentUserEmail = computed(() => authStore.user?.email || '')
 
 // TanStack Query - Users
 const { data: users, isLoading: isLoadingUsers, error: usersError } = useSelectableUsers()
@@ -372,6 +375,40 @@ const getInitials = (name: string) => {
     .join('')
     .toUpperCase()
     .slice(0, 2)
+}
+
+// Helper: Get display name for session (uses other member name for primary sessions)
+const getDisplayName = (session: { sessionId: string; sessionName: string; members: string[]; memberDetails?: { email: string; name: string; isVirtual: boolean }[] | null; insertDate: string }) => {
+  if (!sessions.value || !users.value) {
+    return session.sessionName
+  }
+  return getSessionDisplayName(session as any, currentUserEmail.value, sessions.value, users.value)
+}
+
+// Helper: Check if session is primary (for hiding delete option)
+const isPrimarySessionCheck = (session: { sessionId: string; members: string[]; memberDetails?: { email: string; name: string; isVirtual: boolean }[] | null; insertDate: string }) => {
+  if (!sessions.value || !users.value || !currentUserEmail.value) {
+    return false
+  }
+  return checkIsPrimarySession(session as any, sessions.value, users.value, currentUserEmail.value)
+}
+
+// Handle user click - navigate to primary session if exists, otherwise to new chat
+const handleUserClick = (userId: number) => {
+  if (!sessions.value || !users.value) {
+    navigateToNewChat(userId)
+    return
+  }
+
+  const primarySession = getPrimarySessionForUser(userId, currentUserEmail.value, sessions.value, users.value)
+  if (primarySession) {
+    navigateTo(`/chats/${primarySession.sessionId}`)
+    if (isMobile.value) {
+      closeSidebarForNavigation()
+    }
+  } else {
+    navigateToNewChat(userId)
+  }
 }
 
 // Toggle locale function

@@ -7,12 +7,13 @@
       <UDashboardSidebarCollapse />
 
       <div v-if="session" class="min-w-0 flex-1 group">
-        <!-- View mode: title + pencil icon -->
+        <!-- View mode: title + pencil icon (pencil hidden for primary sessions) -->
         <div v-if="!isEditingTitle" class="flex items-center gap-2">
           <h1 class="text-xl font-semibold text-foreground truncate" data-testid="session-title">
-            {{ session.sessionName }}
+            {{ isPrimarySession ? otherMemberName : session.sessionName }}
           </h1>
           <button
+            v-if="!isPrimarySession"
             type="button"
             class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground flex-shrink-0"
             :aria-label="t('chat.sessionMenu.editName')"
@@ -39,19 +40,31 @@
         <div class="flex items-center text-sm text-muted-foreground"/>
       </div>
 
-      <!-- NEW: Session Members Avatar Stack (hidden when no members) -->
+      <!-- Session Members Avatar Stack (hidden for primary sessions) -->
       <SessionMembers
-        v-if="session && session.members.length > 0 && selectableUsers"
+        v-if="session && session.members.length > 0 && selectableUsers && !isPrimarySession"
         :members="session.members"
         :selectable-users="selectableUsers"
       />
 
-      <!-- NEW: Manage Session Members Button -->
+      <!-- Manage Session Members Button (hidden for primary sessions) -->
       <ManageSessionUsers
-        v-if="session"
+        v-if="session && !isPrimarySession"
         :session-id="session.sessionId"
         :agent-id="session.agentId"
         :members="session.members"
+      />
+
+      <!-- Create new session button (shown only for primary sessions) -->
+      <UButton
+        v-if="session && isPrimarySession && otherMemberId"
+        icon="i-heroicons-plus"
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        :aria-label="t('chat.createNewSession')"
+        data-testid="create-new-session-button"
+        @click="navigateTo(`/chats/new/${otherMemberId}`)"
       />
     </div>
 
@@ -197,12 +210,13 @@
 </template>
 
 <script setup lang="ts">
-import { useChatSession, useWelcomeMessage } from '@/app/composables/useChatQueries'
+import { useChatSession, useChatSessions, useWelcomeMessage } from '@/app/composables/useChatQueries'
 import { useMarkMessagesRead, useUpdateSessionName } from '@/app/composables/useChatMutations'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useSidebar } from '@/app/composables/useSidebar'
+import { usePrimarySession } from '@/app/composables/usePrimarySession'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
@@ -248,6 +262,9 @@ const {
   refetch,
 } = useChatSession(sessionId)
 
+// Fetch all sessions for primary session detection
+const { data: allSessions } = useChatSessions()
+
 // Mark messages as read mutation
 const { mutate: markMessagesRead } = useMarkMessagesRead()
 
@@ -276,6 +293,15 @@ watch(
 
 // Fetch selectable users to determine target agentId
 const { data: selectableUsers, isLoading: isSelectableUsersLoading } = useSelectableUsers()
+
+// Primary session detection
+const currentUserEmail = computed(() => authStore.user?.email)
+const { isPrimarySession, otherMemberName, otherMemberId } = usePrimarySession(
+  session,
+  allSessions,
+  selectableUsers,
+  currentUserEmail
+)
 
 // Use messages from session + failed messages from store
 const messages = computed(() => {

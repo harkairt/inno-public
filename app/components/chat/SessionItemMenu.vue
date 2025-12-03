@@ -87,6 +87,7 @@ const props = defineProps<{
   sessionId: string
   sessionName: string
   agentId: number
+  isPrimarySession?: boolean
 }>()
 
 // Local state
@@ -106,24 +107,37 @@ const canSave = computed(() => {
 })
 
 // Menu items for dropdown
-const menuItems = computed(() => [
-  {
-    label: t('chat.sessionMenu.editName'),
-    icon: 'i-heroicons-pencil-square',
-    onSelect: () => {
-      editedName.value = props.sessionName
-      isModalOpen.value = true
+const menuItems = computed(() => {
+  const items: Array<{
+    label: string
+    icon: string
+    color?: 'error'
+    onSelect: () => void
+  }> = [
+    {
+      label: t('chat.sessionMenu.editName'),
+      icon: 'i-heroicons-pencil-square',
+      onSelect: () => {
+        editedName.value = props.sessionName
+        isModalOpen.value = true
+      }
     }
-  },
-  {
-    label: t('chat.sessionMenu.delete'),
-    icon: 'i-heroicons-trash',
-    color: 'error' as const,
-    onSelect: () => {
-      isDeleteModalOpen.value = true
-    }
+  ]
+
+  // Only show delete option for non-primary sessions
+  if (!props.isPrimarySession) {
+    items.push({
+      label: t('chat.sessionMenu.delete'),
+      icon: 'i-heroicons-trash',
+      color: 'error',
+      onSelect: () => {
+        isDeleteModalOpen.value = true
+      }
+    })
   }
-])
+
+  return items
+})
 
 // Handle save
 async function handleSave() {
