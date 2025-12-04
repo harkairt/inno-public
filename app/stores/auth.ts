@@ -4,7 +4,6 @@ import { err, ok, type Result } from "neverthrow";
 import { authService } from "@/lib/api/services/AuthService";
 import { normalizeApiError } from "@/lib/errors/normalize";
 import { AppError } from "@/lib/errors/types";
-import type { User } from "@/types/domain/models";
 import type { LoginRequestDTO, UserDTO } from "@/types/api/schemas";
 import { ErrorCode } from "@/types/enums";
 import { sha512 } from 'js-sha512'
@@ -32,7 +31,7 @@ export function clearRememberedEmail(): void {
   localStorage.removeItem(REMEMBERED_EMAIL_KEY);
 }
 
-function saveAuthStateToStorage(user: User | null, accessToken: string | null, refreshToken: string | null): Promise<void> {
+function saveAuthStateToStorage(user: UserDTO | null, accessToken: string | null, refreshToken: string | null): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const authData = {
@@ -50,7 +49,7 @@ function saveAuthStateToStorage(user: User | null, accessToken: string | null, r
   });
 }
 
-function loadAuthStateFromStorage(): { user: User | null; accessToken: string | null; refreshToken: string | null } {
+function loadAuthStateFromStorage(): { user: UserDTO | null; accessToken: string | null; refreshToken: string | null } {
   try {
     const stored = localStorage.getItem(AUTH_STORAGE_KEY);
     if (!stored) return { user: null, accessToken: null, refreshToken: null };
@@ -79,7 +78,7 @@ export const useAuthStore = defineStore(
   "auth",
   () => {
     // State
-    const user = ref<User | null>(null);
+    const user = ref<UserDTO | null>(null);
     const accessToken = ref<string | null>(null);
     const refreshToken = ref<string | null>(null);
     const isLoading = ref(false);
@@ -108,10 +107,10 @@ export const useAuthStore = defineStore(
     );
     const userDisplayName = computed(() => user.value?.name || "Unknown User");
     const userAvatar = computed(
-      () => user.value?.avatarUrl || "/images/default-avatar.png"
+      () => user.value?.image || "/images/default-avatar.png"
     );
     const userDarkAvatar = computed(
-      () => user.value?.darkAvatarUrl || "/images/default-avatar-dark.png"
+      () => user.value?.darkImage || "/images/default-avatar-dark.png"
     );
     const getAccessToken = computed(() => accessToken.value);
 
@@ -122,7 +121,7 @@ export const useAuthStore = defineStore(
     // Actions
     async function login(
       credentials: LoginRequestDTO
-    ): Promise<Result<User, AppError>> {
+    ): Promise<Result<UserDTO, AppError>> {
       isLoading.value = true;
       lastError.value = null;
 
@@ -144,8 +143,8 @@ export const useAuthStore = defineStore(
         const tokens = extractTokensFromResponse(result.value.data);
 
         if (result.value.data.user) {
-          // Convert UserDTO to User domain model
-          user.value = mapUserDTOToUser(result.value.data.user);
+          // Use UserDTO directly
+          user.value = result.value.data.user;
 
           // Use setTokens to ensure atomic storage
           await setTokens(tokens.accessToken, tokens.refreshToken);
@@ -244,7 +243,7 @@ export const useAuthStore = defineStore(
 
     async function fetchProfile(
       email: string
-    ): Promise<Result<User, AppError>> {
+    ): Promise<Result<UserDTO, AppError>> {
       isLoading.value = true;
 
       try {
@@ -255,7 +254,7 @@ export const useAuthStore = defineStore(
           return err(result.error);
         }
 
-        user.value = mapUserDTOToUser(result.value);
+        user.value = result.value;
         return ok(user.value);
       } finally {
         isLoading.value = false;
@@ -314,24 +313,6 @@ export const useAuthStore = defineStore(
       lastError.value = null;
     }
 
-    // Helper function to convert UserDTO to User domain model
-    function mapUserDTOToUser(userDTO: UserDTO): User {
-      return {
-        id: userDTO.id,
-        name: userDTO.name,
-        email: userDTO.email,
-        roles: userDTO.roles,
-        isVirtual: userDTO.isVirtual,
-        isAvailable: userDTO.isAvailable,
-        avatarUrl: userDTO.image || undefined,
-        darkAvatarUrl: userDTO.darkImage || undefined,
-        status: userDTO.status,
-        lastSeen: null, // Could be added from DTO if available
-        invitationAccepted: userDTO.invitationAccepted,
-        userIds: userDTO.userIds,
-      };
-    }
-
     return {
       // State
       user,
@@ -357,7 +338,6 @@ export const useAuthStore = defineStore(
       clearAuth,
       setTokens,
       clearError,
-      mapUserDTOToUser,
     };
   },
   {

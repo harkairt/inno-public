@@ -19,7 +19,7 @@
           v-for="message in group.messages"
           :key="message.messageID"
           :data-testid="`message-${message.messageID}`"
-          class="flex"
+          class="group flex"
           :class="{
             'justify-end': isUserMessage(message),
             'justify-start': !isUserMessage(message),
@@ -32,15 +32,32 @@
               'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] rounded-2xl rounded-bl-md border border-[hsl(var(--border))]': !isUserMessage(message),
             }"
           >
-            <!-- Sender Name -->
-            <div
-              class="text-xs font-medium mb-1.5"
-              :class="{
-                'opacity-80': isUserMessage(message),
-                'text-[hsl(var(--muted-foreground))]': !isUserMessage(message),
-              }"
-            >
-              {{ message.senderName }}
+            <!-- Sender Name + Rating Controls -->
+            <div class="flex items-start justify-between gap-2">
+              <div
+                class="text-xs font-medium mb-1.5"
+                :class="{
+                  'opacity-80': isUserMessage(message),
+                  'text-[hsl(var(--muted-foreground))]': !isUserMessage(message),
+                }"
+              >
+                {{ message.senderName }}
+              </div>
+
+              <!-- Rating Controls (AI messages only, not welcome message) -->
+              <div
+                v-if="!isUserMessage(message) && message.messageID !== 'welcome'"
+                class="transition-opacity duration-200 -mt-1 -mr-1"
+                :class="message.isRated ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+              >
+                <MessageRating
+                  :message-id="message.messageID"
+                  :session-id="message.sessionId"
+                  :agent-id="props.agentId ?? 0"
+                  :is-rated="message.isRated"
+                  :rating="message.rating ?? null"
+                />
+              </div>
             </div>
 
             <!-- Message Content -->
@@ -76,6 +93,7 @@
                 />
               </div>
             </div>
+
           </div>
         </div>
       </div>
@@ -96,6 +114,7 @@
 import { computed } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
+import MessageRating from '@/app/components/chat/MessageRating.vue'
 
 const { t, locale } = useI18n()
 

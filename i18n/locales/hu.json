@@ -88,6 +88,11 @@
       "deleting": "Törlés...",
       "deleteSuccess": "Munkamenet törölve",
       "deleteError": "Nem sikerült törölni a munkamenetet"
+    },
+    "rating": {
+      "thumbsUp": "Hasznos",
+      "thumbsDown": "Nem hasznos",
+      "thanks": "Köszönjük a visszajelzést!"
     }
   },
   "errors": {

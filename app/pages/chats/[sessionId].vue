@@ -126,7 +126,7 @@
             v-else
             :messages="messages"
             :welcome-message="trimmedWelcomeMessage"
-            :agent-id="virtualAgentFromSecondMessage?.agentId"
+            :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
             :agent-name="virtualAgentFromSecondMessage?.agentName"
             :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
           />

@@ -88,6 +88,11 @@
       "deleting": "Deleting...",
       "deleteSuccess": "Session deleted",
       "deleteError": "Failed to delete session"
+    },
+    "rating": {
+      "thumbsUp": "Rate as helpful",
+      "thumbsDown": "Rate as not helpful",
+      "thanks": "Thanks for your feedback!"
     }
   },
   "errors": {

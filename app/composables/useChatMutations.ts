@@ -360,10 +360,10 @@ export function useDeleteSession() {
 
 /**
  * Rate message mutation composable
+ * Uses optimistic updates for instant UI feedback
  */
 export function useRateMessage() {
   const queryClient = useQueryClient();
-  const chatStore = useChatStore();
 
   return useMutation({
     mutationFn: async (
@@ -378,18 +378,56 @@ export function useRateMessage() {
       return result.value;
     },
 
-    onSuccess: (_, params) => {
-      // Invalidate related queries (will refetch with updated rating)
+    onMutate: async (params) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({
+        queryKey: chatQueryKeys.session(params.sessionId),
+      });
+
+      // Snapshot the previous session data
+      const previousSession = queryClient.getQueryData<AISessionDTO>(
+        chatQueryKeys.session(params.sessionId)
+      );
+
+      // Optimistically update the message rating
+      queryClient.setQueryData<AISessionDTO>(
+        chatQueryKeys.session(params.sessionId),
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            messages: old.messages?.map((m) =>
+              m.messageID === params.messageID
+                ? { ...m, isRated: true, rating: params.rating ? 1 : 0 }
+                : m
+            ),
+          };
+        }
+      );
+
+      // Return context with previous value for rollback
+      return { previousSession };
+    },
+
+    onError: (error: AppError, params, context) => {
+      // Rollback to previous state on error
+      if (context?.previousSession) {
+        queryClient.setQueryData(
+          chatQueryKeys.session(params.sessionId),
+          context.previousSession
+        );
+      }
+      console.error("Rate message failed:", error);
+    },
+
+    onSettled: (_, __, params) => {
+      // Always refetch after mutation to ensure server sync
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.messages(params.sessionId),
       });
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       });
-    },
-
-    onError: (error: AppError) => {
-      console.error("Rate message failed:", error);
     },
   });
 }

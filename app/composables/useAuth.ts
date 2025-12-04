@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/app/stores/auth'
 import { authService } from '@/lib/api/services/AuthService'
-import type { User } from '@/types/domain/models'
-import type { LoginRequestDTO } from '@/types/api/schemas'
+import type { LoginRequestDTO, UserDTO } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
 
 // Query keys
@@ -22,7 +21,7 @@ export function useLogin() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (credentials: LoginRequestDTO): Promise<User> => {
+    mutationFn: async (credentials: LoginRequestDTO): Promise<UserDTO> => {
       const result = await authStore.login(credentials)
 
       if (result.isErr()) {
@@ -91,7 +90,7 @@ export function useCurrentUser(options?: {
 
   return useQuery({
     queryKey: authQueryKeys.current(),
-    queryFn: async (): Promise<User | null> => {
+    queryFn: async (): Promise<UserDTO | null> => {
       // Return user from store
       return authStore.user
     },
@@ -115,7 +114,7 @@ export function useUserProfile(email: string, options?: {
 
   return useQuery({
     queryKey: authQueryKeys.profile(email),
-    queryFn: async (): Promise<User> => {
+    queryFn: async (): Promise<UserDTO> => {
       // If requesting current user's profile and it's already in store, return it
       if (authStore.user?.email === email && authStore.user) {
         return authStore.user
@@ -127,7 +126,7 @@ export function useUserProfile(email: string, options?: {
         throw result.error
       }
 
-      return authStore.mapUserDTOToUser(result.value)
+      return result.value
     },
     enabled: options?.enabled ?? !!email,
     staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
