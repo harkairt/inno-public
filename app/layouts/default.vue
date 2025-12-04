@@ -315,12 +315,13 @@ const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
 const filteredSessions = computed(() => {
   if (!sessions.value) return []
 
-  // Filter by search query
+  // Filter by search query (includes session name, agent ID, and member emails)
   const query = sessionSearchQuery.value.toLowerCase()
-  const filtered = query
+  let filtered = query
     ? sessions.value.filter(session =>
         session.sessionName.toLowerCase().includes(query) ||
-        session.agentId.toString().includes(query)
+        session.agentId.toString().includes(query) ||
+        session.members.some(email => email.toLowerCase().includes(query))
       )
     : [...sessions.value]
 
