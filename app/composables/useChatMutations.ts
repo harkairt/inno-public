@@ -397,7 +397,7 @@ export function useRateMessage() {
           return {
             ...old,
             messages: old.messages?.map((m) =>
-              m.messageID === params.messageID
+              m.messageID === params.messageId
                 ? { ...m, isRated: true, rating: params.rating ? 1 : 0 }
                 : m
             ),

@@ -82,7 +82,7 @@ function handleRate(positive: boolean) {
 
   rateMessageMutation.mutate({
     sessionId: props.sessionId,
-    messageID: props.messageId,
+    messageId: props.messageId,
     rating: positive,
     agentId: props.agentId,
   })

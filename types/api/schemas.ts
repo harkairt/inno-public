@@ -315,7 +315,7 @@ export const GetMessageRequestDTOSchema = z.object({
 
 export const SetSessionMessageRatingRequestDTOSchema = z.object({
   sessionId: z.string(),
-  messageID: z.string(),
+  messageId: z.string(),
   rating: z.boolean(),
   agentId: z.number()
 })
