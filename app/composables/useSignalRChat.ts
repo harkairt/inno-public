@@ -8,13 +8,8 @@ import { chatQueryKeys } from './useChatQueries'
 // SignalR event types for chat
 interface _ChatSignalREvents {
   ReceiveMessage: [sessionId: string, agentId: number]
-  UserJoined: [{ sessionId: string; userCode: string; userName: string }]
-  UserLeft: [{ sessionId: string; userCode: string; userName: string }]
-  UserTyping: [{ sessionId: string; userCode: string; userName: string }]
-  UserStoppedTyping: [{ sessionId: string; userCode: string; userName: string }]
-  MessageRead: [{ sessionId: string; messageId: string; userCode: string }]
-  SessionUpdated: [{ sessionId: string; updates: Record<string, unknown> }]
-  UnreadCountUpdated: [{ sessionId: string; count: number }]
+  SendStartTypingInfo: [name: string, email: string, sessionId: string]
+  SendStopTypingInfo: [name: string, email: string, sessionId: string]
 }
 
 /**
@@ -90,115 +85,28 @@ export function useSignalRChat(options?: {
 
     // Note: ReceiveMessage handler is in signalr-init.client.ts plugin (centralized)
 
-    // User joined session
-    const unsubscribeUserJoined = signalr.onEvent('UserJoined', (data: {
-      sessionId: string
-      userCode: string
-      userName: string
-    }) => {
-      console.log('👋 User joined session:', data)
-
-      // Invalidate session data (will refetch with updated member list)
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.session(data.sessionId),
-      })
-    })
-
-    // User left session
-    const unsubscribeUserLeft = signalr.onEvent('UserLeft', (data: {
-      sessionId: string
-      userCode: string
-      userName: string
-    }) => {
-      console.log('👋 User left session:', data)
-
-      // Invalidate session data (will refetch with updated member list)
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.session(data.sessionId),
-      })
-    })
-
-    // User is typing
-    const unsubscribeUserTyping = signalr.onEvent('UserTyping', (data: {
-      sessionId: string
-      userCode: string
-      userName: string
-    }) => {
-      console.log('⌨️  User typing:', data)
+    // User started typing
+    const unsubscribeStartTyping = signalr.onEvent('SendStartTypingInfo', (name: string, email: string, sessionId: string) => {
+      console.log('⌨️  User started typing:', { name, email, sessionId })
 
       // Don't show typing indicator for current user
-      if (data.userCode !== authStore.user?.email) {
-        chatStore.addTypingUser(data.sessionId, data.userName)
+      if (email !== authStore.user?.email) {
+        chatStore.addTypingUser(sessionId, name)
       }
     })
 
     // User stopped typing
-    const unsubscribeUserStoppedTyping = signalr.onEvent('UserStoppedTyping', (data: {
-      sessionId: string
-      userCode: string
-      userName: string
-    }) => {
-      console.log('⌨️  User stopped typing:', data)
+    const unsubscribeStopTyping = signalr.onEvent('SendStopTypingInfo', (name: string, email: string, sessionId: string) => {
+      console.log('⌨️  User stopped typing:', { name, email, sessionId })
 
       // Remove typing indicator for this user
-      chatStore.removeTypingUser(data.sessionId, data.userName)
-    })
-
-    // Message read status updated
-    const unsubscribeMessageRead = signalr.onEvent('MessageRead', (data: {
-      sessionId: string
-      messageId: string
-      userCode: string
-    }) => {
-      console.log('📖 Message read:', data)
-
-      // Invalidate queries (will refetch with updated read status and unread count)
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.messages(data.sessionId),
-      })
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.unread(),
-      })
-    })
-
-    // Session updated
-    const unsubscribeSessionUpdated = signalr.onEvent('SessionUpdated', (data: {
-      sessionId: string
-      updates: Record<string, unknown>
-    }) => {
-      console.log('🔄 Session updated:', data)
-
-      // Invalidate queries (will refetch with updated session data)
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.session(data.sessionId),
-      })
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.sessions(),
-      })
-    })
-
-    // Unread count updated
-    const unsubscribeUnreadCountUpdated = signalr.onEvent('UnreadCountUpdated', (data: {
-      sessionId: string
-      count: number
-    }) => {
-      console.log('🔔 Unread count updated:', data)
-
-      // Invalidate queries (will refetch with updated unread count)
-      queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.unread(),
-      })
+      chatStore.removeTypingUser(sessionId, name)
     })
 
     // Store unsubscribe functions for cleanup
     unsubscribers.push(
-      unsubscribeUserJoined,
-      unsubscribeUserLeft,
-      unsubscribeUserTyping,
-      unsubscribeUserStoppedTyping,
-      unsubscribeMessageRead,
-      unsubscribeSessionUpdated,
-      unsubscribeUnreadCountUpdated
+      unsubscribeStartTyping,
+      unsubscribeStopTyping
     )
   }
 
@@ -242,7 +150,7 @@ export function useSignalRChat(options?: {
     }
   )
 
-  // Auto-reconnect when SignalR reconnects
+  // Setup event listeners when connected (immediate: true to handle already-connected state)
   watch(
     () => signalr.isConnected.value,
     async (connected) => {
@@ -251,7 +159,8 @@ export function useSignalRChat(options?: {
       } else if (!connected) {
         cleanupEventListeners()
       }
-    }
+    },
+    { immediate: true }
   )
 
   // Lifecycle management
@@ -267,23 +176,26 @@ export function useSignalRChat(options?: {
   })
 
   // Send typing indicator
-  const sendTypingIndicator = (sessionId: string) => {
-    if (signalr.isReady()) {
-      signalr.send('UserTyping', { sessionId })
+  const sendTypingIndicator = (sessionId: string, memberEmails: string[]) => {
+    if (signalr.isReady() && authStore.user?.email && authStore.user?.name) {
+      signalr.operations.sendStartTypingInfo(
+        memberEmails,
+        authStore.user.name,
+        authStore.user.email,
+        sessionId
+      )
     }
   }
 
   // Send stopped typing indicator
-  const sendStoppedTypingIndicator = (sessionId: string) => {
-    if (signalr.isReady()) {
-      signalr.send('UserStoppedTyping', { sessionId })
-    }
-  }
-
-  // Mark message as read
-  const markMessageAsRead = (sessionId: string, messageId: string) => {
-    if (signalr.isReady()) {
-      signalr.send('MarkMessageRead', { sessionId, messageId })
+  const sendStoppedTypingIndicator = (sessionId: string, memberEmails: string[]) => {
+    if (signalr.isReady() && authStore.user?.email && authStore.user?.name) {
+      signalr.operations.sendStopTypingInfo(
+        memberEmails,
+        authStore.user.name,
+        authStore.user.email,
+        sessionId
+      )
     }
   }
 
@@ -301,7 +213,6 @@ export function useSignalRChat(options?: {
     // Event interaction methods
     sendTypingIndicator,
     sendStoppedTypingIndicator,
-    markMessageAsRead,
 
     // Access to underlying signalr composable
     signalr,

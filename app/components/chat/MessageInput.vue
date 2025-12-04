@@ -172,7 +172,7 @@ async function handleSubmit() {
   if (typingTimeoutId) clearTimeout(typingTimeoutId)
   if (isTypingActive.value) {
     isTypingActive.value = false
-    sendStoppedTypingIndicator(props.sessionId)
+    sendStoppedTypingIndicator(props.sessionId, props.members)
   }
 
   // Trim and store message, clear input immediately
@@ -238,21 +238,21 @@ watch(messageText, (newValue) => {
     // User is typing
     if (!isTypingActive.value) {
       isTypingActive.value = true
-      sendTypingIndicator(props.sessionId)
+      sendTypingIndicator(props.sessionId, props.members)
     }
 
     // Reset timeout - stop typing after 3 seconds of no keystrokes
     if (typingTimeoutId) clearTimeout(typingTimeoutId)
     typingTimeoutId = setTimeout(() => {
       isTypingActive.value = false
-      sendStoppedTypingIndicator(props.sessionId)
+      sendStoppedTypingIndicator(props.sessionId, props.members)
     }, 3000)
   } else {
     // Empty message - clear typing indicator
     if (typingTimeoutId) clearTimeout(typingTimeoutId)
     if (isTypingActive.value) {
       isTypingActive.value = false
-      sendStoppedTypingIndicator(props.sessionId)
+      sendStoppedTypingIndicator(props.sessionId, props.members)
     }
   }
 })
@@ -261,7 +261,7 @@ watch(messageText, (newValue) => {
 onUnmounted(() => {
   if (typingTimeoutId) clearTimeout(typingTimeoutId)
   if (isTypingActive.value) {
-    sendStoppedTypingIndicator(props.sessionId)
+    sendStoppedTypingIndicator(props.sessionId, props.members)
   }
 })
 </script>

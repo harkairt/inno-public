@@ -12,13 +12,39 @@ export class SignalROperations {
 
   /**
    * Notify session members about a new message
-   * @param memberEmails - Array of member email addresses to notify
+   * @param userIds - Array of user IDs (emails) to notify
    * @param sessionId - The session ID
    * @param agentId - The agent ID
    */
-  notifyMessageSent(memberEmails: string[], sessionId: string, agentId: number): void {
+  notifyMessageSent(userIds: string[], sessionId: string, agentId: number): void {
+    if (!userIds.length) return
+
+    this.service.send('SendMessageToUser', userIds, sessionId, agentId)
+  }
+
+  /**
+   * Notify session members that a user started typing
+   * @param memberEmails - Array of member email addresses to notify
+   * @param name - Name of the user who started typing
+   * @param email - Email of the user who started typing
+   * @param sessionId - The session ID
+   */
+  sendStartTypingInfo(memberEmails: string[], name: string, email: string, sessionId: string): void {
     if (!memberEmails.length) return
 
-    this.service.send('SendMessageToUser', memberEmails, sessionId, agentId)
+    this.service.send('SendStartTypingInfo', memberEmails, name, email, sessionId)
+  }
+
+  /**
+   * Notify session members that a user stopped typing
+   * @param memberEmails - Array of member email addresses to notify
+   * @param name - Name of the user who stopped typing
+   * @param email - Email of the user who stopped typing
+   * @param sessionId - The session ID
+   */
+  sendStopTypingInfo(memberEmails: string[], name: string, email: string, sessionId: string): void {
+    if (!memberEmails.length) return
+
+    this.service.send('SendStopTypingInfo', memberEmails, name, email, sessionId)
   }
 }

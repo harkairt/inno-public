@@ -52,46 +52,20 @@ export interface SignalREventRegistry {
   ReceiveMessage: [sessionId: string, agentId: number]
 
   /**
-   * Fired when a user joins a chat session
-   * @param data - User and session information
-   */
-  UserJoined: [{ sessionId: string; userCode: string; userName: string }]
-
-  /**
-   * Fired when a user leaves a chat session
-   * @param data - User and session information
-   */
-  UserLeft: [{ sessionId: string; userCode: string; userName: string }]
-
-  /**
    * Fired when a user starts typing
-   * @param data - User and session information
+   * @param name - Name of the user who started typing
+   * @param email - Email of the user who started typing
+   * @param sessionId - UUID of the session
    */
-  UserTyping: [{ sessionId: string; userCode: string; userName: string }]
+  SendStartTypingInfo: [name: string, email: string, sessionId: string]
 
   /**
    * Fired when a user stops typing
-   * @param data - User and session information
+   * @param name - Name of the user who stopped typing
+   * @param email - Email of the user who stopped typing
+   * @param sessionId - UUID of the session
    */
-  UserStoppedTyping: [{ sessionId: string; userCode: string; userName: string }]
-
-  /**
-   * Fired when a message is marked as read
-   * @param data - Message and user information
-   */
-  MessageRead: [{ sessionId: string; messageId: string; userCode: string }]
-
-  /**
-   * Fired when session metadata is updated
-   * @param data - Session ID and partial updates
-   */
-  SessionUpdated: [{ sessionId: string; updates: Record<string, unknown> }]
-
-  /**
-   * Fired when unread message count changes
-   * @param data - Session ID and new count
-   */
-  UnreadCountUpdated: [{ sessionId: string; count: number }]
+  SendStopTypingInfo: [name: string, email: string, sessionId: string]
 
   // ========================================
   // Connection Lifecycle Events (Internal)
