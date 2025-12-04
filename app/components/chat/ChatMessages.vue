@@ -45,8 +45,9 @@
               </div>
 
               <!-- Rating Controls (AI messages only, not welcome message) -->
+              <!-- TEMPORARILY HIDDEN: Thumbs up/down rating feature -->
               <div
-                v-if="!isUserMessage(message) && message.messageID !== 'welcome'"
+                v-if="false && !isUserMessage(message) && message.messageID !== 'welcome'"
                 class="transition-opacity duration-200 -mt-1 -mr-1"
                 :class="message.isRated ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
               >
