@@ -77,9 +77,11 @@
 <script setup lang="ts">
 import { useSendMessage } from '@/app/composables/useChatMutations'
 import { useAuthStore } from '@/app/stores/auth'
+import { useChatStore } from '@/app/stores/chat'
 import { useSignalRChat } from '@/app/composables/useSignalRChat'
 import type { AiQuestionRequestDTO, UserDTO } from '@/types/api/schemas'
 import { AIQuestionType } from '@/types/enums'
+import { watchDebounced } from '@vueuse/core'
 
 const { t } = useI18n()
 
@@ -87,6 +89,7 @@ const { t } = useI18n()
 interface Props {
   sessionId: string
   agentId: number                      // Fallback when no agent selected (current user's ID)
+  draftKey?: string                    // Optional override for new sessions (userId-based key)
   members?: string[]
   selectableAgents?: UserDTO[]
   selectedAgentId?: number | undefined // undefined = no selection
@@ -94,6 +97,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  draftKey: undefined,
   members: () => [],
   selectableAgents: () => [],
   selectedAgentId: undefined,
@@ -115,12 +119,26 @@ const emit = defineEmits<{
 // Auth store
 const authStore = useAuthStore()
 
+// Chat store
+const chatStore = useChatStore()
+
+// Compute draft key: use draftKey prop if provided, otherwise sessionId
+const effectiveDraftKey = computed(() => props.draftKey || props.sessionId)
+
 // SignalR chat hook
 const { sendTypingIndicator, sendStoppedTypingIndicator } = useSignalRChat()
 
 // Message state
 const messageText = ref('')
 const lastFailedMessage = ref<string>('')
+
+// Restore draft from store on mount
+onMounted(() => {
+  const draft = chatStore.getDraft(effectiveDraftKey.value)
+  if (draft) {
+    messageText.value = draft
+  }
+})
 
 // Typing indicator state
 const isTypingActive = ref(false)
@@ -200,6 +218,9 @@ async function handleSubmit() {
     // Send message
     await mutation.mutateAsync(request)
 
+    // Clear draft on success (CRITICAL - prevents awkward UX)
+    chatStore.clearDraft(effectiveDraftKey.value)
+
     // Clear failed message tracking on success
     lastFailedMessage.value = ''
 
@@ -207,6 +228,7 @@ async function handleSubmit() {
     emit('messageSent')
   } catch (error) {
     // Error is handled by mutation error state
+    // Draft remains in store - user can retry
     console.error('Failed to send message:', error)
   }
 }
@@ -256,6 +278,15 @@ watch(messageText, (newValue) => {
     }
   }
 })
+
+// Save draft to store with 500ms debounce
+watchDebounced(
+  messageText,
+  (value) => {
+    chatStore.saveDraft(effectiveDraftKey.value, value)
+  },
+  { debounce: 500 }
+)
 
 // Cleanup on unmount
 onUnmounted(() => {

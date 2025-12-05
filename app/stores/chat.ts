@@ -13,6 +13,7 @@ export const useChatStore = defineStore('chat', () => {
   const error = ref<string | null>(null)
   const typingUsers = ref<Map<string, Set<string>>>(new Map()) // sessionId -> Set of user names
   const failedMessages = ref<Map<string, FailedMessage[]>>(new Map()) // sessionId -> failed messages (DTO format)
+  const draftMessages = ref<Map<string, string>>(new Map()) // key -> draft text
 
   // Actions
   function setActiveSession(sessionId: string | null) {
@@ -44,6 +45,23 @@ export const useChatStore = defineStore('chat', () => {
 
   function getFailedMessages(sessionId: string): FailedMessage[] {
     return failedMessages.value.get(sessionId) || []
+  }
+
+  // Draft messages management
+  function saveDraft(key: string, text: string) {
+    if (text.trim()) {
+      draftMessages.value.set(key, text)
+    } else {
+      draftMessages.value.delete(key)
+    }
+  }
+
+  function getDraft(key: string): string {
+    return draftMessages.value.get(key) || ''
+  }
+
+  function clearDraft(key: string) {
+    draftMessages.value.delete(key)
   }
 
   // Typing indicator management
@@ -80,6 +98,11 @@ export const useChatStore = defineStore('chat', () => {
     removeAllFailedMessages,
     getFailedMessages,
 
+    // Draft messages
+    saveDraft,
+    getDraft,
+    clearDraft,
+
     // Typing indicators
     addTypingUser,
     removeTypingUser,
@@ -88,6 +111,6 @@ export const useChatStore = defineStore('chat', () => {
 }, {
   persist: {
     key: 'innochat-chat',
-    pick: ['failedMessages', 'activeSessionId'], // Persist failed messages and active session
+    pick: ['failedMessages', 'activeSessionId', 'draftMessages'], // Persist failed messages, active session, and drafts
   },
 })

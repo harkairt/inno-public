@@ -40,6 +40,7 @@
 
       <MessageInput
         :session-id="sessionId"
+        :draft-key="`new-${userId}`"
         :agent-id="agentId"
         :selected-agent-id="selectedTargetAgentId ?? agentId"
         :selectable-agents="isSingleVirtualAgentSession ? [] : [selectedUser]"
@@ -192,6 +193,8 @@ function scrollToBottom() {
 }
 
 function handleMessageSent() {
+  // Clear the new session draft before navigation
+  chatStore.clearDraft(`new-${userId.value}`)
   navigateTo(`/chats/${sessionId.value}`, { replace: true })
 }
 
