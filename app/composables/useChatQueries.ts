@@ -168,7 +168,7 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
   const authStore = useAuthStore()
 
   return useQuery({
-    queryKey: computed(() => [...chatQueryKeys.welcome(toValue(agentId)), options?.sessionId]),
+    queryKey: computed(() => chatQueryKeys.welcome(toValue(agentId))),
     queryFn: async (): Promise<AIWelcomeMessageDTO> => {
       if (!authStore.user) {
         throw new Error('User not authenticated')
