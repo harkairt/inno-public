@@ -26,7 +26,7 @@
           }"
         >
           <div
-            class="max-w-xs lg:max-w-md xl:max-w-lg px-4 py-3"
+            class="max-w-[85%] md:max-w-[75%] sm:max-w-[70%] px-4 py-3"
             :class="{
               'bg-[oklch(88.07%_0.043_117.32)] text-black rounded-2xl rounded-br-md': isUserMessage(message),
               'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] rounded-2xl rounded-bl-md border border-[hsl(var(--border))]': !isUserMessage(message),
