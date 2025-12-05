@@ -2,6 +2,7 @@
 
 @plugin "tailwindcss-animate";
 @import "@nuxt/ui";
+@import "./markdown.css";
 
 @custom-variant dark (&:is(.dark *));
 

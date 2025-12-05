@@ -12,7 +12,10 @@
       "webRoot": "${workspaceFolder}/app",
       "runtimeArgs": [
         "--remote-debugging-port=9222"
-      ]
+      ],
+      "presentation": {
+        "hidden": true
+      }
     },
     {
       "type": "node",
@@ -29,11 +32,14 @@
       },
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
+      "presentation": {
+        "hidden": true
+      }
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "⚡ e2e: preview server",
+      "name": "⚡ build & localhost:3333",
       "program": "${workspaceFolder}/.output/server/index.mjs",
       "env": {
         "PORT": "3333",
@@ -47,7 +53,7 @@
   "compounds": [
     {
       "stopAll": true,
-      "name": "🚧 fullstack: nuxt",
+      "name": "🚧 debug",
       "configurations": [
         "server: nuxt",
         "client: chrome"

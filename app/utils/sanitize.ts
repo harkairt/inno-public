@@ -1,0 +1,63 @@
+import DOMPurify, { type Config } from 'dompurify'
+
+// Configure DOMPurify for chat messages
+const config: Config = {
+  ALLOWED_TAGS: [
+    'p',
+    'br',
+    'strong',
+    'em',
+    'u',
+    's',
+    'code',
+    'pre',
+    'a',
+    'ul',
+    'ol',
+    'li',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+    'span',
+    'div',
+    'hr',
+  ],
+  ALLOWED_ATTR: ['href', 'class', 'data-language'],
+  ALLOW_DATA_ATTR: false,
+  KEEP_CONTENT: true,
+  RETURN_TRUSTED_TYPE: false,
+}
+
+// Track if hook has been added to avoid duplicates
+let hookAdded = false
+
+/**
+ * Sanitizes HTML content to prevent XSS attacks.
+ * All external links are automatically given target="_blank" and rel="noopener noreferrer".
+ */
+export const sanitizeHTML = (dirty: string): string => {
+  if (typeof window === 'undefined') return dirty // SSR safety
+
+  // Add hook only once
+  if (!hookAdded) {
+    DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+      if (node.tagName === 'A' && node.hasAttribute('href')) {
+        node.setAttribute('target', '_blank')
+        node.setAttribute('rel', 'noopener noreferrer')
+      }
+    })
+    hookAdded = true
+  }
+
+  return DOMPurify.sanitize(dirty, config) as string
+}

@@ -62,9 +62,10 @@
             </div>
 
             <!-- Message Content -->
-            <div class="text-sm whitespace-pre-wrap break-words leading-relaxed">
-              {{ message.messageText }}
-            </div>
+            <MarkdownContent
+              :content="message.messageText"
+              class="text-sm leading-relaxed"
+            />
 
             <!-- Message Status and Time -->
             <div
@@ -116,6 +117,7 @@ import { computed } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
+import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 
 const { t, locale } = useI18n()
 
