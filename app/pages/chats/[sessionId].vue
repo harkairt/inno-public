@@ -139,6 +139,7 @@
       <TypingIndicator :typing-users="typingUsers" />
 
       <MessageInput
+        ref="messageInputRef"
         :session-id="sessionId"
         :agent-id="authStore.user?.id || 1"
         :selected-agent-id="selectedTargetAgentId"
@@ -231,11 +232,14 @@ const sessionId = route.params.sessionId as string
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 
-// Sidebar composable for toggle functionality
-const { toggleSidebar } = useSidebar()
+// Sidebar composable for toggle functionality and mobile detection
+const { toggleSidebar, isMobile } = useSidebar()
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// Message input ref for focus control
+const messageInputRef = ref<{ focus: () => void } | null>(null)
 
 // Chat auto-scroll composable
 const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(
@@ -285,6 +289,19 @@ watch(
         sessionId,
         agentId: newSession.agentId,
         userCode: authStore.user.email,
+      })
+    }
+  },
+  { immediate: true }
+)
+
+// Focus chat input on desktop when session loads
+watch(
+  () => session.value,
+  (newSession) => {
+    if (newSession && !isMobile.value) {
+      nextTick(() => {
+        messageInputRef.value?.focus()
       })
     }
   },

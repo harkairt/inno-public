@@ -40,6 +40,7 @@
           <!-- Input Area -->
           <div class="flex-1">
             <UTextarea
+              ref="textareaRef"
               v-model="messageText"
               :placeholder="inputPlaceholder"
               :rows="textareaRows"
@@ -295,4 +296,13 @@ onUnmounted(() => {
     sendStoppedTypingIndicator(props.sessionId, props.members)
   }
 })
+
+// Expose focus method for parent components
+const textareaRef = ref<{ textareaRef: HTMLTextAreaElement } | null>(null)
+
+function focus() {
+  textareaRef.value?.textareaRef?.focus()
+}
+
+defineExpose({ focus })
 </script>
