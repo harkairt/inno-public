@@ -98,29 +98,27 @@ export function useChatAutoScroll(
     })
   }
 
+  // Detect mobile device (runs once at composable creation)
+  const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
   /**
-   * Scroll to a specific element within the container.
-   * Uses scrollIntoView to position the element at the top of the viewport.
-   * Falls back to scrollToBottom if element is not found.
-   *
-   * @param selector - CSS selector for the target element
-   * @param instant - If true, scroll instantly without animation
+   * Scroll to a specific element within the container (Desktop version).
+   * Uses manual position calculation with scrollTo.
    */
-  function scrollToElement(selector: string, instant?: boolean) {
-    console.log('[scrollToElement] Called with selector:', selector)
+  function scrollToElementDesktop(selector: string, instant?: boolean) {
+    console.log('[scrollToElement:desktop] Called with selector:', selector)
     nextTick(() => {
-      console.log('[scrollToElement] nextTick - container exists:', !!container.value)
+      console.log('[scrollToElement:desktop] nextTick - container exists:', !!container.value)
       if (!container.value) {
-        console.log('[scrollToElement] No container, falling back to scrollToBottom')
+        console.log('[scrollToElement:desktop] No container, falling back to scrollToBottom')
         scrollToBottom(instant)
         return
       }
 
       const element = container.value.querySelector(selector) as HTMLElement | null
-      console.log('[scrollToElement] Element found:', !!element, element)
+      console.log('[scrollToElement:desktop] Element found:', !!element, element)
 
       if (element) {
-        // Set flag to prevent scrollToBottom from interfering
         scrollToElementActive = true
 
         const behavior = instant ? 'auto' : (smooth ? 'smooth' : 'auto')
@@ -130,7 +128,7 @@ export function useChatAutoScroll(
         const currentScrollTop = container.value.scrollTop
         const targetScrollTop = currentScrollTop + (elementRect.top - containerRect.top) - 12
 
-        console.log('[scrollToElement] Scrolling to:', targetScrollTop, 'from:', currentScrollTop)
+        console.log('[scrollToElement:desktop] Scrolling to:', targetScrollTop, 'from:', currentScrollTop)
 
         // First, cancel any ongoing smooth scroll by doing an instant scroll to current position
         container.value.scrollTo({ top: currentScrollTop, behavior: 'auto' })
@@ -144,13 +142,76 @@ export function useChatAutoScroll(
         // Clear flag after animation completes (smooth scroll takes ~300-500ms)
         setTimeout(() => {
           scrollToElementActive = false
-          console.log('[scrollToElement] Flag cleared')
+          console.log('[scrollToElement:desktop] Flag cleared')
         }, 500)
       } else {
-        console.log('[scrollToElement] Element not found, falling back to scrollToBottom')
+        console.log('[scrollToElement:desktop] Element not found, falling back to scrollToBottom')
         scrollToBottom(instant)
       }
     })
+  }
+
+  /**
+   * Scroll to a specific element within the container (Mobile version).
+   * Uses element.offsetTop for position calculation and single scrollTo call.
+   * This approach scrolls the container directly, avoiding viewport-level scrollIntoView issues.
+   */
+  function scrollToElementMobile(selector: string, instant?: boolean) {
+    console.log('[scrollToElement:mobile] Called with selector:', selector)
+    nextTick(() => {
+      console.log('[scrollToElement:mobile] nextTick - container exists:', !!container.value)
+      if (!container.value) {
+        console.log('[scrollToElement:mobile] No container, falling back to scrollToBottom')
+        scrollToBottom(instant)
+        return
+      }
+
+      const element = container.value.querySelector(selector) as HTMLElement | null
+      console.log('[scrollToElement:mobile] Element found:', !!element)
+
+      if (element) {
+        scrollToElementActive = true
+
+        const behavior = instant ? 'auto' : (smooth ? 'smooth' : 'auto')
+
+        // Calculate position relative to scroll container using offsetTop
+        // This works reliably on mobile because it scrolls the container, not viewport
+        const targetScrollTop = element.offsetTop - 12
+
+        console.log('[scrollToElement:mobile] Scrolling container to:', targetScrollTop)
+
+        // Single scrollTo call - no coalescing issues
+        container.value.scrollTo({
+          top: targetScrollTop,
+          behavior,
+        })
+
+        // Clear flag after animation
+        setTimeout(() => {
+          scrollToElementActive = false
+          console.log('[scrollToElement:mobile] Flag cleared')
+        }, 500)
+      } else {
+        console.log('[scrollToElement:mobile] Element not found, falling back to scrollToBottom')
+        scrollToBottom(instant)
+      }
+    })
+  }
+
+  /**
+   * Scroll to a specific element within the container.
+   * Automatically uses the appropriate implementation based on device type.
+   * Falls back to scrollToBottom if element is not found.
+   *
+   * @param selector - CSS selector for the target element
+   * @param instant - If true, scroll instantly without animation
+   */
+  function scrollToElement(selector: string, instant?: boolean) {
+    if (isMobile) {
+      scrollToElementMobile(selector, instant)
+    } else {
+      scrollToElementDesktop(selector, instant)
+    }
   }
 
   return {

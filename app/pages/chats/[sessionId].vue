@@ -562,9 +562,11 @@ function formatDate(dateString: string): string {
 
 // Handle message sent event
 function handleMessageSent() {
-  // Scroll to bottom to show the sent message
-  scrollToBottom()
-  console.log('Message sent successfully')
+  // Only scroll if user is still at the bottom (they may have scrolled up while waiting)
+  if (isAtBottom.value) {
+    scrollToBottom()
+  }
+  console.log('Message sent successfully, isAtBottom:', isAtBottom.value)
 }
 
 // Dismiss failed message
@@ -593,15 +595,23 @@ watch(
       wasAtBottomWhenUserSentMessage.value = isAtBottom.value
       // User sent a message - always scroll to bottom to show their message
       scrollToBottom()
-    } else if (wasAtBottomWhenUserSentMessage.value) {
-      // AI responded - only scroll if user was at bottom when they sent message
-      const userMessageIndex = newMessages.length - 2
-      const userMessage = newMessages[userMessageIndex]
+    } else {
+      // AI responded - only scroll if user was at bottom when they sent message AND still at bottom
+      console.log('[auto-scroll] AI message received:', {
+        wasAtBottomWhenUserSentMessage: wasAtBottomWhenUserSentMessage.value,
+        isAtBottom: isAtBottom.value,
+        willScroll: wasAtBottomWhenUserSentMessage.value && isAtBottom.value
+      })
 
-      if (userMessage) {
-        scrollToElement(`[data-testid="message-${userMessage.messageID}"]`)
-      } else {
-        scrollToBottom()
+      if (wasAtBottomWhenUserSentMessage.value && isAtBottom.value) {
+        const userMessageIndex = newMessages.length - 2
+        const userMessage = newMessages[userMessageIndex]
+
+        if (userMessage) {
+          scrollToElement(`[data-testid="message-${userMessage.messageID}"]`)
+        } else {
+          scrollToBottom()
+        }
       }
     }
     // If user scrolled up before sending, don't auto-scroll on AI response
