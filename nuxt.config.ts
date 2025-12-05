@@ -101,7 +101,7 @@ export default defineNuxtConfig({
 
   // PWA Configuration
   pwa: {
-    registerType: 'autoUpdate',
+    registerType: 'prompt',
 
     workbox: {
       navigateFallback: undefined,
@@ -137,7 +137,7 @@ export default defineNuxtConfig({
 
     client: {
       installPrompt: true,
-      periodicSyncForUpdates: 60 * 60 // 1 hour
+      periodicSyncForUpdates: 10 * 60 // 10 minutes
     },
 
     manifest: {

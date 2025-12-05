@@ -6,6 +6,7 @@
         <NuxtPage />
       </NuxtLayout>
       <UNotifications />
+      <AppUpdateBanner />
     </div>
   </UApp>
 </template>

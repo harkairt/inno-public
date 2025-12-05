@@ -134,6 +134,9 @@
     "newChatShortcut": "Új Chat",
     "newChatDescription": "Indítson új cset munkamenetet",
     "historyShortcut": "Előzmények",
-    "historyDescription": "Csevegési előzmények megtekintése"
+    "historyDescription": "Csevegési előzmények megtekintése",
+    "updateAvailable": "Új verzió érhető el",
+    "updateDescription": "Frissítsen a legújabb funkciók használatához",
+    "refresh": "Frissítés most"
   }
 }

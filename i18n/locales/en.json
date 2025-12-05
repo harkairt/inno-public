@@ -134,6 +134,9 @@
     "newChatShortcut": "New Chat",
     "newChatDescription": "Start a new chat session",
     "historyShortcut": "History",
-    "historyDescription": "View chat history"
+    "historyDescription": "View chat history",
+    "updateAvailable": "A new version is available",
+    "updateDescription": "Refresh to use the latest features",
+    "refresh": "Refresh now"
   }
 }
