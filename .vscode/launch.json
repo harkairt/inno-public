@@ -13,9 +13,9 @@
       "runtimeArgs": [
         "--remote-debugging-port=9222"
       ],
-      "presentation": {
-        "hidden": true
-      }
+      // "presentation": {
+      //   "hidden": true
+      // }
     },
     {
       "type": "node",

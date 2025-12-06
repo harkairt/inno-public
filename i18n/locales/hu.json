@@ -138,5 +138,13 @@
     "updateAvailable": "Új verzió érhető el",
     "updateDescription": "Frissítsen a legújabb funkciók használatához",
     "refresh": "Frissítés most"
+  },
+  "voice": {
+    "notSupported": "Hangfelvétel nem támogatott ebben a böngészőben",
+    "permissionDenied": "Mikrofon hozzáférés megtagadva",
+    "noMicrophone": "Nem található mikrofon",
+    "recordingFailed": "Hangfelvétel sikertelen",
+    "transcriptionFailed": "Átírás sikertelen",
+    "cancelled": "Felvétel megszakítva"
   }
 }

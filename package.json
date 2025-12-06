@@ -25,6 +25,7 @@
     "analyze": "vue-tsc"
   },
   "dependencies": {
+    "@gradio/client": "^2.0.0",
     "@microsoft/signalr": "^9.0.6",
     "@nuxt/icon": "^2.1.0",
     "@nuxt/ui": "4.1.0",
@@ -38,6 +39,7 @@
     "@vueuse/core": "^14.0.0",
     "@vueuse/nuxt": "^14.0.0",
     "axios": "^1.13.1",
+    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.2",

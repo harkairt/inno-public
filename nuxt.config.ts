@@ -96,6 +96,11 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '',
       devLoginEmail: '',
+      // Transcription service (Hugging Face Spaces)
+      transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL || '',
+      transcriptionApiKey: process.env.NUXT_PUBLIC_TRANSCRIPTION_API_KEY || '',
+      // HF token for private spaces
+      hfToken: process.env.NUXT_PUBLIC_HF_TOKEN || '',
     },
   },
 
@@ -214,6 +219,19 @@ export default defineNuxtConfig({
 
   vite: {
     // Vite configuration for production
+
+    // Polyfill Buffer for @gradio/client (uses Node.js APIs)
+    define: {
+      'global': 'globalThis',
+    },
+    resolve: {
+      alias: {
+        buffer: 'buffer/',
+      },
+    },
+    optimizeDeps: {
+      include: ['buffer'],
+    },
 
     // Optimization for production
     build: {

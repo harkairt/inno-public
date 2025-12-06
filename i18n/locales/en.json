@@ -138,5 +138,13 @@
     "updateAvailable": "A new version is available",
     "updateDescription": "Refresh to use the latest features",
     "refresh": "Refresh now"
+  },
+  "voice": {
+    "notSupported": "Voice recording is not supported in this browser",
+    "permissionDenied": "Microphone access denied",
+    "noMicrophone": "No microphone found",
+    "recordingFailed": "Recording failed",
+    "transcriptionFailed": "Transcription failed",
+    "cancelled": "Recording cancelled"
   }
 }

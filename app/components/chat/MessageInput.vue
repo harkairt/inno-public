@@ -48,16 +48,37 @@
               autoresize
               size="lg"
               class="w-full"
+              :disabled="isTranscribing"
               data-testid="message-input"
               :ui="{ root: 'relative flex items-center' }"
               @keydown="handleKeyDown"
             />
           </div>
 
+          <!-- Voice Recording Button -->
+          <UButton
+            v-if="isTranscriptionEnabled"
+            :icon="voiceButtonIcon"
+            :color="isRecording ? 'error' : 'neutral'"
+            :variant="isRecording ? 'solid' : 'ghost'"
+            :class="[
+              'shrink-0 transition-all',
+              isRecording && 'animate-pulse'
+            ]"
+            :loading="isTranscribing"
+            :disabled="isTranscribing"
+            size="lg"
+            data-testid="voice-record-button"
+            @click="toggleRecording"
+            @pointerdown="onMicPointerDown"
+            @pointerup="onMicPointerUp"
+            @pointerleave="onMicPointerUp"
+          />
+
           <!-- Send Button -->
           <UButton
             type="submit"
-            :disabled="!canSend"
+            :disabled="!canSend || isRecording"
             icon="i-heroicons-paper-airplane-20-solid"
             size="lg"
             color="primary"
@@ -80,11 +101,14 @@ import { useSendMessage } from '@/app/composables/useChatMutations'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useSignalRChat } from '@/app/composables/useSignalRChat'
+import { useVoiceRecording } from '@/app/composables/useVoiceRecording'
+import { useTranscriptionService } from '@/lib/api/services/TranscriptionService'
 import type { AiQuestionRequestDTO, UserDTO } from '@/types/api/schemas'
 import { AIQuestionType } from '@/types/enums'
 import { watchDebounced } from '@vueuse/core'
 
 const { t } = useI18n()
+const toast = useToast()
 
 // Props
 interface Props {
@@ -147,6 +171,113 @@ let typingTimeoutId: ReturnType<typeof setTimeout> | null = null
 
 // Send message mutation
 const mutation = useSendMessage()
+
+// Voice recording setup
+const transcriptionService = useTranscriptionService()
+const isTranscriptionEnabled = computed(() => transcriptionService.isConfigured())
+
+const {
+  isRecording,
+  isTranscribing,
+  startRecording,
+  stopRecording,
+  cancelRecording,
+  setTranscribing,
+  error: voiceError,
+} = useVoiceRecording({
+  onError: (err) => {
+    console.error('Voice recording error:', err)
+  },
+})
+
+// Voice button icon based on state
+const voiceButtonIcon = computed(() => {
+  if (isTranscribing.value) return 'i-heroicons-arrow-path-20-solid'
+  if (isRecording.value) return 'i-heroicons-stop-20-solid'
+  return 'i-heroicons-microphone-20-solid'
+})
+
+// Long press detection for cancel (500ms)
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+const LONG_PRESS_DURATION = 500
+
+function onMicPointerDown() {
+  if (isRecording.value) {
+    // Start long-press timer for cancel
+    longPressTimer = setTimeout(() => {
+      cancelRecording()
+      toast.add({ title: t('voice.cancelled'), color: 'neutral' })
+    }, LONG_PRESS_DURATION)
+  }
+}
+
+function onMicPointerUp() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+// Toggle recording on click
+async function toggleRecording() {
+  if (isRecording.value) {
+    const blob = await stopRecording()
+    if (blob) {
+      await transcribeAudio(blob)
+    }
+  } else {
+    await startRecording()
+  }
+}
+
+// Transcribe audio and append to input
+async function transcribeAudio(blob: Blob) {
+  setTranscribing(true)
+
+  try {
+    const result = await transcriptionService.transcribe(blob)
+
+    if (result.isOk() && result.value.text.trim()) {
+      // Append to existing text with space
+      const transcribedText = result.value.text.trim()
+      const currentText = messageText.value.trim()
+      messageText.value = currentText
+        ? `${currentText} ${transcribedText}`
+        : transcribedText
+    } else if (result.isErr()) {
+      // Show toast error
+      toast.add({
+        title: t('voice.transcriptionFailed'),
+        description: result.error.message,
+        color: 'error',
+      })
+    }
+  } catch (error) {
+    console.error('Transcription error:', error)
+    toast.add({
+      title: t('voice.transcriptionFailed'),
+      color: 'error',
+    })
+  } finally {
+    setTranscribing(false)
+  }
+}
+
+// Watch for voice errors and show toast
+watch(voiceError, (errorMsg) => {
+  if (errorMsg) {
+    // Map error message to i18n key
+    let toastTitle = t('voice.recordingFailed')
+    if (errorMsg.includes('permission') || errorMsg.includes('NotAllowedError')) {
+      toastTitle = t('voice.permissionDenied')
+    } else if (errorMsg.includes('not found') || errorMsg.includes('No microphone')) {
+      toastTitle = t('voice.noMicrophone')
+    } else if (errorMsg.includes('not supported')) {
+      toastTitle = t('voice.notSupported')
+    }
+    toast.add({ title: toastTitle, color: 'error' })
+  }
+})
 
 // Responsive rows: 1 on mobile, 2 on desktop (lg breakpoint = 1024px)
 const { width } = useWindowSize()
