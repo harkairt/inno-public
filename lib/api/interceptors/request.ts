@@ -4,6 +4,7 @@
  */
 
 import type { InternalAxiosRequestConfig } from "axios";
+import { generateUUID } from "../../utils/uuid";
 
 /**
  * Request interceptor that adds headers and metadata to outgoing requests
@@ -19,7 +20,7 @@ export function requestInterceptor(
 
   // Add request ID for tracking and debugging
   config.headers = config.headers || {};
-  config.headers["X-Request-ID"] = crypto.randomUUID();
+  config.headers["X-Request-ID"] = generateUUID();
 
   // Add client timestamp
   config.headers["X-Client-Timestamp"] = new Date().toISOString();

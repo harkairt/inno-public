@@ -92,6 +92,7 @@ import { useWelcomeMessage, useChatSession } from '@/app/composables/useChatQuer
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
+import { generateUUID } from '@/lib/utils/uuid'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
@@ -103,7 +104,7 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 
 const userId = computed(() => route.params.userId as string)
-const sessionId = ref(crypto.randomUUID())
+const sessionId = ref(generateUUID())
 
 const { data: users, isLoading: isLoadingUsers } = useSelectableUsers()
 
