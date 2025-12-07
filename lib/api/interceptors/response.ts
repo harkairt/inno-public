@@ -221,7 +221,12 @@ async function handleTokenRefresh(
       authStoreInstance.clearAuth()
     }
 
-    console.error('Token refresh failed, user needs to re-authenticate')
+    console.error('Token refresh failed, redirecting to login')
+
+    // Immediate redirect to login
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login'
+    }
 
     return Promise.reject(normalizedRefreshError)
   } finally {
