@@ -428,8 +428,8 @@ export const InnoChatConfigSchema = z.object({
   baseUrl: z.string(),
   axiosTimeout: z.number(),
   publicMode: z.union([z.literal(0), z.literal(1)]),
-  publicLoginEmail: z.string(),
-  publicLoginPassword: z.string(),
+  publicLoginEmail: z.string().nullable(),
+  publicLoginPassword: z.string().nullable(),
   publicAgent: z.union([z.literal(-1), z.number()])
 })
 
