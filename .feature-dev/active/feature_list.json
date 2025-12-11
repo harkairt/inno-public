@@ -1,0 +1,147 @@
+{
+  "feature": "public-chat-mode",
+  "created": "2025-12-11",
+  "architecture": "Minimal Overlay - reuse 90% of existing chat components with public-specific layout, plugin, and route protection",
+  "items": [
+    {
+      "id": "001",
+      "description": "Add sessionStorage mode support to auth store (storageMode ref, setStorageMode action, update save/load/clear functions)",
+      "verification": "grep -q 'storageMode' app/stores/auth.ts && grep -q 'setStorageMode' app/stores/auth.ts && grep -q 'sessionStorage' app/stores/auth.ts",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "002",
+      "description": "Add publicAuthError state to config store (ref and setter action)",
+      "verification": "grep -q 'publicAuthError' app/stores/config.ts && grep -q 'setPublicAuthError' app/stores/config.ts",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "003",
+      "description": "Create usePublicMode composable with isPublicMode, publicAgentId, hasPublicAuthError computeds and helper functions",
+      "verification": "test -f app/composables/usePublicMode.ts && grep -q 'isPublicMode' app/composables/usePublicMode.ts && grep -q 'isValidPublicAgent' app/composables/usePublicMode.ts",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "004",
+      "description": "Create public.vue layout with loading spinner, error state, minimal full-height container, and Hungarian locale setting",
+      "verification": "test -f app/layouts/public.vue && grep -q 'configStore.isLoaded' app/layouts/public.vue && grep -q 'h-dvh' app/layouts/public.vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "005",
+      "description": "Create public-auth.client.ts plugin that auto-authenticates with config credentials in public mode",
+      "verification": "test -f app/plugins/public-auth.client.ts && grep -q 'dependsOn.*config-init' app/plugins/public-auth.client.ts && grep -q 'publicLoginEmail' app/plugins/public-auth.client.ts",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "006",
+      "description": "Modify auth.global.ts middleware to handle public mode routing (redirect non-public routes, block public routes in private mode, validate agentId)",
+      "verification": "grep -q 'publicMode' app/middleware/auth.global.ts && grep -q '/chats/public/' app/middleware/auth.global.ts && grep -q 'publicAgent' app/middleware/auth.global.ts",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "007",
+      "description": "Add disableSignalR prop to MessageInput.vue and guard all typing indicator logic with it",
+      "verification": "grep -q 'disableSignalR' app/components/chat/MessageInput.vue && grep -q 'props.disableSignalR' app/components/chat/MessageInput.vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "008",
+      "description": "Create /chats/public/new/[agentId].vue page with agent validation, session UUID generation, welcome message, and ChatMessages/MessageInput rendering",
+      "verification": "test -f app/pages/chats/public/new/[agentId].vue && grep -q 'generateUUID' app/pages/chats/public/new/[agentId].vue && grep -q 'ChatMessages' app/pages/chats/public/new/[agentId].vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "009",
+      "description": "Create /chats/public/[sessionId].vue page with session loading via useChatSession, messages display, and message input",
+      "verification": "test -f app/pages/chats/public/[sessionId].vue && grep -q 'useChatSession' app/pages/chats/public/[sessionId].vue && grep -q 'ChatMessages' app/pages/chats/public/[sessionId].vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "010",
+      "description": "Add navigation from new public chat to session page on first message sent (replace: true)",
+      "verification": "grep -q 'replace.*true' app/pages/chats/public/new/[agentId].vue && grep -q '/chats/public/' app/pages/chats/public/new/[agentId].vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "011",
+      "description": "Ensure send button is disabled while waiting for AI response (mutation.isPending check)",
+      "verification": "grep -q 'isPending\\|isLoading\\|mutation' app/pages/chats/public/new/[agentId].vue || grep -q 'canSend' app/pages/chats/public/new/[agentId].vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "012",
+      "description": "Hide voice recording button in public mode (either via prop or conditional in pages)",
+      "verification": "grep -q 'isTranscriptionEnabled.*false\\|:disable-voice\\|v-if.*!isPublicMode' app/pages/chats/public/new/[agentId].vue || grep -q 'disableVoice' app/components/chat/MessageInput.vue",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "013",
+      "description": "Test: Public mode auto-authentication works and stores token in sessionStorage",
+      "verification": "manual: Set publicMode=1 in config, load app, verify redirect to /chats/public/new/[agent] and check sessionStorage for auth token",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "014",
+      "description": "Test: Wrong agentId redirects to correct one from config",
+      "verification": "manual: Navigate to /chats/public/new/999, verify redirect to /chats/public/new/[config.publicAgent]",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "015",
+      "description": "Test: Private routes redirect to public chat in public mode",
+      "verification": "manual: With publicMode=1, navigate to /chats or /login, verify redirect to public chat entry",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "016",
+      "description": "Test: Public routes blocked in private mode (publicMode=0)",
+      "verification": "manual: With publicMode=0, navigate to /chats/public/new/1, verify redirect to /login",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "017",
+      "description": "Test: Full public chat flow - send message, navigate to session, continue conversation",
+      "verification": "manual: In public mode, type message, send, verify navigation to session page, send another message, verify it appears",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "018",
+      "description": "Test: Welcome message displays correctly in public chat",
+      "verification": "manual: Load public chat, verify welcome message from agent appears at top of chat",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "019",
+      "description": "Test: Session refresh creates fresh session (sessionStorage cleared)",
+      "verification": "manual: In public chat with messages, refresh page, verify redirect to /chats/public/new/[agent] with empty chat",
+      "status": "pending",
+      "session_completed": null
+    },
+    {
+      "id": "020",
+      "description": "Test: No sidebar, no AppBar, no typing indicators visible in public mode",
+      "verification": "manual: Load public chat, verify minimal UI - no sidebar toggle, no header bar, no typing dots when AI responds",
+      "status": "pending",
+      "session_completed": null
+    }
+  ]
+}

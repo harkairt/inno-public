@@ -37,6 +37,7 @@ export default withNuxt(
             'lib/api/interceptors/*.ts',
             'lib/api/services/*.ts',
             'lib/api/services/__tests__/*.ts',
+            'lib/config/*.ts',
             'lib/errors/*.ts',
             'lib/errors/__tests__/*.ts',
             'lib/signalr/*.ts',

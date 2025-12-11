@@ -28,9 +28,10 @@
           <div
             class="max-w-[85%] md:max-w-[75%] sm:max-w-[70%] px-4 py-3"
             :class="{
-              'bg-[oklch(88.07%_0.043_117.32)] text-black rounded-2xl rounded-br-md': isUserMessage(message),
-              'bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] rounded-2xl rounded-bl-md border border-[hsl(var(--border))]': !isUserMessage(message),
+              'rounded-br-md': isUserMessage(message),
+              'rounded-bl-md': !isUserMessage(message),
             }"
+            :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
           >
             <!-- Sender Name + Rating Controls -->
             <div class="flex items-start justify-between gap-2">
@@ -113,13 +114,38 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type CSSProperties } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 
 const { t, locale } = useI18n()
+
+// Config-driven message styles using CSS variables
+const ownMessageStyle = computed<CSSProperties>(() => ({
+  backgroundColor: 'var(--config-own-message-bg)',
+  fontSize: 'var(--config-own-message-font-size)',
+  fontStyle: 'var(--config-own-message-font-style)' as CSSProperties['fontStyle'],
+  fontWeight: 'var(--config-own-message-font-weight)' as CSSProperties['fontWeight'],
+  borderWidth: 'var(--config-message-border-width)',
+  borderColor: 'var(--config-message-border-color)',
+  borderStyle: 'var(--config-message-border-style)' as CSSProperties['borderStyle'],
+  borderRadius: 'var(--config-message-border-radius)',
+  color: 'black',
+}))
+
+const partnerMessageStyle = computed<CSSProperties>(() => ({
+  backgroundColor: 'var(--config-partner-message-bg)',
+  fontSize: 'var(--config-partner-message-font-size)',
+  fontStyle: 'var(--config-partner-message-font-style)' as CSSProperties['fontStyle'],
+  fontWeight: 'var(--config-partner-message-font-weight)' as CSSProperties['fontWeight'],
+  borderWidth: 'var(--config-message-border-width)',
+  borderColor: 'var(--config-message-border-color)',
+  borderStyle: 'var(--config-message-border-style)' as CSSProperties['borderStyle'],
+  borderRadius: 'var(--config-message-border-radius)',
+  color: 'hsl(var(--foreground))',
+}))
 
 enum MessageStatus {
   PENDING = 'PENDING',

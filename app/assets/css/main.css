@@ -33,6 +33,25 @@
    LIGHT MODE - Warm & Refined Palette
    ============================================ */
 :root {
+  /* Config-driven message styling (fallbacks match DEFAULT_CONFIG) */
+  --config-own-message-bg: rgba(189, 189, 189, 0.302);
+  --config-own-message-font-size: 14px;
+  --config-own-message-font-style: normal;
+  --config-own-message-font-weight: normal;
+
+  --config-partner-message-bg: rgba(0, 188, 212, 0.302);
+  --config-partner-message-font-size: 14px;
+  --config-partner-message-font-style: normal;
+  --config-partner-message-font-weight: normal;
+
+  --config-message-border-width: 0px;
+  --config-message-border-color: rgba(0, 0, 0, 0);
+  --config-message-border-style: solid;
+  --config-message-border-radius: 2px;
+
+  --config-main-color: #027be2;
+  --config-background-color: #ffffff;
+
   /* Force Nuxt UI primary to deep teal (#005f73) */
   --ui-primary: oklch(0.40 0.09 210);
 
