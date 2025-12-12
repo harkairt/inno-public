@@ -109,7 +109,9 @@ export default defineNuxtConfig({
     registerType: 'prompt',
 
     workbox: {
-      navigateFallback: undefined,
+      // Disable navigateFallback - let GitHub Pages 404.html handle SPA routing
+      // Using absolute '/index.html' breaks when app is hosted at a subdirectory (e.g., /vonno/)
+      navigateFallback: null,
       globPatterns: ['**/*.{js,css,html,png,svg,ico,txt}'],
       skipWaiting: true,
       clientsClaim: true,

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/vue-query'
 import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
-import { toValue, type MaybeRefOrGetter } from 'vue'
+import { toValue, watch, type MaybeRefOrGetter } from 'vue'
 import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
 
@@ -79,7 +79,7 @@ export function useChatSession(sessionId: string, options?: {
 }) {
   const authStore = useAuthStore()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: chatQueryKeys.session(sessionId),
     queryFn: async (): Promise<AISessionDTO> => {
       if (!authStore.user) {
@@ -116,6 +116,23 @@ export function useChatSession(sessionId: string, options?: {
       return failureCount < 2
     },
   })
+
+  // Debug: Log message timestamps and contents whenever they change
+  watch(
+    () => query.data.value?.messages,
+    (messages) => {
+      if (messages) {
+        console.log('[useChatSession] Messages changed:', messages.map(m => ({
+          messageID: m.messageID,
+          sendDate: m.sendDate,
+          messageText: m.messageText?.substring(0, 100) + (m.messageText && m.messageText.length > 100 ? '...' : ''),
+        })))
+      }
+    },
+    { deep: true }
+  )
+
+  return query
 }
 
 /**

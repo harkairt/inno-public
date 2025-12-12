@@ -146,5 +146,15 @@
     "recordingFailed": "Hangfelvétel sikertelen",
     "transcriptionFailed": "Átírás sikertelen",
     "cancelled": "Felvétel megszakítva"
+  },
+  "public": {
+    "authError": {
+      "title": "Valami hiba történt",
+      "description": "A chat szolgáltatás jelenleg nem elérhető. Kérjük, próbálja újra később."
+    },
+    "sessionError": {
+      "title": "Munkamenet nem található",
+      "description": "A keresett beszélgetés nem létezik vagy már lejárt."
+    }
   }
 }

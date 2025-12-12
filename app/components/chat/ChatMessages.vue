@@ -34,7 +34,7 @@
             :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
           >
             <!-- Sender Name + Rating Controls -->
-            <div class="flex items-start justify-between gap-2">
+            <div v-if="!props.hideSenderNames" class="flex items-start justify-between gap-2">
               <div
                 class="text-xs font-medium mb-1.5"
                 :class="{
@@ -102,14 +102,17 @@
       </div>
     </div>
 
-    <!-- Empty State (only show if no messages AND no welcome message) -->
-    <div v-if="!allMessages || allMessages.length === 0" class="text-center py-8">
-      <UEmpty
-        :title="t('chat.messages.noMessages')"
-        :description="t('chat.messages.emptyState')"
-        icon="i-heroicons-chat-bubble-left-right"
-      />
-    </div>
+    <!-- Empty State (only show default if no messages AND slot not provided) -->
+    <template v-if="!allMessages || allMessages.length === 0">
+      <slot v-if="$slots.empty" name="empty" />
+      <div v-else class="text-center py-8">
+        <UEmpty
+          :title="t('chat.messages.noMessages')"
+          :description="t('chat.messages.emptyState')"
+          icon="i-heroicons-chat-bubble-left-right"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -169,6 +172,7 @@ interface Props {
   agentId?: number
   agentName?: string
   welcomeMessageDate?: string
+  hideSenderNames?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -177,6 +181,7 @@ const props = withDefaults(defineProps<Props>(), {
   agentId: undefined,
   agentName: undefined,
   welcomeMessageDate: undefined,
+  hideSenderNames: false,
 })
 
 const authStore = useAuthStore()

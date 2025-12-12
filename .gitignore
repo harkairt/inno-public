@@ -6,8 +6,8 @@
 .cache
 dist
 
-# Netlify build output
-public
+# Netlify build output (only root-level, not pages/chats/public/)
+/public
 
 # Node dependencies
 node_modules

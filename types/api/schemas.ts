@@ -424,8 +424,6 @@ export const InnoChatConfigSchema = z.object({
   messageTextPartnerItalic: z.boolean(),
   messageTextPartnerBold: z.boolean(),
   messageTextPartnerSize: z.number(),
-  backendUrl: z.string(),
-  baseUrl: z.string(),
   axiosTimeout: z.number(),
   publicMode: z.union([z.literal(0), z.literal(1)]),
   publicLoginEmail: z.string().nullable(),

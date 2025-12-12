@@ -1,0 +1,157 @@
+<template>
+  <div class="flex flex-col h-full min-h-0 overflow-hidden">
+    <!-- Chat Content Area -->
+    <div ref="messagesContainer" class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col">
+      <div class="flex-1" />
+      <ChatMessages
+        :messages="messages"
+        :welcome-message="trimmedWelcomeMessage"
+        :welcome-message-date="chatStartTime"
+        :agent-id="agentId"
+        :agent-name="agentName"
+        :hide-sender-names="true"
+      >
+        <template #empty />
+      </ChatMessages>
+    </div>
+
+    <!-- Typing Indicator -->
+    <TypingIndicator :typing-users="typingUsers" />
+
+    <!-- Message Input -->
+    <MessageInput
+      :session-id="sessionId"
+      :draft-key="`public-${agentId}`"
+      :agent-id="agentId"
+      :selected-agent-id="agentId"
+      :members="members"
+      :disable-signal-r="true"
+      :disable-voice="true"
+      :disabled="!canSend"
+      @message-sent="handleMessageSent"
+      @scroll-to-bottom="scrollToBottom"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useWelcomeMessage, useChatSession } from '@/app/composables/useChatQueries'
+import { useSendMessage } from '@/app/composables/useChatMutations'
+import { useAuthStore } from '@/app/stores/auth'
+import { useChatStore } from '@/app/stores/chat'
+import { usePublicMode } from '@/app/composables/usePublicMode'
+import { usePublicChatAgent } from '@/app/composables/usePublicChatAgent'
+import { generateUUID } from '@/lib/utils/uuid'
+import MessageInput from '@/app/components/chat/MessageInput.vue'
+import ChatMessages from '@/app/components/chat/ChatMessages.vue'
+import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+
+const route = useRoute()
+const authStore = useAuthStore()
+const chatStore = useChatStore()
+const { publicAgentId, isValidPublicAgent, getPublicChatUrl } = usePublicMode()
+
+// Extract agent ID from route
+const routeAgentId = computed(() => Number(route.params.agentId))
+
+// Validate agent ID - redirect if invalid
+watchEffect(() => {
+  if (!isValidPublicAgent(routeAgentId.value)) {
+    const correctUrl = getPublicChatUrl()
+    if (correctUrl) {
+      navigateTo(correctUrl, { replace: true })
+    }
+  }
+})
+
+// Use the configured agent ID
+const agentId = computed(() => publicAgentId.value ?? routeAgentId.value)
+
+// Generate a fresh session ID for each new chat
+const sessionId = ref(generateUUID())
+
+// Capture chat start time for welcome message ordering (must be before any user messages)
+const chatStartTime = new Date().toISOString()
+
+// Fetch agent info using startPublicChat endpoint
+const { data: publicChatData } = usePublicChatAgent(agentId, {
+  enabled: computed(() => !!agentId.value && authStore.isAuthenticated)
+})
+
+// Get agent name from public chat data
+const agentName = computed(() => publicChatData.value?.agent?.name)
+
+// Fetch welcome message for the agent
+const { data: welcomeMsg } = useWelcomeMessage(agentId, {
+  enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
+  sessionId: ''
+})
+
+// Trim quotes from welcome message
+const trimmedWelcomeMessage = computed(() => {
+  if (!welcomeMsg.value?.message) return undefined
+  let msg = welcomeMsg.value.message
+  if (msg.startsWith('"') && msg.endsWith('"')) {
+    msg = msg.slice(1, -1)
+  }
+  return msg
+})
+
+// Members for this session (user email + agent email from startPublicChat)
+const members = computed(() => {
+  if (!authStore.user?.email) return []
+  const agentEmail = publicChatData.value?.agent?.email
+  if (!agentEmail) return [authStore.user.email]
+  return [authStore.user.email, agentEmail]
+})
+
+// Get messages from cache (mutation adds optimistic messages here)
+// Session doesn't exist on server until first message is sent, so disable the query
+const { data: sessionData } = useChatSession(sessionId.value, {
+  enabled: false
+})
+
+const messages = computed(() => {
+  const queryMessages = sessionData.value?.messages || []
+  const failedMessages = chatStore.getFailedMessages(sessionId.value)
+  return [...queryMessages, ...failedMessages]
+})
+
+// Send mutation for disabling button while pending
+const mutation = useSendMessage()
+
+// Disable send button while waiting for AI response
+const canSend = computed(() => !mutation.isPending.value)
+
+// Typing indicator users
+const typingUsers = computed(() => chatStore.getTypingUsers(sessionId.value))
+
+// Messages container ref for scrolling
+const messagesContainer = ref<HTMLElement | null>(null)
+
+function scrollToBottom() {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
+}
+
+// Handle message sent - navigate to session page with replace
+function handleMessageSent() {
+  // Clear draft before navigation
+  chatStore.clearDraft(`public-${agentId.value}`)
+  // Navigate to session page, replacing the current history entry
+  navigateTo(`/chats/public/${sessionId.value}`, { replace: true })
+}
+
+// Page meta
+definePageMeta({
+  layout: 'public',
+  key: route => route.fullPath,
+})
+
+useSeoMeta({
+  title: 'Chat',
+})
+</script>

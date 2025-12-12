@@ -14,6 +14,7 @@ export const useConfigStore = defineStore('config', () => {
   const config = ref<InnoChatConfig>({ ...DEFAULT_CONFIG })
   const isLoaded = ref(false)
   const loadError = ref<Error | null>(null)
+  const publicAuthError = ref(false)
 
   // Computed - typed accessors for common values
   const mainColor = computed(() => config.value.mainColor)
@@ -71,11 +72,16 @@ export const useConfigStore = defineStore('config', () => {
     config.value = { ...config.value, ...newConfig }
   }
 
+  function setPublicAuthError(value: boolean): void {
+    publicAuthError.value = value
+  }
+
   return {
     // State
     config,
     isLoaded,
     loadError,
+    publicAuthError,
 
     // Computed
     mainColor,
@@ -88,5 +94,6 @@ export const useConfigStore = defineStore('config', () => {
     // Actions
     loadConfig,
     setConfig,
+    setPublicAuthError,
   }
 })

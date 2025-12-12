@@ -14,8 +14,40 @@ import { useSignalR } from '@/app/composables/useSignalR'
 const AUTH_STORAGE_KEY = "innochat-auth";
 const REMEMBERED_EMAIL_KEY = "innochat-remembered-email";
 
+// Storage mode: 'localStorage' for normal mode, 'sessionStorage' for public mode
+type StorageMode = 'localStorage' | 'sessionStorage';
+let storageMode: StorageMode = 'localStorage';
+
+function getStorage(): Storage {
+  if (typeof window === 'undefined') {
+    // SSR fallback - return a no-op storage
+    return {
+      length: 0,
+      clear: () => {},
+      getItem: () => null,
+      key: () => null,
+      removeItem: () => {},
+      setItem: () => {},
+    };
+  }
+  return storageMode === 'sessionStorage' ? sessionStorage : localStorage;
+}
+
+export function setStorageMode(mode: StorageMode): void {
+  // If switching modes, clear the old storage first
+  if (storageMode !== mode) {
+    clearAuthStateFromStorage();
+  }
+  storageMode = mode;
+}
+
+export function getStorageMode(): StorageMode {
+  return storageMode;
+}
+
 // Remember Me helpers - stores only email (not sensitive data)
 // SSR-safe: check for window/localStorage availability
+// Note: Remember Me always uses localStorage (not affected by storage mode)
 export function saveRememberedEmail(email: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
@@ -40,10 +72,10 @@ function saveAuthStateToStorage(user: UserDTO | null, accessToken: string | null
         refreshToken,
         timestamp: new Date().toISOString()
       };
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
+      getStorage().setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       resolve();
     } catch (error) {
-      console.warn("Failed to save auth state to localStorage:", error);
+      console.warn(`Failed to save auth state to ${storageMode}:`, error);
       reject(error);
     }
   });
@@ -51,7 +83,7 @@ function saveAuthStateToStorage(user: UserDTO | null, accessToken: string | null
 
 function loadAuthStateFromStorage(): { user: UserDTO | null; accessToken: string | null; refreshToken: string | null } {
   try {
-    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    const stored = getStorage().getItem(AUTH_STORAGE_KEY);
     if (!stored) return { user: null, accessToken: null, refreshToken: null };
 
     const authData = JSON.parse(stored);
@@ -61,16 +93,16 @@ function loadAuthStateFromStorage(): { user: UserDTO | null; accessToken: string
       refreshToken: authData.refreshToken || null
     };
   } catch (error) {
-    console.warn("Failed to load auth state from localStorage:", error);
+    console.warn(`Failed to load auth state from ${storageMode}:`, error);
     return { user: null, accessToken: null, refreshToken: null };
   }
 }
 
 function clearAuthStateFromStorage() {
   try {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+    getStorage().removeItem(AUTH_STORAGE_KEY);
   } catch (error) {
-    console.warn("Failed to clear auth state from localStorage:", error);
+    console.warn(`Failed to clear auth state from ${storageMode}:`, error);
   }
 }
 

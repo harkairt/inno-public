@@ -5,6 +5,7 @@ import { useAuthStore } from "@/app/stores/auth";
 import { useSignalR } from "@/app/composables/useSignalR";
 import { chatQueryKeys } from "./useChatQueries";
 import { userQueryKeys } from "./useUsers";
+import { publicChatAgentQueryKeys } from "./usePublicChatAgent";
 import type {
   AISessionMessageDTO,
   AiQuestionRequestDTO,
@@ -37,13 +38,21 @@ function isEmptyResponse(message: AISessionMessageDTO): boolean {
   );
 }
 
-// Look up agent from cached selectable users
+// Look up agent from cached selectable users or public chat agent
 function getAgentFromCache(
   queryClient: ReturnType<typeof useQueryClient>,
   agentId: number
 ): UserDTO | undefined {
+  // First check selectable users (regular chat)
   const selectableUsers = queryClient.getQueryData<UserDTO[]>(userQueryKeys.selectable());
-  return selectableUsers?.find((user) => user.id === agentId);
+  const fromSelectable = selectableUsers?.find((user) => user.id === agentId);
+  if (fromSelectable) return fromSelectable;
+
+  // Fallback: check public chat agent cache
+  const publicChatData = queryClient.getQueryData<AIPublicChatStartDTO>(
+    publicChatAgentQueryKeys.agent(agentId)
+  );
+  return publicChatData?.agent ?? undefined;
 }
 
 /**

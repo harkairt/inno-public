@@ -57,7 +57,7 @@
 
           <!-- Voice Recording Button -->
           <UButton
-            v-if="isTranscriptionEnabled"
+            v-if="isTranscriptionEnabled && !props.disableVoice"
             :icon="voiceButtonIcon"
             :color="isRecording ? 'error' : 'neutral'"
             :variant="isRecording ? 'solid' : 'ghost'"
@@ -119,6 +119,8 @@ interface Props {
   selectableAgents?: UserDTO[]
   selectedAgentId?: number | undefined // undefined = no selection
   selectedAgentName?: string           // Name of selected agent for placeholder
+  disableSignalR?: boolean             // Disable SignalR typing indicators (for public mode)
+  disableVoice?: boolean               // Disable voice recording button (for public mode)
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -126,7 +128,9 @@ const props = withDefaults(defineProps<Props>(), {
   members: () => [],
   selectableAgents: () => [],
   selectedAgentId: undefined,
-  selectedAgentName: undefined
+  selectedAgentName: undefined,
+  disableSignalR: false,
+  disableVoice: false,
 })
 
 // Filter to only virtual agents
@@ -318,11 +322,13 @@ const errorMessage = computed(() => {
 async function handleSubmit() {
   if (!canSend.value) return
 
-  // Clear typing indicator immediately on send
-  if (typingTimeoutId) clearTimeout(typingTimeoutId)
-  if (isTypingActive.value) {
-    isTypingActive.value = false
-    sendStoppedTypingIndicator(props.sessionId, props.members)
+  // Clear typing indicator immediately on send (only if SignalR enabled)
+  if (!props.disableSignalR) {
+    if (typingTimeoutId) clearTimeout(typingTimeoutId)
+    if (isTypingActive.value) {
+      isTypingActive.value = false
+      sendStoppedTypingIndicator(props.sessionId, props.members)
+    }
   }
 
   // Trim and store message, clear input immediately
@@ -386,8 +392,11 @@ function handleKeyDown(event: KeyboardEvent) {
   }
 }
 
-// Watch messageText for changes - typing indicator
+// Watch messageText for changes - typing indicator (only if SignalR enabled)
 watch(messageText, (newValue) => {
+  // Skip typing indicator logic if SignalR is disabled
+  if (props.disableSignalR) return
+
   if (newValue.trim()) {
     // User is typing
     if (!isTypingActive.value) {
@@ -420,10 +429,10 @@ watchDebounced(
   { debounce: 500 }
 )
 
-// Cleanup on unmount
+// Cleanup on unmount (only if SignalR enabled)
 onUnmounted(() => {
   if (typingTimeoutId) clearTimeout(typingTimeoutId)
-  if (isTypingActive.value) {
+  if (!props.disableSignalR && isTypingActive.value) {
     sendStoppedTypingIndicator(props.sessionId, props.members)
   }
 })
