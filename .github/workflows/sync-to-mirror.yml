@@ -1,0 +1,22 @@
+name: Sync to innochat_public
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.MIRROR_PAT }}
+
+      - name: Push to mirror
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/".insteadOf "https://github.com/"
+          git remote add mirror https://github.com/harkairt/inno-public.git
+          git push mirror develop --force
