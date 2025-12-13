@@ -2,7 +2,7 @@ import type { Result } from 'neverthrow'
 import { err, ok } from 'neverthrow'
 import { apiClient } from '../client'
 import { normalizeApiError } from '@/lib/errors/normalize'
-import { AppError } from '@/lib/errors/types'
+import { AppError, AuthenticationError, InvalidCredentialsError } from '@/lib/errors/types'
 import type {
   LoginRequestDTO,
   LoginResponseDTO,
@@ -13,6 +13,37 @@ import { LoginResponseDTOSchema, UserDTOSchema } from '@/types/api/schemas'
 import type { ApiResponse } from '@/types/api/base'
 import { ErrorCode } from '@/types/enums'
 
+/**
+ * Known server warning messages and their error mappings
+ */
+const LOGIN_WARNING_ERRORS: Record<string, () => AppError> = {
+  'Hibás felhasználónév / jelszó': () => new InvalidCredentialsError(),
+}
+
+/**
+ * Parse login API response and return appropriate error or success
+ */
+function parseLoginResponse(
+  response: ApiResponse<LoginResponseDTO['data']>,
+): Result<NonNullable<LoginResponseDTO['data']>, AppError> {
+  // Check for warning field - server uses this for auth failures
+  if (response.warning) {
+    const errorFactory = LOGIN_WARNING_ERRORS[response.warning]
+    if (errorFactory) {
+      return err(errorFactory())
+    }
+    // Unknown warning - return as generic auth error with message
+    return err(new AuthenticationError(response.warning))
+  }
+
+  // Check for missing data
+  if (!response.data) {
+    return err(new AppError(ErrorCode.UNAUTHORIZED, 'Invalid login response'))
+  }
+
+  return ok(response.data)
+}
+
 export class AuthService {
   /**
    * Login with email and password
@@ -22,28 +53,34 @@ export class AuthService {
     credentials: LoginRequestDTO,
   ): Promise<Result<LoginResponseDTO, AppError>> {
     try {
-      const response = await apiClient.post<ApiResponse<LoginResponseDTO>>(
+      const response = await apiClient.post<ApiResponse<LoginResponseDTO['data']>>(
         '/api/authentication/login',
         credentials,
       )
 
-      if (!response.data.data) {
-        return err(new AppError(ErrorCode.UNAUTHORIZED, 'Invalid login response'))
+      // Parse response and map warnings to errors
+      const parsedResponse = parseLoginResponse(response.data)
+      if (parsedResponse.isErr()) {
+        return err(parsedResponse.error)
       }
 
       // Validate response with Zod
-      const parseResult = LoginResponseDTOSchema.safeParse(response.data)
+      const validationResult = LoginResponseDTOSchema.safeParse({
+        data: parsedResponse.value,
+        warning: response.data.warning,
+        success: response.data.success,
+      })
 
-      if (!parseResult.success) {
+      if (!validationResult.success) {
         return err(new AppError(
           ErrorCode.VALIDATION_ERROR,
           'Invalid response from server',
           undefined,
-          parseResult.error,
+          validationResult.error,
         ))
       }
 
-      return ok(parseResult.data)
+      return ok(validationResult.data)
     } catch (error) {
       return err(normalizeApiError(error))
     }

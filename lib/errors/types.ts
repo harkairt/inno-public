@@ -155,6 +155,13 @@ export class InvalidTokenError extends AuthenticationError {
   }
 }
 
+export class InvalidCredentialsError extends AuthenticationError {
+  constructor(message = 'Invalid username or password') {
+    super(message)
+    this.name = 'InvalidCredentialsError'
+  }
+}
+
 export class ConnectionError extends NetworkError {
   constructor(message = 'Connection failed') {
     super(message)
@@ -255,6 +262,10 @@ export function isNetworkError(error: unknown): error is NetworkError {
 
 export function isServerError(error: unknown): error is ServerError {
   return error instanceof ServerError
+}
+
+export function isInvalidCredentialsError(error: unknown): error is InvalidCredentialsError {
+  return error instanceof InvalidCredentialsError
 }
 
 // ============================================================================

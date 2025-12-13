@@ -9,6 +9,7 @@ import type { ErrorCode } from '../enums'
 export interface ApiResponse<T> {
   data: T | null
   success?: string | null
+  info?: string | null
   warning?: string | null
   error?: ApiError | null
 }
