@@ -11,6 +11,7 @@ vi.mock('@/app/stores/auth', () => ({
 const mockNavigateTo = vi.fn()
 vi.mock('#app', () => ({
   navigateTo: mockNavigateTo,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- Mock matches Nuxt's defineNuxtRouteMiddleware signature
   defineNuxtRouteMiddleware: (fn: Function) => fn
 }))
 

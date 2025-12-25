@@ -3,9 +3,9 @@
  * Provides utilities for mocking API responses with Playwright route interception
  */
 
-import type { Page, Route } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { mockUsers, mockAllUsers } from '../mocks/data/users'
-import { mockSessions, mockSessionHeaders, mockUnreadCounts } from '../mocks/data/sessions'
+import { mockSessionHeaders, mockUnreadCounts } from '../mocks/data/sessions'
 import { mockConversation } from '../mocks/data/messages'
 
 // ============================================================================

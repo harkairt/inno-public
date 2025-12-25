@@ -12,13 +12,13 @@ export enum MessageType {
 }
 
 export const MessageSchema = z.object({
-  messageId: z.string().uuid(),
-  sessionId: z.string().uuid(),
-  userId: z.string().uuid(),
+  messageId: z.uuid(),
+  sessionId: z.uuid(),
+  userId: z.uuid(),
   content: z.string().min(1).max(10000).trim(),
   timestamp: z.coerce.date(),
-  status: z.nativeEnum(MessageStatus),
-  messageType: z.nativeEnum(MessageType),
+  status: z.enum(MessageStatus),
+  messageType: z.enum(MessageType),
 })
 
 export type Message = z.infer<typeof MessageSchema>

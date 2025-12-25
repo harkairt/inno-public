@@ -1,8 +1,7 @@
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
-  const configStore = useConfigStore()
   // Handle publicMode routing and publicAgent validation
-  const { isPublicMode, isValidPublicAgent, getPublicChatUrl, publicAgentId } = usePublicMode()
+  const { isPublicMode, isValidPublicAgent, getPublicChatUrl } = usePublicMode()
 
   // List of public routes that don't require authentication
   const publicRoutes = ['/login']
@@ -31,7 +30,7 @@ export default defineNuxtRouteMiddleware((to) => {
     if (isPublicChatRoute) {
       // Extract agentId from /chats/public/new/[agentId] pattern
       const match = normalizedPath.match(/^\/chats\/public\/new\/(\d+)$/)
-      if (match && match[1]) {
+      if (match?.[1]) {
         const agentIdFromRoute = match[1]
         // If agent ID doesn't match config, redirect to correct one
         if (!isValidPublicAgent(agentIdFromRoute)) {

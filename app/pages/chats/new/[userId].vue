@@ -199,12 +199,12 @@ function handleMessageSent() {
   navigateTo(`/chats/${sessionId.value}`, { replace: true })
 }
 
-function handleError(error: any) {
+function handleError(error: unknown) {
   console.error('New chat error:', error)
 }
 
-function getUserFriendlyMessage(error: any): string {
-  if (error?.message) {
+function getUserFriendlyMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
     return error.message
   }
   return t('errors.unexpectedCreateError')

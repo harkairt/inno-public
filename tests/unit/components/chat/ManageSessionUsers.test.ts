@@ -32,9 +32,11 @@ vi.mock('@/app/stores/auth', () => ({
 vi.stubGlobal('useI18n', () => ({ t: (key: string) => key }))
 vi.stubGlobal('useToast', () => ({ add: vi.fn() }))
 vi.stubGlobal('ref', ref)
-vi.stubGlobal('computed', (fn: () => any) => ({ value: fn() }))
+vi.stubGlobal('computed', (fn: () => unknown) => ({ value: fn() }))
 
+// eslint-disable-next-line import/first -- Must come after vi.stubGlobal for mocks to work
 import { useSelectableUsers } from '@/app/composables/useUsers'
+// eslint-disable-next-line import/first
 import { useMutuallyVisibleUsers } from '@/app/composables/useMutuallyVisibleUsers'
 
 describe('ManageSessionUsers', () => {
@@ -81,7 +83,7 @@ describe('ManageSessionUsers', () => {
     const { default: ManageSessionUsers } = await import('@/app/components/chat/ManageSessionUsers.vue')
     const { mount } = await import('@vue/test-utils')
 
-    const wrapper = mount(ManageSessionUsers, {
+    const _wrapper = mount(ManageSessionUsers, {
       props: {
         sessionId: 'test-session',
         agentId: 1,

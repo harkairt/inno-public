@@ -1,4 +1,4 @@
-import { MessageType, MessageStatus } from '@/lib/types/chat'
+import type { MessageType, MessageStatus } from '@/lib/types/chat'
 
 // Interface matching API contracts
 export interface ChatMessage {

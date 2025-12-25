@@ -22,7 +22,7 @@ export class LogService {
   /**
    * Log debug message
    */
-  async debug(message: string, data?: string, context?: Record<string, unknown>): Promise<void> {
+  async debug(message: string, data?: string): Promise<void> {
     await this.log({
       loglevel: LogLevel.Debug,
       title: message,

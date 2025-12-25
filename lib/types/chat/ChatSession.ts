@@ -1,8 +1,8 @@
 import { z } from 'zod'
 
 export const ChatSessionSchema = z.object({
-  sessionId: z.string().uuid(),
-  userId: z.string().uuid(),
+  sessionId: z.uuid(),
+  userId: z.uuid(),
   sessionName: z.string().min(1).max(255).trim(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

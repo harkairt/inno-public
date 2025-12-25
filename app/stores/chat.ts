@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
-import { AIAnswerType, MessageStatus } from '@/types/enums'
+import type { MessageStatus } from '@/types/enums'
 
 // Extended message type for failed messages (DTO format with status)
 type FailedMessage = AISessionMessageDTO & { status: MessageStatus }

@@ -5,7 +5,6 @@
 
 import { test, expect } from '../fixtures'
 import { selectors } from '../selectors'
-import { searchUsers, clearUserSearch } from '../actions/user.actions'
 import { navigateToChats } from '../actions/navigation.actions'
 
 test.describe('User Search', () => {
@@ -188,7 +187,7 @@ test.describe('User Search', () => {
       const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
 
       // Type rapidly
-      await searchInput.type('testuser', { delay: 50 })
+      await searchInput.pressSequentially('testuser', { delay: 50 })
 
       // Should handle without errors
       await authenticatedPage.waitForTimeout(1000)

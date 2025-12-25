@@ -471,13 +471,13 @@ export const MutationSuccessResponseSchema = z.string().transform((val, ctx) => 
       return true as const
     }
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Expected success message "kész."',
     })
     return z.NEVER
   } catch {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: 'custom',
       message: 'Invalid JSON in mutation response',
     })
     return z.NEVER

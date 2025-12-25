@@ -5,7 +5,6 @@ import type { ConnectionState, SignalRConnectionInfo } from '@/lib/signalr/types
 import { useAuthStore } from '@/app/stores/auth'
 
 export function useSignalR() {
-  const _client = useNuxtApp().$client
   const config = useRuntimeConfig()
 
   // Get SignalR hub URL - use relative path in dev, full URL in production
@@ -135,8 +134,8 @@ export function useSignalR() {
     eventName: string,
     handler: (...args: T) => void
   ): () => void {
-    // TODO: Improve type safety for event handler registration
-    return service.on(eventName, handler as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SignalR handler requires flexible typing
+    return service.on(eventName, handler as (...args: any[]) => void)
   }
 
   /**

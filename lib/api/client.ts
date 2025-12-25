@@ -18,8 +18,9 @@ function getApiBaseUrl(): string {
   }
 
   // In browser context, check if window.__NUXT__ has runtime config
-  if (typeof window !== 'undefined' && (window as any).__NUXT__?.config?.public?.apiBaseUrl) {
-    return (window as any).__NUXT__.config.public.apiBaseUrl
+  type NuxtWindow = Window & { __NUXT__?: { config?: { public?: { apiBaseUrl?: string } } } }
+  if (typeof window !== 'undefined' && (window as NuxtWindow).__NUXT__?.config?.public?.apiBaseUrl) {
+    return (window as NuxtWindow).__NUXT__!.config!.public!.apiBaseUrl!
   }
 
   // Fallback to environment variable or empty string (use relative URLs for proxy)

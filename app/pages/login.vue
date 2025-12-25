@@ -131,8 +131,8 @@ const handleLogin = async () => {
         const redirect = (route.query.redirect as string) || '/'
         await router.push(redirect)
       },
-      onError: (error: any) => {
-        loginError.value = error?.message || t('login.invalidCredentials')
+      onError: (error: unknown) => {
+        loginError.value = error instanceof Error ? error.message : t('login.invalidCredentials')
       },
     }
   )

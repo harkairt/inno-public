@@ -5,7 +5,7 @@
 
 import { test, expect } from '../fixtures'
 import { selectors } from '../selectors'
-import { editSessionTitle, getSessionTitle } from '../actions/chat.actions'
+import { getSessionTitle } from '../actions/chat.actions'
 
 test.describe('Session Management', () => {
   test.describe('Session Title', () => {
@@ -54,8 +54,8 @@ test.describe('Session Management', () => {
         await sessionLinks.first().click()
         await authenticatedPage.waitForURL(/\/chats\//)
 
-        // Get original title
-        const originalTitle = await getSessionTitle(authenticatedPage)
+        // Get original title (for future assertions)
+        await getSessionTitle(authenticatedPage)
 
         // Click edit button
         const titleArea = authenticatedPage.locator(selectors.chat.sessionTitle).locator('..')
@@ -102,8 +102,8 @@ test.describe('Session Management', () => {
         await sessionLinks.first().click()
         await authenticatedPage.waitForURL(/\/chats\//)
 
-        // Get original title
-        const originalTitle = await getSessionTitle(authenticatedPage)
+        // Get original title (for future assertions)
+        await getSessionTitle(authenticatedPage)
 
         // Start editing
         const titleArea = authenticatedPage.locator(selectors.chat.sessionTitle).locator('..')

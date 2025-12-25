@@ -5,8 +5,6 @@
 
 import { test, expect } from '../fixtures'
 import { selectors } from '../selectors'
-import { sendMessage, getMessageCount, scrollToBottom } from '../actions/chat.actions'
-import { navigateToChatSession } from '../actions/navigation.actions'
 
 test.describe('Chat Messaging', () => {
   // Note: These tests require an existing chat session
@@ -151,7 +149,7 @@ test.describe('Chat Messaging', () => {
 
         // Press Shift+Enter to add newline
         await messageInput.press('Shift+Enter')
-        await messageInput.type('Line 2')
+        await messageInput.pressSequentially('Line 2')
 
         // Value should contain newline
         const value = await messageInput.inputValue()

@@ -146,10 +146,6 @@ export const useAuthStore = defineStore(
     );
     const getAccessToken = computed(() => accessToken.value);
 
-    // Expose direct access properties for response interceptor compatibility
-    const _accessToken = computed(() => accessToken.value);
-    const _refreshToken = computed(() => refreshToken.value);
-
     // Actions
     async function login(
       credentials: LoginRequestDTO

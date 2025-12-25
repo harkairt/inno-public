@@ -5,7 +5,6 @@
 
 import { test, expect } from '../fixtures'
 import { selectors } from '../selectors'
-import { toggleSidebar, isSidebarCollapsed, isSidebarVisible } from '../actions/navigation.actions'
 
 test.describe('Chat Navigation', () => {
   test.describe('Sidebar', () => {

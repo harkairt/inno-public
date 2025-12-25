@@ -219,25 +219,6 @@ export function transformRequestInterceptor(
   return config;
 }
 
-/**
- * Helper function to transform camelCase to snake_case
- */
-function transformToSnakeCase(obj: unknown): unknown {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj !== "object") return obj;
-  if (obj instanceof Date) return obj;
-  if (Array.isArray(obj)) return obj.map(transformToSnakeCase);
-
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = key.replace(
-      /[A-Z]/g,
-      (letter) => `_${letter.toLowerCase()}`
-    );
-    result[snakeKey] = transformToSnakeCase(value);
-  }
-  return result;
-}
 
 /**
  * Request interceptor for debugging

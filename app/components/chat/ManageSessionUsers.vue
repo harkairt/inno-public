@@ -184,11 +184,11 @@ const handleUserToggle = async (user: UserDTO, isCurrentlyChecked: boolean) => {
     }
     // On success: TanStack Query auto-invalidates the session query
     // UI updates automatically when the session refetches
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Show error toast notification
     toast.add({
       title: t('common.error'),
-      description: error.message || t('errors.failedToUpdate'),
+      description: error instanceof Error ? error.message : t('errors.failedToUpdate'),
       color: 'error',
     })
   } finally {

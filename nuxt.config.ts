@@ -89,7 +89,12 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: true
+    typeCheck: true,
+    tsConfig: {
+      compilerOptions: {
+        strictNullChecks: true
+      }
+    }
   },
 
   runtimeConfig: {

@@ -14,9 +14,10 @@ export interface TokenPair {
  * @param data - Response data object containing token fields (camelCase)
  * @returns TokenPair object with token values
  */
-export function extractTokensFromResponse(data: any): TokenPair {
-  const accessToken = data?.accessToken ?? null
-  const refreshToken = data?.refreshToken ?? null
+export function extractTokensFromResponse(data: unknown): TokenPair {
+  const tokenData = data as { accessToken?: string; refreshToken?: string } | null | undefined
+  const accessToken = tokenData?.accessToken ?? null
+  const refreshToken = tokenData?.refreshToken ?? null
 
   // Validate tokens are not empty strings
   const validatedAccessToken = accessToken && accessToken.trim() !== '' ? accessToken : null

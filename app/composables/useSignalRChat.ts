@@ -2,15 +2,6 @@ import { onMounted, onUnmounted, computed, watch } from 'vue'
 import { useSignalR } from './useSignalR'
 import { useChatStore } from '@/app/stores/chat'
 import { useAuthStore } from '@/app/stores/auth'
-import { useQueryClient } from '@tanstack/vue-query'
-import { chatQueryKeys } from './useChatQueries'
-
-// SignalR event types for chat
-interface _ChatSignalREvents {
-  ReceiveMessage: [sessionId: string, agentId: number]
-  SendStartTypingInfo: [name: string, email: string, sessionId: string]
-  SendStopTypingInfo: [name: string, email: string, sessionId: string]
-}
 
 /**
  * SignalR chat integration composable
@@ -23,7 +14,6 @@ export function useSignalRChat(options?: {
   const signalr = useSignalR()
   const chatStore = useChatStore()
   const authStore = useAuthStore()
-  const queryClient = useQueryClient()
 
   // Store unsubscribe functions for cleanup
   const unsubscribers: Array<() => void> = []

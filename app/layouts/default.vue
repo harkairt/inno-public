@@ -317,7 +317,7 @@ const filteredSessions = computed(() => {
 
   // Filter by search query (includes session name, agent ID, and member emails)
   const query = sessionSearchQuery.value.toLowerCase()
-  let filtered = query
+  const filtered = query
     ? sessions.value.filter(session =>
         session.sessionName.toLowerCase().includes(query) ||
         session.agentId.toString().includes(query) ||
@@ -384,7 +384,7 @@ const getDisplayName = (session: { sessionId: string; sessionName: string; membe
   if (!sessions.value || !users.value) {
     return session.sessionName
   }
-  return getSessionDisplayName(session as any, currentUserEmail.value, sessions.value, users.value)
+  return getSessionDisplayName(session as Parameters<typeof getSessionDisplayName>[0], currentUserEmail.value, sessions.value, users.value)
 }
 
 // Helper: Check if session is primary (for hiding delete option)
@@ -392,7 +392,7 @@ const isPrimarySessionCheck = (session: { sessionId: string; members: string[]; 
   if (!sessions.value || !users.value || !currentUserEmail.value) {
     return false
   }
-  return checkIsPrimarySession(session as any, sessions.value, users.value, currentUserEmail.value)
+  return checkIsPrimarySession(session as Parameters<typeof checkIsPrimarySession>[0], sessions.value, users.value, currentUserEmail.value)
 }
 
 // Handle user click - navigate to primary session if exists, otherwise to new chat

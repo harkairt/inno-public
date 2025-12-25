@@ -19,6 +19,7 @@ const mockLocalStorage = (() => {
       store[key] = value
     }),
     removeItem: vi.fn((key: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- localStorage mock requires dynamic property deletion
       delete store[key]
     }),
     clear: vi.fn(() => {

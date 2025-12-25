@@ -96,18 +96,6 @@ export function useSendMessage() {
       // Create optimistic message
       const tempMessageId = generateTempId();
       const userMessageTimestamp = new Date();
-      const tempMessage: AISessionMessageDTO = {
-        messageID: tempMessageId,
-        sessionId: request.sessionId,
-        messageType: AIAnswerType.Text,
-        messageText: request.question,
-        senderUserCode: authStore.user?.email || "unknown",
-        senderName: authStore.user?.name || "You",
-        sendDate: userMessageTimestamp.toISOString(),
-        isRated: false,
-        rating: null,
-        readByUsers: [authStore.user?.email || "unknown"],
-      };
 
       // Add synthetic typing indicator for virtual agents
       const agent = getAgentFromCache(queryClient, request.agentId);
@@ -274,7 +262,6 @@ export function useSendMessage() {
  */
 export function useUpdateSessionName() {
   const queryClient = useQueryClient();
-  const chatStore = useChatStore();
 
   return useMutation({
     mutationFn: async (params: SetSessionNameRequestDTO): Promise<MutationSuccess> => {
@@ -447,7 +434,6 @@ export function useRateMessage() {
  */
 export function useMarkMessagesRead() {
   const queryClient = useQueryClient();
-  const chatStore = useChatStore();
   const authStore = useAuthStore();
 
   return useMutation({

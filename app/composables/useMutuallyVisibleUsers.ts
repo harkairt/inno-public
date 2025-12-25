@@ -19,20 +19,14 @@ export function useMutuallyVisibleUsers(
       return []
     }
 
-    const currentUserId = authStore.user.id
-    const currentUserVisibleIds = authStore.user.userIds || []
-
-    return users.value.filter(user => {
-      // Check mutual visibility:
-      // 1. Current user can see this user (user.id is in currentUser.userIds)
-      const currentUserCanSee = currentUserVisibleIds.includes(user.id)
-
-      // 2. This user can see current user (currentUser.id is in user.userIds)
-      const userCanSeeCurrent = (user.userIds || []).includes(currentUserId)
-
-      return true;
-      // return currentUserCanSee && userCanSeeCurrent
-    })
+    // TODO: Implement mutual visibility check when backend supports it
+    // Check mutual visibility:
+    // 1. Current user can see this user (user.id is in currentUser.userIds)
+    // const currentUserCanSee = (authStore.user.userIds || []).includes(user.id)
+    // 2. This user can see current user (currentUser.id is in user.userIds)
+    // const userCanSeeCurrent = (user.userIds || []).includes(authStore.user.id)
+    // return currentUserCanSee && userCanSeeCurrent
+    return users.value
   })
 
   return { mutuallyVisibleUsers }

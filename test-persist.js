@@ -33,7 +33,7 @@ function testPiniaPersist() {
       try {
         const value = JSON.parse(localStorage.getItem(key))
         console.log(`  - ${key}:`, value)
-      } catch (e) {
+      } catch {
         console.log(`  - ${key}: [raw data]`, localStorage.getItem(key))
       }
     })
@@ -57,7 +57,7 @@ console.log('🧪 Pinia Persistence Test Suite')
 console.log('================================')
 
 const localStorageWorks = testLocalStorage()
-const existingStores = testPiniaPersist()
+testPiniaPersist()
 testPluginLoad()
 
 if (localStorageWorks) {

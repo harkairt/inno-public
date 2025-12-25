@@ -233,7 +233,7 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 
 // Sidebar composable for toggle functionality and mobile detection
-const { toggleSidebar, isMobile } = useSidebar()
+const { isMobile } = useSidebar()
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -524,7 +524,7 @@ const errorMessage = computed(() => {
 // Handle session not found or access denied
 watchEffect(() => {
   if (isError.value && error.value) {
-    const err = error.value as any
+    const err = error.value as { code?: string; statusCode?: number }
     if (err.code === 'NOT_FOUND' || err.statusCode === 404) {
       // Session not found - redirect to chats list after a short delay
       setTimeout(() => {
@@ -549,33 +549,18 @@ useSeoMeta({
 })
 
 // Error boundary handler
-function handleError(error: any) {
+function handleError(error: unknown) {
   console.error('Chat session error:', error)
 }
 
 // Error message normalization
-function getUserFriendlyMessage(error: any): string {
-  if (error?.message) {
+function getUserFriendlyMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
     return error.message
   }
   return t('errors.unexpectedCreateError')
 }
 
-// Date formatting
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return ''
-
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-    })
-  } catch {
-    return ''
-  }
-}
 
 // Handle message sent event
 function handleMessageSent() {
@@ -586,10 +571,6 @@ function handleMessageSent() {
   console.log('Message sent successfully, isAtBottom:', isAtBottom.value)
 }
 
-// Dismiss failed message
-function dismissFailedMessage(messageId: string) {
-  chatStore.removeFailedMessage(sessionId, messageId)
-}
 
 // Auto-scroll when messages change (new message arrives)
 // NOTE: We check isAtBottom BEFORE DOM updates (default flush),

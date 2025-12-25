@@ -12,7 +12,6 @@
 </template>
 
 <script setup lang="ts">
-import type { Ref } from 'vue'
 import * as locales from '@nuxt/ui/locale'
 
 const { locale } = useI18n()

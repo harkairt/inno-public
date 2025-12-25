@@ -314,8 +314,8 @@ const canSend = computed(() => {
 // Computed: Error message
 const errorMessage = computed(() => {
   if (!mutation.error.value) return t('chat.messageInput.failedToSend')
-  const error = mutation.error.value as any
-  return error.message || t('chat.messageInput.anErrorOccurred')
+  const error = mutation.error.value
+  return error instanceof Error ? error.message : t('chat.messageInput.anErrorOccurred')
 })
 
 // Handle form submit

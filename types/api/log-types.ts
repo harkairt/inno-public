@@ -43,13 +43,13 @@ export interface ApiErrorData {
 
 export interface UserActionLog extends ClientLogEntry {
   data: {
+    [key: string]: unknown
     action: string
     userId?: number
-    [key: string]: unknown
   }
   context: {
-    type: 'user_action'
     [key: string]: unknown
+    type: 'user_action'
   }
 }
 

@@ -4,7 +4,6 @@
  */
 
 import { test, expect } from '../fixtures'
-import { selectors } from '../selectors'
 import { navigateToChats, navigateToUsers, refreshPage } from '../actions/navigation.actions'
 
 test.describe('Session Persistence', () => {

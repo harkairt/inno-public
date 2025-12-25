@@ -19,6 +19,7 @@ interface AuthStore {
 
 // Extend Axios types for custom properties
 declare module 'axios' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   export interface AxiosResponse<T = any, D = any> {
     metadata?: {
       requestId?: string
@@ -60,7 +61,7 @@ export function setAuthStore(authStore: AuthStore): void {
   authStoreInstance = authStore
 }
 
-function processQueue(error: unknown, _token: string | null = null): void {
+function processQueue(error: unknown): void {
   const queueLength = failedQueue.length
   console.log(`🔄 Token refresh: Processing ${queueLength} queued requests...`)
 

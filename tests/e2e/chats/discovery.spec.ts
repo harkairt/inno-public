@@ -6,7 +6,6 @@
 import { test, expect } from '../fixtures'
 import { selectors } from '../selectors'
 import { navigateToChats } from '../actions/navigation.actions'
-import { startChatWithAgent, openUnreadChat } from '../actions/chat.actions'
 
 test.describe('Chat Discovery Page', () => {
   test.describe('Virtual Agents Section', () => {
