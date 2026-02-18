@@ -1,27 +1,7 @@
 <template>
   <div class="flex flex-col h-full min-h-0 overflow-hidden">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center h-full">
-      <div class="text-center">
-        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-      </div>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="isError" class="flex items-center justify-center p-6 h-full">
-      <div class="text-center max-w-md">
-        <div class="text-4xl mb-4">😔</div>
-        <h1 class="text-xl font-semibold text-foreground mb-2">
-          {{ t('public.sessionError.title') }}
-        </h1>
-        <p class="text-muted-foreground">
-          {{ t('public.sessionError.description') }}
-        </p>
-      </div>
-    </div>
-
     <!-- Chat Content -->
-    <template v-else-if="session">
+    <template v-if="session">
       <div ref="messagesContainer" class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col">
         <div class="flex-1" />
         <ChatMessages
@@ -52,6 +32,11 @@
         @scroll-to-bottom="scrollToBottom"
       />
     </template>
+
+    <!-- Spinner shown while redirecting (no cached session) -->
+    <div v-else class="flex items-center justify-center h-full">
+      <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+    </div>
   </div>
 </template>
 
@@ -61,34 +46,42 @@ import { useSendMessage } from '@/app/composables/useChatMutations'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { usePublicMode } from '@/app/composables/usePublicMode'
-import { useSelectableUsers } from '@/app/composables/useUsers'
+import { usePublicChatAgent } from '@/app/composables/usePublicChatAgent'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
 
-const { t } = useI18n()
 const route = useRoute()
 const authStore = useAuthStore()
 const chatStore = useChatStore()
-const { publicAgentId } = usePublicMode()
+const { publicAgentId, getPublicChatUrl } = usePublicMode()
 
 const sessionId = route.params.sessionId as string
 
-// Fetch the session with messages
-const { data: session, isLoading, isError, error, refetch } = useChatSession(sessionId)
+// Session data comes from Vue Query cache (populated by useSendMessage mutation).
+// getSessionById is not available in public mode, so disable the query.
+const { data: session } = useChatSession(sessionId, { enabled: false })
 
-// Fetch users to get agent name
-const { data: users } = useSelectableUsers()
+// Redirect to new public chat if no cached session data (e.g. direct navigation or page refresh)
+watchEffect(() => {
+  if (!session.value) {
+    const url = getPublicChatUrl()
+    if (url) {
+      navigateTo(url, { replace: true })
+    }
+  }
+})
 
 // Agent ID from config or session
 const agentId = computed(() => publicAgentId.value ?? session.value?.agentId ?? 0)
 
-// Get agent name
-const agentName = computed(() => {
-  if (!users.value || !agentId.value) return undefined
-  const agent = users.value.find(u => u.id === agentId.value)
-  return agent?.name
+// Fetch agent info using startPublicChat endpoint (same pattern as new/[agentId].vue)
+const { data: publicChatData } = usePublicChatAgent(agentId, {
+  enabled: computed(() => !!agentId.value && authStore.isAuthenticated)
 })
+
+// Get agent name from public chat data
+const agentName = computed(() => publicChatData.value?.agent?.name)
 
 // Fetch welcome message for the agent
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
