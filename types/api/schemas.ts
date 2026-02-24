@@ -130,7 +130,7 @@ export const UserDTOSchema = z.object({
   invitationAccepted: z.boolean(),
   roles: z.array(z.string()),
   isVirtual: z.boolean(),
-  url: z.string(),
+  url: z.string().nullable().optional(),
   image: z.string().nullable().optional(),
   darkImage: z.string().nullable().optional(),
   userIds: z.array(z.number()),
