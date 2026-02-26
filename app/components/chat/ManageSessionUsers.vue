@@ -127,7 +127,7 @@ const toast = useToast()
 // Computed: Check if ANY mutation is currently pending
 // This disables ALL checkboxes to prevent concurrent operations
 const isAnyMutationPending = computed(() =>
-  addUserMutation.isPending.value || removeUserMutation.isPending.value
+  addUserMutation.isPending.value ?? removeUserMutation.isPending.value
 )
 
 // Helper: Check if a user is currently in the session
@@ -144,7 +144,7 @@ const filteredUsers = computed(() => {
   // Filter by search query
   const filtered = mutuallyVisibleUsers.value.filter(user => {
     if (!query) return true
-    const name = (user.name || '').toLowerCase()
+    const name = (user.name ?? '').toLowerCase()
     const email = user.email.toLowerCase()
     return name.includes(query) || email.includes(query)
   })

@@ -24,12 +24,12 @@ export class TranscriptionService {
     if (serviceUrl !== undefined && apiKey !== undefined) {
       this.serviceUrl = serviceUrl
       this.apiKey = apiKey
-      this.hfToken = hfToken || ''
+      this.hfToken = hfToken ?? ''
     } else {
       const config = useRuntimeConfig()
-      this.serviceUrl = config.public.transcriptionServiceUrl || ''
-      this.apiKey = config.public.transcriptionApiKey || ''
-      this.hfToken = config.public.hfToken || ''
+      this.serviceUrl = config.public.transcriptionServiceUrl ?? ''
+      this.apiKey = config.public.transcriptionApiKey ?? ''
+      this.hfToken = config.public.hfToken ?? ''
     }
   }
 

@@ -184,7 +184,7 @@ export function useSendMessage() {
         messageText: request.question,
         messageType: AIAnswerType.Text,
         senderUserCode: request.userCode,
-        senderName: authStore.user?.name || '',
+        senderName: authStore.user?.name ?? '',
         sendDate: userMessageTimestamp,
         isRated: false,
         rating: null,

@@ -152,7 +152,7 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 
 // Compute draft key: use draftKey prop if provided, otherwise sessionId
-const effectiveDraftKey = computed(() => props.draftKey || props.sessionId)
+const effectiveDraftKey = computed(() => props.draftKey ?? props.sessionId)
 
 // SignalR chat hook
 const { sendTypingIndicator, sendStoppedTypingIndicator } = useSignalRChat()
@@ -339,7 +339,7 @@ async function handleSubmit() {
   // Prepare request
   const targetAgentId = props.selectedAgentId ?? props.agentId
   const request: AiQuestionRequestDTO = {
-    userCode: authStore.user?.email || '',
+    userCode: authStore.user?.email ?? '',
     sessionId: props.sessionId,
     agentId: targetAgentId,
     members: props.members,

@@ -57,7 +57,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function getDraft(key: string): string {
-    return draftMessages.value.get(key) || ''
+    return draftMessages.value.get(key) ?? ''
   }
 
   function clearDraft(key: string) {

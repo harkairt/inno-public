@@ -57,7 +57,7 @@ const highlightCodeBlocks = (html: string): string => {
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
 
-      const language = lang || 'text'
+      const language = lang ?? 'text'
       const highlighted = highlightCode(decodedCode, language)
 
       // If highlighting returned the original code, return the match unchanged

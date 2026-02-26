@@ -24,7 +24,7 @@ function getApiBaseUrl(): string {
   }
 
   // Fallback to environment variable or empty string (use relative URLs for proxy)
-  return import.meta.env.NUXT_PUBLIC_API_BASE_URL || ''
+  return import.meta.env.NUXT_PUBLIC_API_BASE_URL ?? ''
 }
 
 export function createApiClient(): AxiosInstance {

@@ -293,7 +293,7 @@ const { mutate: logout, isPending: isLoggingOut } = useLogout()
 
 // Auth store for current user
 const authStore = useAuthStore()
-const currentUserEmail = computed(() => authStore.user?.email || '')
+const currentUserEmail = computed(() => authStore.user?.email ?? '')
 
 // TanStack Query - Users
 const { data: users, isLoading: isLoadingUsers, error: usersError } = useSelectableUsers()
@@ -360,7 +360,7 @@ const getMemberNames = (members: string[]): string => {
 
   const names = otherMembers.slice(0, 2).map(email => {
     const user = users.value?.find(u => u.email === email)
-    return user?.name?.split(' ')[0] || email.split('@')[0]
+    return user?.name?.split(' ')[0] ?? email.split('@')[0]
   })
 
   if (otherMembers.length > 2) {

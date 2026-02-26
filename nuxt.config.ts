@@ -4,9 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   ssr: false,
-
+	compatibilityDate: '2026-02-26',
   app: {
-    baseURL: process.env.NUXT_APP_BASE_URL || '/',
+    baseURL: process.env.NUXT_APP_BASE_URL ?? '/',
     head: {
       link: [
         // Google Fonts: Plus Jakarta Sans (headings) + Inter (body)
@@ -99,13 +99,13 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || '',
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL ?? '',
       devLoginEmail: '',
       // Transcription service (Hugging Face Spaces)
-      transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL || '',
-      transcriptionApiKey: process.env.NUXT_PUBLIC_TRANSCRIPTION_API_KEY || '',
+      transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL ?? '',
+      transcriptionApiKey: process.env.NUXT_PUBLIC_TRANSCRIPTION_API_KEY ?? '',
       // HF token for private spaces
-      hfToken: process.env.NUXT_PUBLIC_HF_TOKEN || '',
+      hfToken: process.env.NUXT_PUBLIC_HF_TOKEN ?? '',
     },
   },
 
@@ -160,8 +160,8 @@ export default defineNuxtConfig({
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'portrait',
-      scope: process.env.NUXT_APP_BASE_URL || '/',
-      start_url: process.env.NUXT_APP_BASE_URL || '/',
+      scope: process.env.NUXT_APP_BASE_URL ?? '/',
+      start_url: process.env.NUXT_APP_BASE_URL ?? '/',
       icons: [
         {
           src: 'icons/icon-72x72.png',
@@ -273,13 +273,13 @@ export default defineNuxtConfig({
   // Route rules for API proxy (works in both dev and production)
   routeRules: {
     '/api/**': {
-      proxy: `${process.env.NUXT_PROXY_TARGET || 'http://localhost:8082'}/api/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/api/**`
     },
     '/chatHub/**': {
-      proxy: `${process.env.NUXT_PROXY_TARGET || 'http://localhost:8082'}/chatHub/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/chatHub/**`
     },
     '/assets/**': {
-      proxy: `${process.env.NUXT_PROXY_TARGET || 'http://localhost:8082'}/assets/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/assets/**`
     }
   }
 })

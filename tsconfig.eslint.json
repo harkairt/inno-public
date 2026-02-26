@@ -1,0 +1,25 @@
+{
+  // Used by ESLint for type-aware rules (parserOptions.project in eslint.config.mjs).
+  // This is separate from tsconfig.json (which uses project references for the build)
+  // because ESLint needs a single tsconfig that includes ALL source files.
+  "extends": "./.nuxt/tsconfig.json",
+  "include": [
+    ".nuxt/nuxt.d.ts",
+    ".nuxt/imports.d.ts",
+    ".nuxt/components.d.ts",
+    "app/**/*",
+    "types/**/*",
+    "lib/**/*",
+    "i18n/**/*",
+    "nuxt.config.ts",
+    "app.config.ts",
+    "vitest.config.ts",
+    "eslint.config.mjs"
+  ],
+  "exclude": [
+    "node_modules",
+    ".output",
+    "dist",
+    ".data"
+  ]
+}

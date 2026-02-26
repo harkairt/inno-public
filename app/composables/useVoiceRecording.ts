@@ -158,7 +158,7 @@ export function useVoiceRecording(options: UseVoiceRecordingOptions = {}) {
       }
 
       mediaRecorder.onstop = () => {
-        const mimeType = mediaRecorder?.mimeType || 'audio/webm'
+        const mimeType = mediaRecorder?.mimeType ?? 'audio/webm'
         const blob = new Blob(audioChunks, { type: mimeType })
         audioBlob.value = blob
         cleanup()

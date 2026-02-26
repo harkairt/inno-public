@@ -198,7 +198,7 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
 
       const result = await chatService.getWelcomeMessage({
         userCode: authStore.user.email,
-        sessionId: options?.sessionId || '',
+        sessionId: options?.sessionId ?? '',
         agentId: unwrappedAgentId,
         members: [],
         question: '',

@@ -117,7 +117,7 @@ export function usePrimarySession(
   })
 
   const otherMemberName = computed(() => {
-    return otherMemberInfo.value?.name || ''
+    return otherMemberInfo.value?.name ?? ''
   })
 
   const otherMemberId = computed(() => {

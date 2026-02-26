@@ -1,7 +1,7 @@
-import type { LogInfoDTO } from '@/types/api/schemas'
-import { apiClient } from '../client'
-import type { ErrorData } from '@/types/api/log-types'
-import { LogLevel } from '@/types/enums'
+import type { LogInfoDTO } from "@/types/api/schemas";
+import { apiClient } from "../client";
+import type { ErrorData } from "@/types/api/log-types";
+import { LogLevel } from "@/types/enums";
 
 export class LogService {
   /**
@@ -11,9 +11,9 @@ export class LogService {
   async log(logInfo: LogInfoDTO): Promise<void> {
     try {
       // Fire and forget - don't await or throw errors
-      apiClient.post('/api/Log/log', logInfo).catch(() => {
+      apiClient.post("/api/Log/log", logInfo).catch(() => {
         // Silently fail - logging errors shouldn't crash app
-      })
+      });
     } catch {
       // Silently fail
     }
@@ -27,32 +27,40 @@ export class LogService {
       loglevel: LogLevel.Debug,
       title: message,
       details: data ?? undefined,
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
    * Log info message
    */
-  async info(message: string, data?: unknown, context?: Record<string, unknown>): Promise<void> {
+  async info(
+    message: string,
+    data?: unknown,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
     await this.log({
       loglevel: LogLevel.Info,
       title: message,
       details: data || context ? JSON.stringify({ data, context }) : undefined,
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
    * Log warning message
    */
-  async warn(message: string, data?: unknown, context?: Record<string, unknown>): Promise<void> {
+  async warn(
+    message: string,
+    data?: unknown,
+    context?: Record<string, unknown>,
+  ): Promise<void> {
     await this.log({
       loglevel: LogLevel.Warning,
       title: message,
       details: data || context ? JSON.stringify({ data, context }) : undefined,
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -63,24 +71,27 @@ export class LogService {
     error?: Error | unknown,
     context?: Record<string, unknown>,
   ): Promise<void> {
-    let errorData: ErrorData | undefined = undefined
+    let errorData: ErrorData | undefined = undefined;
 
     if (error instanceof Error) {
       errorData = {
         name: error.name,
         message: error.message,
         stack: error.stack,
-      }
+      };
     } else if (error) {
-      errorData = error as ErrorData
+      errorData = error as ErrorData;
     }
 
     await this.log({
       loglevel: LogLevel.Error,
       title: message,
-      details: errorData || context ? JSON.stringify({ error: errorData, context }) : undefined,
-      source: 'client',
-    })
+      details:
+        errorData || context
+          ? JSON.stringify({ error: errorData, context })
+          : undefined,
+      source: "client",
+    });
   }
 
   /**
@@ -99,10 +110,10 @@ export class LogService {
         action,
         userId,
         ...(data as Record<string, unknown>),
-        ...(context && { context: { ...context, type: 'user_action' } }),
+        ...(context && { context: { ...context, type: "user_action" } }),
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -116,21 +127,24 @@ export class LogService {
     error?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: statusCode && statusCode >= 400 ? LogLevel.Error : LogLevel.Info,
+      loglevel:
+        statusCode && statusCode >= 400 ? LogLevel.Error : LogLevel.Info,
       title: `API ${method} ${url}`,
       details: JSON.stringify({
         method,
         url,
         statusCode,
         duration,
-        error: error ? {
-          message: (error as ErrorData).message,
-          code: (error as ErrorData).code,
-        } : undefined,
-        context: { type: 'api_request' },
+        error: error
+          ? {
+              message: (error as ErrorData).message,
+              code: (error as ErrorData).code,
+            }
+          : undefined,
+        context: { type: "api_request" },
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -139,7 +153,7 @@ export class LogService {
   async logPerformance(
     metric: string,
     value: number,
-    unit: string = 'ms',
+    unit: string = "ms",
     context?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
@@ -149,10 +163,10 @@ export class LogService {
         metric,
         value,
         unit,
-        ...(context && { context: { ...context, type: 'performance' } }),
+        ...(context && { context: { ...context, type: "performance" } }),
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -160,7 +174,11 @@ export class LogService {
    */
   async logChatInteraction(
     sessionId: string,
-    action: 'message_sent' | 'message_received' | 'session_started' | 'session_ended',
+    action:
+      | "message_sent"
+      | "message_received"
+      | "session_started"
+      | "session_ended",
     data?: unknown,
   ): Promise<void> {
     await this.log({
@@ -170,50 +188,63 @@ export class LogService {
         sessionId,
         action,
         ...(data as Record<string, unknown>),
-        context: { type: 'chat_interaction' },
+        context: { type: "chat_interaction" },
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
    * Log authentication event
    */
   async logAuthEvent(
-    event: 'login' | 'logout' | 'token_refresh' | 'login_failed' | 'token_expired',
+    event:
+      | "login"
+      | "logout"
+      | "token_refresh"
+      | "login_failed"
+      | "token_expired",
     userId?: number,
     data?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: event.includes('failed') || event.includes('expired') ? LogLevel.Warning : LogLevel.Info,
+      loglevel:
+        event.includes("failed") || event.includes("expired")
+          ? LogLevel.Warning
+          : LogLevel.Info,
       title: `Auth ${event}`,
       details: JSON.stringify({
         event,
         userId,
         ...(data as Record<string, unknown>),
-        context: { type: 'auth_event' },
+        context: { type: "auth_event" },
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
    * Log SignalR event
    */
   async logSignalREvent(
-    event: 'connected' | 'disconnected' | 'reconnecting' | 'reconnected' | 'error',
+    event:
+      | "connected"
+      | "disconnected"
+      | "reconnecting"
+      | "reconnected"
+      | "error",
     data?: unknown,
   ): Promise<void> {
     await this.log({
-      loglevel: event === 'error' ? LogLevel.Error : LogLevel.Info,
+      loglevel: event === "error" ? LogLevel.Error : LogLevel.Info,
       title: `SignalR ${event}`,
       details: JSON.stringify({
         event,
         ...(data as Record<string, unknown>),
-        context: { type: 'signalr_event' },
+        context: { type: "signalr_event" },
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -222,15 +253,15 @@ export class LogService {
   async logErrorBoundary(
     error: Error,
     errorInfo: {
-      componentStack: string
-      errorBoundary?: string
-      errorBoundaryStack?: string
+      componentStack: string;
+      errorBoundary?: string;
+      errorBoundaryStack?: string;
     },
     context?: Record<string, unknown>,
   ): Promise<void> {
     await this.log({
       loglevel: LogLevel.Error,
-      title: 'React Error Boundary caught an error',
+      title: "React Error Boundary caught an error",
       details: JSON.stringify({
         error: {
           name: error.name,
@@ -238,10 +269,10 @@ export class LogService {
           stack: error.stack,
         },
         errorInfo,
-        ...(context && { context: { ...context, type: 'error_boundary' } }),
+        ...(context && { context: { ...context, type: "error_boundary" } }),
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -260,10 +291,10 @@ export class LogService {
         feature,
         action,
         ...(data as Record<string, unknown>),
-        ...(context && { context: { ...context, type: 'feature_usage' } }),
+        ...(context && { context: { ...context, type: "feature_usage" } }),
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
@@ -275,39 +306,41 @@ export class LogService {
   ): Promise<void> {
     await this.log({
       loglevel: LogLevel.Info,
-      title: 'System information',
+      title: "System information",
       details: JSON.stringify({
         ...info,
-        ...(context && { context: { ...context, type: 'system_info' } }),
+        ...(context && { context: { ...context, type: "system_info" } }),
       }),
-      source: 'client',
-    })
+      source: "client",
+    });
   }
 
   /**
    * Create a child logger with additional context
    */
   createChild(context: Record<string, unknown>): LogService {
-    const childService = new LogService()
+    const childService = new LogService();
 
     // Override the log method to include context
     childService.log = async (logInfo: LogInfoDTO) => {
-      const existingDetails = logInfo.details ? JSON.parse(logInfo.details) : {}
+      const existingDetails = logInfo.details
+        ? (typeof logInfo.details === 'string' ? JSON.parse(logInfo.details) : logInfo.details)
+        : {};
       await this.log({
         ...logInfo,
         details: JSON.stringify({
           ...existingDetails,
           context: {
             ...context,
-            ...(existingDetails.context || {}),
+            ...(existingDetails.context ?? {}),
           },
         }),
-      })
-    }
+      });
+    };
 
-    return childService
+    return childService;
   }
 }
 
 // Singleton
-export const logService = new LogService()
+export const logService = new LogService();

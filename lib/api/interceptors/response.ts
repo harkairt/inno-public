@@ -97,7 +97,7 @@ export function responseInterceptor(response: AxiosResponse): AxiosResponse {
   }
 
   // Handle specific response transformations
-  const url = response.config.url || ''
+  const url = response.config.url ?? ''
 
   // Transform snake_case to camelCase for specific endpoints
   if (url.includes('/login') || url.includes('/user')) {
@@ -299,14 +299,14 @@ async function handleServiceUnavailableRetry(
 const responseCache = new Map<string, { data: unknown; timestamp: number; ttl: number }>()
 
 export function cacheResponseInterceptor(response: AxiosResponse): AxiosResponse {
-  const url = response.config.url || ''
+  const url = response.config.url ?? ''
   const method = response.config.method?.toLowerCase()
 
   // Only cache GET requests
   if (method !== 'get') return response
 
   // Check for cache-control headers
-  const cacheControl = response.headers['cache-control'] || ''
+  const cacheControl = response.headers['cache-control'] ?? ''
   const noCache = cacheControl.includes('no-cache') || cacheControl.includes('no-store')
 
   if (noCache) return response
@@ -333,7 +333,7 @@ export function cacheResponseInterceptor(response: AxiosResponse): AxiosResponse
  * or implement caching at a higher level (e.g., in a service layer).
  */
 export function getCachedResponse(config: InternalAxiosRequestConfig): AxiosResponse | undefined {
-  const url = config.url || ''
+  const url = config.url ?? ''
   const method = config.method?.toLowerCase()
 
   // Only check cache for GET requests

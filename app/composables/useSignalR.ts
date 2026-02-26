@@ -73,7 +73,7 @@ export function useSignalR() {
 
     try {
       // Get token from auth store if not provided
-      const token = accessToken || authStore.accessToken || ''
+      const token = accessToken ?? authStore.accessToken ?? ''
 
       if (!token) {
         console.warn('No access token available for SignalR connection')
@@ -111,7 +111,7 @@ export function useSignalR() {
     const authStore = useAuthStore()
 
     try {
-      const token = accessToken || authStore.accessToken || ''
+      const token = accessToken ?? authStore.accessToken ?? ''
 
       if (!token) {
         console.warn('No access token available for SignalR reconnection')
@@ -212,7 +212,7 @@ export function useSignalRConnectionMonitor() {
       case 'disconnected':
         return 'Disconnected'
       case 'failed':
-        return signalr.lastError.value || 'Connection failed'
+        return signalr.lastError.value ?? 'Connection failed'
       default:
         return 'Unknown status'
     }
