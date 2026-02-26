@@ -129,6 +129,8 @@
             :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
             :agent-name="virtualAgentFromSecondMessage?.agentName"
             :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
+            :active-options-message-id="lastUnansweredOptionsMessageId"
+            @option-submitted="handleOptionSubmitted"
           />
         </div>
         <!-- Bottom fade gradient -->
@@ -139,6 +141,7 @@
       <TypingIndicator :typing-users="typingUsers" />
 
       <MessageInput
+        v-if="!isOptionsMode"
         ref="messageInputRef"
         :session-id="sessionId"
         :agent-id="authStore.user?.id || 1"
@@ -212,12 +215,14 @@
 
 <script setup lang="ts">
 import { useChatSession, useChatSessions, useWelcomeMessage } from '@/app/composables/useChatQueries'
-import { useMarkMessagesRead, useUpdateSessionName } from '@/app/composables/useChatMutations'
+import { useMarkMessagesRead, useUpdateSessionName, useSendMessage } from '@/app/composables/useChatMutations'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useSidebar } from '@/app/composables/useSidebar'
 import { usePrimarySession } from '@/app/composables/usePrimarySession'
+import { AIAnswerType, AIQuestionType } from '@/types/enums'
+import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
@@ -322,7 +327,7 @@ const { isPrimarySession, otherMemberName, otherMemberId } = usePrimarySession(
 
 // Use messages from session + failed messages from store
 const messages = computed(() => {
-  const queryMessages = session.value?.messages || []
+  const queryMessages = session.value?.messages ?? []
   const failedMessages = chatStore.getFailedMessages(sessionId)
   return [...queryMessages, ...failedMessages]
 })
@@ -345,6 +350,45 @@ const selectableTargetAgents = computed(() => {
 
 // Selected target agent ID (undefined = no selection, falls back to current user)
 const selectedTargetAgentId = ref<number | undefined>(undefined)
+
+// Options message mutation + logic
+const optionMutation = useSendMessage()
+
+const lastUnansweredOptionsMessageId = computed(() => {
+  const msgs = messages.value
+  const userEmail = authStore.user?.email
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const msg = msgs[i]
+    if (msg && msg.messageType === AIAnswerType.Options) {
+      const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
+      return hasUserAfter ? undefined : msg.messageID
+    }
+  }
+  return undefined
+})
+
+const isOptionsMode = computed(() => !!lastUnansweredOptionsMessageId.value)
+
+async function handleOptionSubmitted(answer: string) {
+  if (!session.value) return
+  const targetAgentId = selectedTargetAgentId.value ?? (authStore.user?.id ?? 1)
+  const request: AiQuestionRequestDTO = {
+    userCode: authStore.user?.email ?? '',
+    sessionId,
+    agentId: targetAgentId,
+    members: session.value.members ?? [],
+    question: answer,
+    group: '',
+    pquestionType: AIQuestionType.Text,
+    options: [],
+  }
+  try {
+    await optionMutation.mutateAsync(request)
+    scrollToBottom()
+  } catch (error) {
+    console.error('Failed to send option answer:', error)
+  }
+}
 
 // Detect if second message is from a virtual agent (for welcome message)
 const virtualAgentFromSecondMessage = computed(() => {
@@ -544,7 +588,7 @@ definePageMeta({
 
 // SEO
 useSeoMeta({
-  title: () => session.value?.sessionName || 'Chat Session',
+  title: () => session.value?.sessionName ?? 'Chat Session',
   description: 'View and continue your conversation',
 })
 

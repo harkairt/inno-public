@@ -39,8 +39,9 @@ describe('validateMessage', () => {
     expect(result.isErr()).toBe(true)
     if (result.isErr()) {
       expect(result.error.validationErrors).toHaveLength(1)
-      expect(result.error.validationErrors[0].field).toBe('messageId')
-      expect(result.error.validationErrors[0].message).toContain('valid')
+      const firstError = result.error.validationErrors[0]!
+      expect(firstError.field).toBe('messageId')
+      expect(firstError.message).toContain('valid')
     }
   })
 
@@ -60,8 +61,9 @@ describe('validateMessage', () => {
     expect(result.isErr()).toBe(true)
     if (result.isErr()) {
       expect(result.error.validationErrors).toHaveLength(1)
-      expect(result.error.validationErrors[0].field).toBe('content')
-      expect(result.error.validationErrors[0].message).toContain('empty')
+      const firstError = result.error.validationErrors[0]!
+      expect(firstError.field).toBe('content')
+      expect(firstError.message).toContain('empty')
     }
   })
 

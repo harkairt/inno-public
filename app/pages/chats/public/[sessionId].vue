@@ -11,6 +11,8 @@
           :agent-id="agentId"
           :agent-name="agentName"
           :hide-sender-names="true"
+          :active-options-message-id="lastUnansweredOptionsMessageId"
+          @option-submitted="handleOptionSubmitted"
         >
           <template #empty />
         </ChatMessages>
@@ -21,6 +23,7 @@
 
       <!-- Message Input -->
       <MessageInput
+        v-if="!isOptionsMode"
         :session-id="sessionId"
         :agent-id="agentId"
         :selected-agent-id="agentId"
@@ -47,6 +50,8 @@ import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { usePublicMode } from '@/app/composables/usePublicMode'
 import { usePublicChatAgent } from '@/app/composables/usePublicChatAgent'
+import { AIAnswerType, AIQuestionType } from '@/types/enums'
+import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
@@ -121,6 +126,42 @@ const mutation = useSendMessage()
 
 // Disable send button while waiting for AI response
 const canSend = computed(() => !mutation.isPending.value)
+
+// Options message logic
+const lastUnansweredOptionsMessageId = computed(() => {
+  const msgs = messages.value
+  const userEmail = authStore.user?.email
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const msg = msgs[i]
+    if (msg && msg.messageType === AIAnswerType.Options) {
+      const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
+      return hasUserAfter ? undefined : msg.messageID
+    }
+  }
+  return undefined
+})
+
+const isOptionsMode = computed(() => !!lastUnansweredOptionsMessageId.value)
+
+async function handleOptionSubmitted(answer: string) {
+  if (!session.value) return
+  const request: AiQuestionRequestDTO = {
+    userCode: authStore.user?.email ?? '',
+    sessionId,
+    agentId: agentId.value,
+    members: session.value.members ?? [],
+    question: answer,
+    group: '',
+    pquestionType: AIQuestionType.Text,
+    options: [],
+  }
+  try {
+    await mutation.mutateAsync(request)
+    scrollToBottom()
+  } catch (error) {
+    console.error('Failed to send option answer:', error)
+  }
+}
 
 // Typing indicator users
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))

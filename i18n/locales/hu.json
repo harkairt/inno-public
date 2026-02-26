@@ -93,6 +93,9 @@
       "thumbsUp": "Hasznos",
       "thumbsDown": "Nem hasznos",
       "thanks": "Köszönjük a visszajelzést!"
+    },
+    "options": {
+      "submit": "Küldés"
     }
   },
   "errors": {

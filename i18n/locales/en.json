@@ -93,6 +93,9 @@
       "thumbsUp": "Rate as helpful",
       "thumbsDown": "Rate as not helpful",
       "thanks": "Thanks for your feedback!"
+    },
+    "options": {
+      "submit": "Submit"
     }
   },
   "errors": {

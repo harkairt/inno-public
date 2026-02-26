@@ -63,7 +63,21 @@
             </div>
 
             <!-- Message Content -->
+            <template v-if="message.messageType === AIAnswerType.Options">
+              <MarkdownContent
+                v-if="!parseOptionsPayload(message.messageText)"
+                :content="message.messageText"
+                class="text-sm leading-relaxed"
+              />
+              <OptionsMessage
+                v-else
+                :payload="parseOptionsPayload(message.messageText)!"
+                :is-active="message.messageID === props.activeOptionsMessageId"
+                @submit="(answer) => emit('optionSubmitted', answer)"
+              />
+            </template>
             <MarkdownContent
+              v-else
               :content="message.messageText"
               class="text-sm leading-relaxed"
             />
@@ -119,9 +133,12 @@
 <script setup lang="ts">
 import { computed, type CSSProperties } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
+import { parseOptionsPayload } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
+import { AIAnswerType } from '@/types/enums'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
+import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
 
 const { t, locale } = useI18n()
 
@@ -173,6 +190,7 @@ interface Props {
   agentName?: string
   welcomeMessageDate?: string
   hideSenderNames?: boolean
+  activeOptionsMessageId?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -182,7 +200,12 @@ const props = withDefaults(defineProps<Props>(), {
   agentName: undefined,
   welcomeMessageDate: undefined,
   hideSenderNames: false,
+  activeOptionsMessageId: undefined,
 })
+
+const emit = defineEmits<{
+  optionSubmitted: [answer: string]
+}>()
 
 const authStore = useAuthStore()
 
@@ -199,9 +222,9 @@ const welcomeMessageObj = computed((): ExtendedMessage | null => {
     messageID: 'welcome',
     messageText: props.welcomeMessage,
     messageType: 0, // AIAnswerType.Text
-    senderUserCode: props.agentId?.toString() || 'agent',
-    senderName: props.agentName || 'Agent', // This should probably be i18n too, but it's used as a fallback
-    sendDate: props.welcomeMessageDate || new Date().toISOString(),
+    senderUserCode: props.agentId?.toString() ?? 'agent',
+    senderName: props.agentName ?? 'Agent', // This should probably be i18n too, but it's used as a fallback
+    sendDate: props.welcomeMessageDate ?? new Date().toISOString(),
     isRated: false,
     rating: null,
     readByUsers: [],

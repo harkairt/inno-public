@@ -212,6 +212,29 @@ export const MessageOptionSchema = z.object({
   selectedValue: z.string()
 })
 
+// Options message payload (parsed from messageText when messageType = 'options')
+export const OptionsMessagePayloadSchema = z.object({
+  Text: z.string(),
+  MultiSelectEnabled: z.boolean(),
+  Items: z.array(z.object({
+    Key: z.string(),
+    Value: z.string()
+  }))
+})
+export type OptionsMessagePayload = z.infer<typeof OptionsMessagePayloadSchema>
+
+export function parseOptionsPayload(
+  messageText: string | null | undefined
+): OptionsMessagePayload | null {
+  if (!messageText) return null
+  try {
+    const result = OptionsMessagePayloadSchema.safeParse(JSON.parse(messageText))
+    return result.success ? result.data : null
+  } catch {
+    return null
+  }
+}
+
 export const AISessionMessageDTOSchema = z.object({
   isRated: z.boolean(),
   messageID: z.string(),

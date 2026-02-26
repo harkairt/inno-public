@@ -32,6 +32,8 @@
           :welcome-message="trimmedWelcomeMessage"
           :agent-id="agentId"
           :agent-name="selectedUser.name || selectedUser.email"
+          :active-options-message-id="lastUnansweredOptionsMessageId"
+          @option-submitted="handleOptionSubmitted"
         />
       </div>
 
@@ -39,6 +41,7 @@
       <TypingIndicator :typing-users="typingUsers" />
 
       <MessageInput
+        v-if="!isOptionsMode"
         :session-id="sessionId"
         :draft-key="`new-${userId}`"
         :agent-id="agentId"
@@ -89,10 +92,13 @@
 
 <script setup lang="ts">
 import { useWelcomeMessage, useChatSession } from '@/app/composables/useChatQueries'
+import { useSendMessage } from '@/app/composables/useChatMutations'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { generateUUID } from '@/lib/utils/uuid'
+import { AIAnswerType, AIQuestionType } from '@/types/enums'
+import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
@@ -151,6 +157,43 @@ const messages = computed(() => {
   const failedMessages = chatStore.getFailedMessages(sessionId.value)
   return [...queryMessages, ...failedMessages]
 })
+
+// Options message logic
+const optionMutation = useSendMessage()
+
+const lastUnansweredOptionsMessageId = computed(() => {
+  const msgs = messages.value
+  const userEmail = authStore.user?.email
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const msg = msgs[i]
+    if (msg && msg.messageType === AIAnswerType.Options) {
+      const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
+      return hasUserAfter ? undefined : msg.messageID
+    }
+  }
+  return undefined
+})
+
+const isOptionsMode = computed(() => !!lastUnansweredOptionsMessageId.value)
+
+async function handleOptionSubmitted(answer: string) {
+  const request: AiQuestionRequestDTO = {
+    userCode: authStore.user?.email ?? '',
+    sessionId: sessionId.value,
+    agentId: agentId.value,
+    members: members.value,
+    question: answer,
+    group: '',
+    pquestionType: AIQuestionType.Text,
+    options: [],
+  }
+  try {
+    await optionMutation.mutateAsync(request)
+    scrollToBottom()
+  } catch (error) {
+    console.error('Failed to send option answer:', error)
+  }
+}
 
 // Typing indicator
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId.value))

@@ -36,12 +36,12 @@ export function validateMessage(message: unknown): Result<Message, ValidationErr
  */
 function getValidationErrorMessage(issue: {
   code: string
-  path: string[]
+  path: PropertyKey[]
   message: string
   expected?: string
   received?: string
-  minimum?: number
-  maximum?: number
+  minimum?: number | bigint
+  maximum?: number | bigint
 }): string {
   const field = issue.path.join('.')
 

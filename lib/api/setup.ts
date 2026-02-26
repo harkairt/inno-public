@@ -25,6 +25,8 @@ import {
 let isSetup = false
 
 interface AuthStore {
+  accessToken: string | null
+  refreshToken: string | null
   getAccessToken: string | null
   setTokens: (accessToken: string | null, refreshToken: string | null) => Promise<void>
   clearAuth: () => void
