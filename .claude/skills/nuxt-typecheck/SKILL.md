@@ -13,10 +13,10 @@ Whenever a command returns a result that means something has to be fixed then us
    - If there are type errors, immediately use @agent-Plan to create a comprehensive fix plan
    - Wait for the fix plan to be implemented before proceeding
 
-2. **Lint Check**: Run `bun run lint` command to verify code style and linting rules:
+2. **Lint Check**: Run `npm run lint` command to verify code style and linting rules:
    - If there are lint errors, immediately use @agent-Plan to create a comprehensive fix plan
    - Wait for the fix plan to be implemented before proceeding
 
-3. **Development Server Check**: Run `bun run dev` command and analyze the output carefully:
+3. **Development Server Check**: Run `npm run dev` command and analyze the output carefully:
    - If there are syntax errors, compilation errors, or startup failures, immediately use @agent-Plan to create a comprehensive fix plan
    - Wait for the fix plan to be implemented before proceeding

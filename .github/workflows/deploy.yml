@@ -23,24 +23,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: 'latest'
-
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+          node-version: 'lts/*'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: bun install
+        run: npm ci
 
       - name: Generate static site
-        run: bun run generate
+        run: npm run generate
         env:
           NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
           NUXT_PUBLIC_API_BASE_URL: ${{ vars.NUXT_PUBLIC_API_BASE_URL }}

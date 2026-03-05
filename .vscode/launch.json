@@ -21,7 +21,7 @@
       "type": "node",
       "request": "launch",
       "name": "server: nuxt",
-      "runtimeExecutable": "bun",
+      "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
         "dev",
