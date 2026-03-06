@@ -70,7 +70,7 @@ export default defineNuxtConfig({
   },
 
   pinia: {
-    storesDirs: ['./app/stores/**'],
+    storesDirs: ['./stores/**'],
   },
 
   // Path aliases - @ points to project root, ~ points to app directory
@@ -255,7 +255,7 @@ export default defineNuxtConfig({
       }
     },
     plugins: [
-      tailwindcss(),
+      tailwindcss() as any,
     ],
   },
 
