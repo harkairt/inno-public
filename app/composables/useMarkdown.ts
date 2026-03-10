@@ -1,3 +1,4 @@
+import { sanitizeHTML } from '@/app/utils/sanitize'
 import MarkdownIt from 'markdown-it'
 import texmath from 'markdown-it-texmath'
 import katex from 'katex'
@@ -24,7 +25,7 @@ export const useMarkdown = () => {
         return markdownInstance!.render(markdown)
       } catch (error) {
         console.error('Markdown parsing failed:', error)
-        return markdown // Fallback to raw text
+        return sanitizeHTML(markdown) // Fallback to sanitized text
       }
     },
   }

@@ -5,6 +5,8 @@
 
 import type { InternalAxiosRequestConfig } from "axios";
 import { generateUUID } from "../../utils/uuid";
+import { AppError } from "../../errors/types";
+import { ErrorCode } from "@/types/enums";
 
 /**
  * Request interceptor that adds headers and metadata to outgoing requests
@@ -83,12 +85,6 @@ export function createAuthRequestInterceptor(getToken: () => string | null) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Add debug header in development
-    if (process.env.NODE_ENV === "development") {
-      config.headers = config.headers || {};
-      config.headers["X-Debug-Mode"] = "true";
-    }
-
     return config;
   };
 }
@@ -154,10 +150,13 @@ export function rateLimitInterceptor(
     const resetTime = rateLimiter.getResetTime(key);
     const waitTime = Math.max(0, resetTime - Date.now());
 
-    console.warn(`⚠️ Rate limit exceeded for ${key}. Reset in ${waitTime}ms`);
+    if (import.meta.dev) {
+      console.warn(`Rate limit exceeded for ${key}. Reset in ${waitTime}ms`);
+    }
 
-    // You could implement a queue here or throw an error
-    // For now, we'll just log a warning
+    return Promise.reject(
+      new AppError(ErrorCode.RATE_LIMITED, `Rate limit exceeded. Try again in ${Math.ceil(waitTime / 1000)}s`)
+    ) as any;
   }
 
   return config;

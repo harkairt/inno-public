@@ -547,18 +547,6 @@ function handleTitleKeydown(event: KeyboardEvent) {
   }
 }
 
-// Debug logging
-watch([session, isLoading, isError], () => {
-  console.log('[Chat Session Debug]', {
-    sessionId,
-    session: session.value,
-    messages: messages.value,
-    isLoading: isLoading.value,
-    isError: isError.value,
-    error: error.value,
-  })
-}, { immediate: true })
-
 // Error message
 const errorMessage = computed(() => {
   if (!error.value) return t('errors.sessionNotFound')
@@ -612,7 +600,7 @@ function handleMessageSent() {
   if (isAtBottom.value) {
     scrollToBottom()
   }
-  console.log('Message sent successfully, isAtBottom:', isAtBottom.value)
+  if (import.meta.dev) console.log('Message sent successfully, isAtBottom:', isAtBottom.value)
 }
 
 
@@ -639,7 +627,7 @@ watch(
       scrollToBottom()
     } else {
       // AI responded - only scroll if user was at bottom when they sent message AND still at bottom
-      console.log('[auto-scroll] AI message received:', {
+      if (import.meta.dev) console.log('[auto-scroll] AI message received:', {
         wasAtBottomWhenUserSentMessage: wasAtBottomWhenUserSentMessage.value,
         isAtBottom: isAtBottom.value,
         willScroll: wasAtBottomWhenUserSentMessage.value && isAtBottom.value

@@ -28,8 +28,10 @@ export class TranscriptionService {
     } else {
       const config = useRuntimeConfig()
       this.serviceUrl = config.public.transcriptionServiceUrl ?? ''
-      this.apiKey = config.public.transcriptionApiKey ?? ''
-      this.hfToken = config.public.hfToken ?? ''
+      // API keys are in server-only config; on client they'll be empty strings
+      // A server API proxy should be used for production transcription calls
+      this.apiKey = (config as any).transcriptionApiKey ?? ''
+      this.hfToken = (config as any).hfToken ?? ''
     }
   }
 

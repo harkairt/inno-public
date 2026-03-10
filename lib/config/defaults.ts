@@ -21,7 +21,7 @@ export const DEFAULT_CONFIG: InnoChatConfig = {
   messageTextPartnerItalic: false,
   messageTextPartnerBold: false,
   messageTextPartnerSize: 14,
-  axiosTimeout: 6000000,
+  axiosTimeout: 30000,
   publicMode: 0,
   publicLoginEmail: null,
   publicLoginPassword: null,

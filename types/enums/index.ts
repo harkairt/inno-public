@@ -76,6 +76,7 @@ export enum ErrorCode {
   IMPORT_ERROR = 'IMPORT_ERROR',
   RESET_ERROR = 'RESET_ERROR',
   RESTORE_ERROR = 'RESTORE_ERROR',
+  RATE_LIMITED = 'RATE_LIMITED',
 }
 
 // Cache strategies for Vue Query
