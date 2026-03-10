@@ -21,7 +21,7 @@ export default defineNuxtConfig({
         // Critical for Android keyboard: tells browser to resize content when keyboard appears
         {
           name: 'viewport',
-          content: 'width=device-width, initial-scale=1, interactive-widget=resizes-content'
+          content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'
         }
       ]
     }
@@ -207,17 +207,17 @@ export default defineNuxtConfig({
       categories: ['productivity', 'business', 'utilities'],
       shortcuts: [
         {
-          name: 'New Chat',
-          short_name: 'Chat',
-          description: 'Start a new chat session',
-          url: '/chat/new',
+          name: 'Chats',
+          short_name: 'Chats',
+          description: 'View your conversations',
+          url: '/chats',
           icons: [{ src: 'icons/chat-96x96.png', sizes: '96x96', type: 'image/png' }]
         },
         {
-          name: 'History',
-          short_name: 'History',
-          description: 'View chat history',
-          url: '/history',
+          name: 'Users',
+          short_name: 'Users',
+          description: 'Browse users',
+          url: '/users',
           icons: [{ src: 'icons/history-96x96.png', sizes: '96x96', type: 'image/png' }]
         }
       ]

@@ -109,12 +109,12 @@ export function useSendMessage() {
         messageID: tempMessageId,
         messageText: request.question,
         messageType: AIAnswerType.Text,
-        senderUserCode: authStore.user?.email || "unknown",
-        senderName: authStore.user?.name || "You",
+        senderUserCode: authStore.user?.email ?? "unknown",
+        senderName: authStore.user?.name ?? "You",
         sendDate: userMessageTimestamp.toISOString(),
         isRated: false,
         rating: null,
-        readByUsers: [authStore.user?.email || "unknown"],
+        readByUsers: [authStore.user?.email ?? "unknown"],
         sessionId: request.sessionId,
       };
 
@@ -126,7 +126,7 @@ export function useSendMessage() {
             // Existing session - append message
             return {
               ...old,
-              messages: [...(old.messages || []), tempMessageDTO],
+              messages: [...(old.messages ?? []), tempMessageDTO],
             };
           }
 
@@ -136,7 +136,7 @@ export function useSendMessage() {
             agentId: request.agentId,
             agentImage: null,
             agentDarkImage: null,
-            userCode: authStore.user?.email || 'unknown',
+            userCode: authStore.user?.email ?? 'unknown',
             members: request.members,
             sessionName: '',
             insertDate: userMessageTimestamp.toISOString(),
@@ -155,10 +155,13 @@ export function useSendMessage() {
         chatStore.removeTypingUser(request.sessionId, context.virtualAgentName);
       }
 
-      // Notify session members via SignalR
+      // Notify session members via SignalR (exclude self — backend already filters, but be safe)
       const { isConnected, operations } = useSignalR()
       if (isConnected.value && request.members?.length) {
-        operations.notifyMessageSent(request.members, request.sessionId, request.agentId)
+        const otherMembers = request.members.filter(m => m !== authStore.user?.email)
+        if (otherMembers.length) {
+          operations.notifyMessageSent(otherMembers, request.sessionId, request.agentId)
+        }
       }
 
       // Update Vue Query cache with server response for existing sessions
@@ -170,7 +173,7 @@ export function useSendMessage() {
             if (!old) return old;
             return {
               ...old,
-              messages: [...(old.messages || []), serverMessage],
+              messages: [...(old.messages ?? []), serverMessage],
             };
           }
         );
@@ -232,7 +235,7 @@ export function useSendMessage() {
             if (!old) return old;
             return {
               ...old,
-              messages: (old.messages || []).filter(m => m.messageID !== context.tempMessageId)
+              messages: (old.messages ?? []).filter(m => m.messageID !== context.tempMessageId)
             };
           }
         );
@@ -445,7 +448,7 @@ export function useMarkMessagesRead() {
       const result = await chatService.markMessagesRead(
         params.sessionId,
         params.agentId,
-        params.userCode || authStore.user?.email || ""
+        params.userCode ?? authStore.user?.email ?? ""
       );
 
       if (result.isErr()) {
@@ -489,7 +492,7 @@ export function useMarkMessagesRead() {
     onSuccess: (_, params) => {
       // Optimistically update the session's messages as read in cache
       // This avoids invalidating the session query which would cause a cascade loop
-      const userCode = params.userCode || authStore.user?.email || "";
+      const userCode = params.userCode ?? authStore.user?.email ?? "";
       queryClient.setQueryData<AISessionDTO>(
         chatQueryKeys.session(params.sessionId),
         (old) => {
@@ -500,7 +503,7 @@ export function useMarkMessagesRead() {
               ...msg,
               readByUsers: msg.readByUsers?.includes(userCode)
                 ? msg.readByUsers
-                : [...(msg.readByUsers || []), userCode],
+                : [...(msg.readByUsers ?? []), userCode],
             })),
           };
         }

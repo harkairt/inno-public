@@ -130,7 +130,7 @@ class RateLimiter {
   }
 
   getResetTime(key = "default"): number {
-    const timestamps = this.requests.get(key) || [];
+    const timestamps = this.requests.get(key) ?? [];
     if (timestamps.length === 0) return 0;
 
     const oldestRequest = Math.min(...timestamps);
@@ -143,7 +143,7 @@ const rateLimiter = new RateLimiter();
 
 export function rateLimitInterceptor(
   config: InternalAxiosRequestConfig
-): InternalAxiosRequestConfig {
+): InternalAxiosRequestConfig | Promise<never> {
   const key = `${config.method}_${config.url}`;
 
   if (!rateLimiter.canMakeRequest(key)) {
@@ -156,7 +156,7 @@ export function rateLimitInterceptor(
 
     return Promise.reject(
       new AppError(ErrorCode.RATE_LIMITED, `Rate limit exceeded. Try again in ${Math.ceil(waitTime / 1000)}s`)
-    ) as any;
+    );
   }
 
   return config;
@@ -176,7 +176,7 @@ export function cacheInterceptor(
     // Add no-cache for dynamic data endpoints
     const noCacheEndpoints = ["/messages", "/sessions", "/unread"];
 
-    const url = config.url || "";
+    const url = config.url ?? "";
     const shouldNoCache = noCacheEndpoints.some((endpoint) =>
       url.includes(endpoint)
     );
@@ -208,7 +208,7 @@ export function transformRequestInterceptor(
   }
 
   // Transform request data for specific endpoints
-  const url = config.url || "";
+  const url = config.url ?? "";
 
   // Example: Convert camelCase to snake_case for specific endpoints
   if (url.includes("/login") || url.includes("/register")) {

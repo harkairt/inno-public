@@ -28,9 +28,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       })
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.sessions(),
+        exact: true,
       })
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.unread(),
+        exact: true,
       })
     })
 
@@ -49,7 +51,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         // Get queryClient from nuxtApp (provided by vue-query.client.ts plugin)
         const queryClient = nuxtApp.$queryClient as QueryClient
 
-        await signalr.connect(authStore.accessToken || undefined)
+        await signalr.connect(authStore.accessToken ?? undefined)
 
         // Setup event listeners after connection
         if (signalr.isConnected.value) {

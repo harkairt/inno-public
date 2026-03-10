@@ -261,4 +261,67 @@ Defined in `types/api/schemas.ts` (Zod-inferred):
 
 ---
 
+## Nested Route Layout Pattern (Master-Detail)
+
+`app/pages/chats.vue` acts as a parent layout for all `/chats/*` child routes:
+
+```vue
+<template>
+  <div class="flex flex-1 h-full overflow-hidden">
+    <ChatListPanel v-if="!isMobile" class="w-80 border-r border-border flex-shrink-0" />
+    <NuxtPage class="flex-1 min-w-0" />
+  </div>
+</template>
+```
+
+Key rules:
+- Parent route files (e.g. `chats.vue`) render `<NuxtPage>` for child routes
+- Desktop: show list panel + child content side-by-side
+- Mobile: only show child content (list is a separate route)
+- Use `useNavigationVisibility()` for `isMobile` detection (768px breakpoint)
+
+---
+
+## Page-Level Error Boundary Pattern
+
+Chat pages wrap content in `<NuxtErrorBoundary>` with a flex-col wrapper:
+
+```vue
+<template>
+  <NuxtErrorBoundary @error="handleError">
+    <div class="flex flex-col h-full w-full">
+      <!-- Header -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-border">...</div>
+      <!-- Content -->
+      <div class="flex flex-col h-full min-h-0">...</div>
+    </div>
+    <template #error="{ error, clearError }">
+      <!-- Error fallback with UAlert + retry/back buttons -->
+    </template>
+  </NuxtErrorBoundary>
+</template>
+```
+
+Key rules:
+- `NuxtErrorBoundary` renders as a fragment — always add a `flex flex-col h-full w-full` wrapper div inside
+- The `#error` slot provides fallback UI with `clearError` function
+- Mobile pages show a back button (`v-if="isMobile"`) navigating to `/chats`
+
+---
+
+## Navigation Visibility Composable
+
+`useNavigationVisibility` centralizes responsive + auth-aware visibility:
+
+```typescript
+const { isMobile, isActiveChat, showBottomTabBar, showRail } = useNavigationVisibility()
+```
+
+- `isMobile` — viewport width < 768px
+- `isActiveChat` — route is `chats-sessionId` or `chats-new-userId`
+- `showBottomTabBar` — mobile AND not in active chat AND authenticated AND not public mode
+- `showRail` — desktop AND authenticated AND not public mode
+
+---
+
 See `references/patterns.md` for extended code examples of optimistic updates, public mode patterns, and SignalR cache integration.

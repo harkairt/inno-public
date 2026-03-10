@@ -105,9 +105,7 @@ export function formatValidationErrors(
   const errors: Record<string, string[]> = {};
 
   for (const validationError of error.validationErrors) {
-    if (!errors[validationError.field]) {
-      errors[validationError.field] = [];
-    }
+    errors[validationError.field] ??= [];
     errors[validationError.field]?.push(validationError.message);
   }
 
@@ -214,12 +212,12 @@ export class ErrorTracker {
 
     // Track by error code
     this.metrics.countByCode[error.code] =
-      (this.metrics.countByCode[error.code] || 0) + 1;
+      (this.metrics.countByCode[error.code] ?? 0) + 1;
 
     // Track by status code
     if (error.statusCode) {
       this.metrics.countByStatusCode[error.statusCode] =
-        (this.metrics.countByStatusCode[error.statusCode] || 0) + 1;
+        (this.metrics.countByStatusCode[error.statusCode] ?? 0) + 1;
     }
 
     // Track recent errors

@@ -84,7 +84,7 @@ function getOtherMemberInfo(
 
   return {
     email: otherEmail,
-    name: memberDetail?.name || user?.name || otherEmail,
+    name: memberDetail?.name ?? user?.name ?? otherEmail,
     id: user?.id
   }
 }

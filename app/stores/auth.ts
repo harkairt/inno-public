@@ -143,12 +143,12 @@ export const useAuthStore = defineStore(
     const isAgent = computed(
       () => user.value?.roles.includes("agent") ?? false
     );
-    const userDisplayName = computed(() => user.value?.name || "Unknown User");
+    const userDisplayName = computed(() => user.value?.name ?? "Unknown User");
     const userAvatar = computed(
-      () => user.value?.image || "/images/default-avatar.png"
+      () => user.value?.image ?? "/images/default-avatar.png"
     );
     const userDarkAvatar = computed(
-      () => user.value?.darkImage || "/images/default-avatar-dark.png"
+      () => user.value?.darkImage ?? "/images/default-avatar-dark.png"
     );
     const getAccessToken = computed(() => accessToken.value);
 
@@ -184,8 +184,8 @@ export const useAuthStore = defineStore(
           // Initialize SignalR connection after successful login
           try {
             const { connect } = useSignalR()
-            await connect(tokens.accessToken || undefined)
-          } catch (error) {
+            await connect(tokens.accessToken ?? undefined)
+          } catch  {
             // Don't block login flow if SignalR fails - it's not critical
             // User can still use the app, SignalR will retry on next action
           }
@@ -211,7 +211,7 @@ export const useAuthStore = defineStore(
       try {
         const { disconnect } = useSignalR()
         await disconnect()
-      } catch (error) {
+      } catch {
         // Continue with logout even if SignalR disconnect fails
       }
 

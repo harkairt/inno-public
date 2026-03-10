@@ -1,10 +1,20 @@
 <template>
   <NuxtErrorBoundary @error="handleError">
+    <div class="flex flex-col h-full w-full">
     <!-- Header Section -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-border">
-      <!-- UNIFIED BUTTON: Mobile toggle / Desktop collapse -->
-      <UDashboardSidebarToggle />
-      <UDashboardSidebarCollapse />
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)]">
+      <!-- Mobile: back button to session list -->
+      <UButton
+        v-if="isMobile"
+        icon="i-heroicons-arrow-left"
+        variant="ghost"
+        color="neutral"
+        square
+        size="sm"
+        :aria-label="t('errors.backToChats')"
+        data-testid="back-to-chats"
+        @click="navigateTo('/chats')"
+      />
 
       <div v-if="session" class="min-w-0 flex-1 group">
         <!-- View mode: title + pencil icon (pencil hidden for primary sessions) -->
@@ -178,6 +188,7 @@
       </div>
     </div>
 
+    </div>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
       <div class="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -219,7 +230,7 @@ import { useMarkMessagesRead, useUpdateSessionName, useSendMessage } from '@/app
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
-import { useSidebar } from '@/app/composables/useSidebar'
+import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { usePrimarySession } from '@/app/composables/usePrimarySession'
 import { AIAnswerType, AIQuestionType } from '@/types/enums'
 import type { AiQuestionRequestDTO } from '@/types/api/schemas'
@@ -237,8 +248,8 @@ const sessionId = route.params.sessionId as string
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 
-// Sidebar composable for toggle functionality and mobile detection
-const { isMobile } = useSidebar()
+// Navigation visibility for mobile detection
+const { isMobile } = useNavigationVisibility()
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -267,7 +278,7 @@ const {
   data: session,
   isLoading,
   isError,
-  error,
+  error: chatError,
   refetch,
 } = useChatSession(sessionId)
 
@@ -359,7 +370,7 @@ const lastUnansweredOptionsMessageId = computed(() => {
   const userEmail = authStore.user?.email
   for (let i = msgs.length - 1; i >= 0; i--) {
     const msg = msgs[i]
-    if (msg && msg.messageType === AIAnswerType.Options) {
+    if (msg?.messageType === AIAnswerType.Options) {
       const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
       return hasUserAfter ? undefined : msg.messageID
     }
@@ -549,14 +560,14 @@ function handleTitleKeydown(event: KeyboardEvent) {
 
 // Error message
 const errorMessage = computed(() => {
-  if (!error.value) return t('errors.sessionNotFound')
-  return error.value.message || t('errors.unexpectedError')
+  if (!chatError.value) return t('errors.sessionNotFound')
+  return chatError.value.message || t('errors.unexpectedError')
 })
 
 // Handle session not found or access denied
 watchEffect(() => {
-  if (isError.value && error.value) {
-    const err = error.value as { code?: string; statusCode?: number }
+  if (isError.value && chatError.value) {
+    const err = chatError.value as { code?: string; statusCode?: number }
     if (err.code === 'NOT_FOUND' || err.statusCode === 404) {
       // Session not found - redirect to chats list after a short delay
       setTimeout(() => {

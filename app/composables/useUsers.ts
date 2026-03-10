@@ -29,7 +29,7 @@ export function useSelectableUsers(options?: {
       }
 
       const result = await userService.getSelectableUsers(
-        options?.email || authStore.user.email
+        options?.email ?? authStore.user.email
       )
 
       if (result.isErr()) {
