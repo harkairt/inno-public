@@ -7,10 +7,9 @@
       class="space-y-3"
     >
       <!-- Date Separator -->
-      <div class="flex items-center justify-center my-6">
-        <div class="bg-[hsl(var(--muted))] px-4 py-1.5 rounded-full">
-          <span class="text-xs font-medium text-[hsl(var(--muted-foreground))]">{{ group.date }}</span>
-        </div>
+      <div class="flex items-center gap-4 my-6 px-1">
+        <span class="text-[11px] font-medium tracking-wide uppercase text-[hsl(var(--muted-foreground)/0.7)] shrink-0">{{ group.date }}</span>
+        <div class="flex-1 h-px bg-[hsl(var(--border)/0.4)]" />
       </div>
 
       <!-- Messages in this group -->
@@ -152,7 +151,7 @@ const ownMessageStyle = computed<CSSProperties>(() => ({
   borderColor: 'var(--config-message-border-color)',
   borderStyle: 'var(--config-message-border-style)' as CSSProperties['borderStyle'],
   borderRadius: 'var(--config-message-border-radius)',
-  color: 'black',
+  color: 'hsl(var(--foreground))',
 }))
 
 const partnerMessageStyle = computed<CSSProperties>(() => ({

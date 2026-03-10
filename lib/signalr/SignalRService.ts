@@ -62,10 +62,10 @@ export class SignalRService {
     this.connection.onreconnecting((error) => {
       console.log(
         "🔄 SignalR reconnecting:",
-        error?.message || "Unknown error"
+        error?.message ?? "Unknown error"
       );
       this.reconnectAttempts++;
-      this.lastError = error?.message || "Reconnection failed";
+      this.lastError = error?.message ?? "Reconnection failed";
       this.emit("stateChange", "reconnecting");
     });
 
@@ -80,9 +80,9 @@ export class SignalRService {
     this.connection.onclose((error) => {
       console.log(
         "❌ SignalR connection closed:",
-        error?.message || "Unknown error"
+        error?.message ?? "Unknown error"
       );
-      this.lastError = error?.message || "Connection closed";
+      this.lastError = error?.message ?? "Connection closed";
       this.emit("stateChange", "disconnected");
       this.emit("closed", error);
     });
@@ -149,9 +149,9 @@ export class SignalRService {
   getConnectionInfo(): SignalRConnectionInfo {
     return {
       state: this.getState(),
-      connectionId: this.connection?.connectionId || undefined,
+      connectionId: this.connection?.connectionId ?? undefined,
       reconnectAttempts: this.reconnectAttempts,
-      lastError: this.lastError || undefined,
+      lastError: this.lastError ?? undefined,
     };
   }
 
@@ -187,10 +187,7 @@ export class SignalRService {
     methodName: string,
     ...args: unknown[]
   ): Promise<TResult> {
-    if (
-      !this.connection ||
-      this.connection.state !== signalR.HubConnectionState.Connected
-    ) {
+    if (this.connection?.state !== signalR.HubConnectionState.Connected) {
       throw new Error("SignalR not connected - cannot invoke method");
     }
 
@@ -210,10 +207,7 @@ export class SignalRService {
    * Send message to server without waiting for response
    */
   send(methodName: string, ...args: unknown[]): void {
-    if (
-      !this.connection ||
-      this.connection.state !== signalR.HubConnectionState.Connected
-    ) {
+    if (this.connection?.state !== signalR.HubConnectionState.Connected) {
       console.warn("⚠️ SignalR not connected - cannot send message");
       return;
     }

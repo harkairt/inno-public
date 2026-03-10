@@ -14,19 +14,30 @@ description: Use when starting work on vonno/InnoChat, asking about project stru
 ## Architecture Layers
 
 ```
-Pages/Layouts
+App Shell (default.vue)
     │
-    ├─ Composables (Vue Query: useChatQueries, useChatMutations)
-    │       │
-    │       ├─ Services (lib/api/services/)  ──→  apiClient (Axios)  ──→  Backend
-    │       │
-    │       └─ SignalR (lib/signalr/)        ──→  /chatHub WebSocket
+    ├─ Navigation: AppRail (desktop) | AppBottomTabBar (mobile)
+    │       └─ useNavigationVisibility (responsive breakpoint + auth/route logic)
     │
-Pinia Stores (auth, chat, config)  ↔  Composables + Pages
+    ├─ Pages/Nested Layouts (e.g. chats.vue wraps chats/*.vue children)
+    │       │
+    │       ├─ Composables (Vue Query: useChatQueries, useChatMutations)
+    │       │       │
+    │       │       ├─ Services (lib/api/services/)  ──→  apiClient (Axios)  ──→  Backend
+    │       │       │
+    │       │       └─ SignalR (lib/signalr/)        ──→  /chatHub WebSocket
+    │       │
+    │       └─ Data Aggregation Composables (e.g. useChatListData — combines queries + UI logic)
+    │
+    Pinia Stores (auth, chat, config)  ↔  Composables + Pages
 ```
 
+- **App Shell** (`default.vue`) renders navigation + `<slot />` — minimal, ~23 lines
+- **Navigation** uses `AppRail` (desktop, 64px icon rail) or `AppBottomTabBar` (mobile, fixed bottom tabs). Visibility controlled by `useNavigationVisibility` composable (768px breakpoint, auth state, route awareness)
+- **Nested Route Layouts** — e.g. `app/pages/chats.vue` renders `ChatListPanel` + `<NuxtPage>` side-by-side on desktop (master-detail pattern)
 - **Pages** consume composables, never services directly
 - **Composables** own all server state via TanStack Vue Query
+- **Data Aggregation Composables** (e.g. `useChatListData`) combine multiple queries with search/filter logic into a single reusable unit
 - **Services** make HTTP calls and return `Result<T, AppError>` (neverthrow)
 - **Stores** hold app-wide UI state (auth tokens, active session, etc.)
 - **SignalR** delivers real-time messages; composables listen via `useSignalRChat`
@@ -69,15 +80,17 @@ Public mode is activated when `config.json` contains a `publicAgentId`. The `aut
 |---|---|
 | New page/route | `app/pages/` (Nuxt file-based routing) |
 | Reusable UI component | `app/components/` (or `app/components/chat/` for chat) |
+| Navigation component | `app/components/navigation/` (AppRail, AppBottomTabBar) |
 | Data fetching (queries) | `app/composables/useChatQueries.ts` |
 | Data mutations | `app/composables/useChatMutations.ts` |
+| Data aggregation composable | `app/composables/` (e.g. `useChatListData.ts` — combines queries + search/filter) |
 | App-wide UI state | `app/stores/chat.ts` or `app/stores/auth.ts` |
 | Backend API call | `lib/api/services/ChatService.ts` (or new `XxxService.ts`) |
 | Shared TypeScript types | `lib/types/` or `types/api/schemas.ts` |
 | Reusable pure utils | `lib/utils/` or `app/utils/` |
 | Global middleware | `app/middleware/` |
 | Nuxt plugin | `app/plugins/` |
-| i18n strings | `app/locales/en.json` + `app/locales/hu.json` |
+| i18n strings | `i18n/locales/en.json` + `i18n/locales/hu.json` |
 
 ---
 

@@ -227,7 +227,7 @@ export function useSignalRChatMonitor() {
       case 'disconnected':
         return 'Disconnected from chat'
       case 'failed':
-        return signalr.signalr.lastError.value || 'Connection failed'
+        return signalr.signalr.lastError.value ?? 'Connection failed'
       default:
         return 'Unknown status'
     }

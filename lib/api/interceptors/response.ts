@@ -222,7 +222,7 @@ async function handleTokenRefresh(
 
     // Immediate redirect to login
     if (typeof window !== 'undefined') {
-      const baseUrl = (window as any).__NUXT__?.config?.app?.baseURL || '/'
+      const baseUrl = (window as unknown as { __NUXT__?: { config?: { app?: { baseURL?: string } } } }).__NUXT__?.config?.app?.baseURL ?? '/'
       window.location.href = `${baseUrl}login`
     }
 
@@ -242,7 +242,7 @@ async function handleRateLimitRetry(
   const maxRetries = 3
   const baseDelay = 1000 // 1 second
 
-  originalRequest._retryCount = (originalRequest._retryCount || 0) + 1
+  originalRequest._retryCount = (originalRequest._retryCount ?? 0) + 1
 
   if (originalRequest._retryCount > maxRetries) {
     return Promise.reject(normalizeApiError(error))
@@ -272,7 +272,7 @@ async function handleServiceUnavailableRetry(
   const maxRetries = 2
   const delay = 2000 // 2 seconds
 
-  originalRequest._retryCount = (originalRequest._retryCount || 0) + 1
+  originalRequest._retryCount = (originalRequest._retryCount ?? 0) + 1
 
   if (originalRequest._retryCount > maxRetries) {
     return Promise.reject(normalizeApiError(error))
@@ -304,7 +304,7 @@ export function cacheResponseInterceptor(response: AxiosResponse): AxiosResponse
 
   // Check for cache-control headers
   const cacheControl = response.headers['cache-control'] ?? ''
-  const noCache = cacheControl.includes('no-cache') || cacheControl.includes('no-store')
+  const noCache = cacheControl.includes('no-cache') ?? cacheControl.includes('no-store')
 
   if (noCache) return response
 

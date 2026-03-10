@@ -30,8 +30,8 @@ export class TranscriptionService {
       this.serviceUrl = config.public.transcriptionServiceUrl ?? ''
       // API keys are in server-only config; on client they'll be empty strings
       // A server API proxy should be used for production transcription calls
-      this.apiKey = (config as any).transcriptionApiKey ?? ''
-      this.hfToken = (config as any).hfToken ?? ''
+      this.apiKey = (config as unknown as { transcriptionApiKey: string }).transcriptionApiKey ?? ''
+      this.hfToken = (config as unknown as { hfToken: string }).hfToken ?? ''
     }
   }
 
@@ -106,10 +106,12 @@ export class TranscriptionService {
         return err(
           new AppError(
             ErrorCode.SERVER_ERROR,
-            parseResult.data.error || 'Transcription failed',
+            parseResult.data.error ?? 'Transcription failed',
           ),
         )
       }
+
+
 
       return ok(parseResult.data)
     } catch (error) {
@@ -152,9 +154,7 @@ export class TranscriptionService {
 let _instance: TranscriptionService | null = null
 
 export function useTranscriptionService(): TranscriptionService {
-  if (!_instance) {
-    _instance = new TranscriptionService()
-  }
+  _instance ??= new TranscriptionService();
   return _instance
 }
 

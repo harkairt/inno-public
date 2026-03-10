@@ -30,12 +30,12 @@ export const useChatStore = defineStore('chat', () => {
 
   // Failed messages management
   function addFailedMessage(sessionId: string, message: FailedMessage) {
-    const messages = failedMessages.value.get(sessionId) || []
+    const messages = failedMessages.value.get(sessionId) ?? []
     failedMessages.value.set(sessionId, [...messages, message])
   }
 
   function removeFailedMessage(sessionId: string, messageId: string) {
-    const messages = failedMessages.value.get(sessionId) || []
+    const messages = failedMessages.value.get(sessionId) ?? []
     failedMessages.value.set(sessionId, messages.filter(m => m.messageID !== messageId))
   }
 
@@ -44,7 +44,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function getFailedMessages(sessionId: string): FailedMessage[] {
-    return failedMessages.value.get(sessionId) || []
+    return failedMessages.value.get(sessionId) ?? []
   }
 
   // Draft messages management
@@ -77,7 +77,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function getTypingUsers(sessionId: string): string[] {
-    return Array.from(typingUsers.value.get(sessionId) || [])
+    return Array.from(typingUsers.value.get(sessionId) ?? [])
   }
 
   return {

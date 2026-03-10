@@ -25,6 +25,23 @@
     "agent": "Ügynök {id}",
     "you": "Te"
   },
+  "navigation": {
+    "chats": "Csevegések",
+    "users": "Felhasználók",
+    "profile": "Profil",
+    "mainNavigation": "Fő navigáció"
+  },
+  "profile": {
+    "language": "Nyelv",
+    "colorMode": "Megjelenés",
+    "colorModeLight": "Világos",
+    "colorModeDark": "Sötét",
+    "colorModeSystem": "Rendszer",
+    "connectionStatus": "Kapcsolat"
+  },
+  "users": {
+    "aiAgent": "AI Ügynök"
+  },
   "common": {
     "loading": "Betöltés...",
     "error": "Hiba történt"

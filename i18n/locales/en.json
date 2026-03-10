@@ -25,6 +25,23 @@
     "agent": "Agent {id}",
     "you": "You"
   },
+  "navigation": {
+    "chats": "Chats",
+    "users": "Users",
+    "profile": "Profile",
+    "mainNavigation": "Main navigation"
+  },
+  "profile": {
+    "language": "Language",
+    "colorMode": "Appearance",
+    "colorModeLight": "Light",
+    "colorModeDark": "Dark",
+    "colorModeSystem": "System",
+    "connectionStatus": "Connection"
+  },
+  "users": {
+    "aiAgent": "AI Agent"
+  },
   "common": {
     "loading": "Loading...",
     "error": "An error occurred"

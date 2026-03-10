@@ -116,7 +116,7 @@ export class ChatService {
         request,
       )
 
-      const sessions = response.data.data || []
+      const sessions = response.data.data ?? []
 
       // Validate each session header with Zod (no messages)
       const validatedSessions: AISessionHeaderDTO[] = []
@@ -262,7 +262,7 @@ export class ChatService {
         request,
       )
 
-      const unreadMessages = response.data.data || []
+      const unreadMessages = response.data.data ?? []
 
       // Validate each unread message entry with Zod
       const validatedUnreadMessages = []

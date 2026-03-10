@@ -19,7 +19,8 @@ export class UserService {
         { params: { email } },
       )
 
-      const users = response.data.data || []
+      
+      const users = response.data.data ?? []
 
       // Validate each user with Zod
       const validatedUsers = []

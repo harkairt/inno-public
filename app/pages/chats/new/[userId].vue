@@ -1,9 +1,20 @@
 <template>
   <NuxtErrorBoundary @error="handleError">
+    <div class="flex flex-col h-full w-full">
     <!-- Header Section -->
     <div class="flex items-center gap-3 px-4 py-3 border-b border-border">
-      <UDashboardSidebarToggle />
-      <UDashboardSidebarCollapse />
+      <!-- Mobile: back button to session list -->
+      <UButton
+        v-if="isMobile"
+        icon="i-heroicons-arrow-left"
+        variant="ghost"
+        color="neutral"
+        square
+        size="sm"
+        :aria-label="t('errors.backToChats')"
+        data-testid="back-to-chats"
+        @click="navigateTo('/chats')"
+      />
 
       <div v-if="selectedUser" class="min-w-0 flex-1">
         <h1 class="text-xl font-semibold text-foreground truncate">
@@ -55,6 +66,7 @@
       />
     </div>
 
+    </div>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
       <div class="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -102,8 +114,10 @@ import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 
 const { t } = useI18n()
+const { isMobile } = useNavigationVisibility()
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -125,7 +139,7 @@ watchEffect(() => {
   }
 })
 
-const agentId = computed(() => selectedUser.value?.id || 1)
+const agentId = computed(() => selectedUser.value?.id ?? 1)
 
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!selectedUser.value && selectedUser.value.isVirtual === true),
@@ -153,7 +167,7 @@ const { data: sessionData } = useChatSession(sessionId.value, {
 })
 
 const messages = computed(() => {
-  const queryMessages = sessionData.value?.messages || []
+  const queryMessages = sessionData.value?.messages ?? []
   const failedMessages = chatStore.getFailedMessages(sessionId.value)
   return [...queryMessages, ...failedMessages]
 })
@@ -166,7 +180,7 @@ const lastUnansweredOptionsMessageId = computed(() => {
   const userEmail = authStore.user?.email
   for (let i = msgs.length - 1; i >= 0; i--) {
     const msg = msgs[i]
-    if (msg && msg.messageType === AIAnswerType.Options) {
+    if (msg?.messageType === AIAnswerType.Options) {
       const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
       return hasUserAfter ? undefined : msg.messageID
     }

@@ -75,10 +75,10 @@ export function normalizeApiError(error: unknown): AppError {
 
   // Error with status property (like fetch Response errors)
   if (error instanceof Error && 'status' in error) {
-    const status = (error as { status?: number }).status
+    const status = (error as { status?: number }).status ?? 500
     return createApiError(
       status || 500,
-      error.message || 'Request failed',
+      error.message ?? 'Request failed',
       (error as { url?: string }).url,
       (error as { requestId?: string }).requestId
     )
@@ -99,7 +99,7 @@ export function normalizeApiError(error: unknown): AppError {
 
   // Object with message property
   if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = String((error as { message?: unknown }).message || 'Unknown error occurred')
+    const message = String((error as { message?: unknown }).message ?? 'Unknown error occurred')
     return new UnknownError(message, error)
   }
 

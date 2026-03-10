@@ -1,14 +1,10 @@
 <template>
   <div class="flex flex-col h-full">
-    <!-- Header with mobile and desktop toggle buttons -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-border">
-      <UDashboardSidebarToggle />
-      <UDashboardSidebarCollapse />
-      <h1 class="text-lg font-semibold">{{ t('chat.header') }}</h1>
-    </div>
+    <!-- Mobile: full-page session list -->
+    <ChatListPanel v-if="isMobile" />
 
-    <!-- Main content area -->
-    <div class="flex-1 overflow-y-auto">
+    <!-- Desktop: empty state / welcome content (session list is in parent wrapper) -->
+    <div v-else class="flex-1 overflow-y-auto">
       <div class="max-w-4xl w-full mx-auto px-4 pt-6 sm:pt-24 pb-8 space-y-8">
 
         <!-- Virtual Agents Section -->
@@ -23,7 +19,7 @@
               :agent="agent"
               :style="{ animationDelay: `${index * 100}ms` }"
               class="animate-fade-in-up"
-              @click="navigateToNewChat(agent.id)"
+              @click="navigateTo(`/chats/new/${agent.id}`)"
             />
           </div>
         </section>
@@ -41,7 +37,7 @@
               :selectable-users="users ?? []"
               :style="{ animationDelay: `${(virtualAgents.length + index) * 100}ms` }"
               class="animate-fade-in-up"
-              @click="navigateToChat(chat.sessionId)"
+              @click="navigateTo(`/chats/${chat.sessionId}`)"
             />
           </div>
         </section>
@@ -64,7 +60,6 @@
 
         <!-- Loading State -->
         <div v-if="isLoading" class="space-y-8">
-          <!-- Skeleton for agents -->
           <div class="space-y-4">
             <USkeleton class="h-4 w-40" />
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -79,16 +74,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useSidebar } from '~/composables/useSidebar'
+import { computed } from 'vue'
+import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { useSelectableUsers } from '~/composables/useUsers'
 import { useChatSessions, useUnreadMessageCounts } from '~/composables/useChatQueries'
+import ChatListPanel from '~/components/chat/ChatListPanel.vue'
 import AgentTile from '~/components/chat/AgentTile.vue'
 import UnreadChatCard from '~/components/chat/UnreadChatCard.vue'
 
 const { t } = useI18n()
-const router = useRouter()
-const { setSidebarOpen, isMobile, navigateToNewChat } = useSidebar()
+const { isMobile } = useNavigationVisibility()
 
 definePageMeta({
   title: 'Chat History',
@@ -100,21 +95,19 @@ useSeoMeta({
   description: 'View and manage your previous conversations',
 })
 
-// Data fetching
+// Data fetching (only used for desktop empty state)
 const { data: users, isLoading: usersLoading } = useSelectableUsers()
 const { data: sessions, isLoading: sessionsLoading } = useChatSessions()
 const { data: unreadCounts, isLoading: unreadLoading } = useUnreadMessageCounts()
 
 const isLoading = computed(() => usersLoading.value || sessionsLoading.value || unreadLoading.value)
 
-// Virtual agents (first 3)
 const virtualAgents = computed(() =>
   (users.value ?? [])
     .filter(user => user.isVirtual)
-    .slice(0, 3)
+    .slice(0, 3),
 )
 
-// Unread chats (all, most recent first)
 const unreadChats = computed(() => {
   if (!sessions.value || !unreadCounts.value) return []
 
@@ -123,23 +116,11 @@ const unreadChats = computed(() => {
       const unread = unreadCounts.value?.find(u => u.sessionId === session.sessionId)
       return {
         ...session,
-        unreadCount: unread?.unreadMessageCount ?? 0
+        unreadCount: unread?.unreadMessageCount ?? 0,
       }
     })
     .filter(session => session.unreadCount > 0)
     .sort((a, b) => new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime())
-})
-
-// Actions
-function navigateToChat(sessionId: string) {
-  router.push(`/chats/${sessionId}`)
-}
-
-// Auto-open sidebar on mobile when visiting the chat list page
-onMounted(() => {
-  if (isMobile.value) {
-    setSidebarOpen(true)
-  }
 })
 </script>
 

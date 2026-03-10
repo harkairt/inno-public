@@ -28,6 +28,6 @@ const avatarSrc = computed(() => {
   if (isDark && props.darkImage) {
     return props.darkImage
   }
-  return props.image || undefined
+  return props.image ?? undefined
 })
 </script>
