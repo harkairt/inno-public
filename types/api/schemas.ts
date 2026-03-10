@@ -125,7 +125,6 @@ export const UserDTOSchema = z.object({
   updatedAt: z.string().nullable(),
   name: z.string(),
   email: z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'),
-  passwordHash: z.string().nullable().optional(),
   status: UserStatusSchema,
   invitationAccepted: z.boolean(),
   roles: z.array(z.string()),

@@ -37,8 +37,7 @@ export class AppError extends Error {
       code: this.code,
       message: this.message,
       statusCode: this.statusCode,
-      details: this.details,
-      stack: this.stack
+      details: this.details
     }
   }
 }

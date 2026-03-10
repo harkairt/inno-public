@@ -88,10 +88,28 @@ let hookAdded = false
  * All external links are automatically given target="_blank" and rel="noopener noreferrer".
  */
 export const sanitizeHTML = (dirty: string): string => {
-  if (typeof window === 'undefined') return dirty // SSR safety
+  if (typeof window === 'undefined') {
+    // Basic HTML entity escaping for SSR context where DOMPurify isn't available
+    return dirty
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+  }
 
-  // Add hook only once
+  // Add hooks only once
   if (!hookAdded) {
+    // Filter dangerous CSS values from style attributes
+    DOMPurify.addHook('uponSanitizeAttribute', (_node, data) => {
+      if (data.attrName === 'style') {
+        const dangerous = /url\s*\(|expression\s*\(|javascript:|position\s*:\s*(fixed|absolute)/i
+        if (dangerous.test(data.attrValue)) {
+          data.keepAttr = false
+        }
+      }
+    })
+
     DOMPurify.addHook('afterSanitizeAttributes', (node) => {
       if (node.tagName === 'A' && node.hasAttribute('href')) {
         node.setAttribute('target', '_blank')

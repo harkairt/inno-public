@@ -1,3 +1,9 @@
+function isInternalRedirect(path: string): boolean {
+  // Must start with / and must NOT start with // (protocol-relative URL)
+  // Must not contain :// (absolute URL disguised as path)
+  return path.startsWith('/') && !path.startsWith('//') && !path.includes('://')
+}
+
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
   // Handle publicMode routing and publicAgent validation
@@ -72,6 +78,6 @@ export default defineNuxtRouteMiddleware((to) => {
     if (redirect === '/login' || redirect.startsWith('/login?') || redirect.startsWith('/login/')) {
       return navigateTo('/')
     }
-    return navigateTo(redirect)
+    return navigateTo(isInternalRedirect(redirect) ? redirect : '/')
   }
 })

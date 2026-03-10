@@ -36,7 +36,7 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@nuxt/ui',
     '@nuxt/icon',
-    '@nuxt/test-utils',
+    ...(process.env.NODE_ENV === 'test' ? ['@nuxt/test-utils'] : []),
     '@nuxtjs/i18n'
   ],
 
@@ -66,7 +66,7 @@ export default defineNuxtConfig({
 
   sourcemap: {
     server: true,
-    client: true,
+    client: false,
   },
 
   pinia: {
@@ -98,14 +98,14 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // Server-only (never sent to client)
+    transcriptionApiKey: process.env.NUXT_TRANSCRIPTION_API_KEY ?? '',
+    hfToken: process.env.NUXT_HF_TOKEN ?? '',
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL ?? '',
       devLoginEmail: '',
       // Transcription service (Hugging Face Spaces)
       transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL ?? '',
-      transcriptionApiKey: process.env.NUXT_PUBLIC_TRANSCRIPTION_API_KEY ?? '',
-      // HF token for private spaces
-      hfToken: process.env.NUXT_PUBLIC_HF_TOKEN ?? '',
     },
   },
 
@@ -242,7 +242,7 @@ export default defineNuxtConfig({
 
     // Optimization for production
     build: {
-      sourcemap: true,
+      sourcemap: false,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -266,12 +266,19 @@ export default defineNuxtConfig({
         target: 'esnext'
       }
     },
-    // Enable debug logging for proxy requests
-    logLevel: 4, // 0: silent, 1: error, 2: warn, 3: info, 4: verbose
+    logLevel: 1, // 0: silent, 1: error, 2: warn, 3: info, 4: verbose
   },
 
   // Route rules for API proxy (works in both dev and production)
   routeRules: {
+    '/**': {
+      headers: {
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
+      },
+    },
     '/api/**': {
       proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/api/**`
     },

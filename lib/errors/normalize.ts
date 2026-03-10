@@ -56,7 +56,7 @@ function isNetworkLikeError(error: Error): boolean {
  * Normalizes backend API errors (which vary in format) into consistent AppError
  */
 export function normalizeApiError(error: unknown): AppError {
-  console.warn('Normalizing error:', error)
+  if (import.meta.dev) console.warn('Normalizing error:', error)
 
   // Axios error (most common for HTTP requests)
   if (isAxiosError(error)) {

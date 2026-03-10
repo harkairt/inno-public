@@ -10,13 +10,18 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   // Function to setup chat event listeners
   const setupChatEventListeners = (signalr: ReturnType<typeof useSignalR>, queryClient: QueryClient) => {
     if (listenersRegistered) {
-      console.log('SignalR chat event listeners already registered, skipping')
+      if (import.meta.dev) console.log('SignalR chat event listeners already registered, skipping')
       return
     }
 
     // ReceiveMessage - invalidate queries to trigger refetch
-    signalr.onEvent('ReceiveMessage', (sessionId: string, agentId: number) => {
-      console.log('New message notification:', { sessionId, agentId })
+    signalr.onEvent('ReceiveMessage', (sessionId: unknown, agentId: unknown) => {
+      if (typeof sessionId !== 'string' || typeof agentId !== 'number') {
+        if (import.meta.dev) console.warn('Invalid ReceiveMessage payload:', { sessionId, agentId })
+        return
+      }
+
+      if (import.meta.dev) console.log('New message notification:', { sessionId, agentId })
 
       queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(sessionId),
@@ -30,12 +35,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     })
 
     listenersRegistered = true
-    console.log('SignalR chat event listeners registered')
+    if (import.meta.dev) console.log('SignalR chat event listeners registered')
   }
 
   // Auto-connect if user is already authenticated (page refresh scenario)
   if (authStore.isAuthenticated && authStore.accessToken) {
-    console.log('User authenticated on app load, initializing SignalR connection...')
+    if (import.meta.dev) console.log('User authenticated on app load, initializing SignalR connection...')
 
     // Small delay to ensure all stores and plugins are fully initialized
     setTimeout(async () => {
@@ -58,13 +63,13 @@ export default defineNuxtPlugin(async (nuxtApp) => {
           }
         })
 
-        console.log('SignalR auto-connected on app initialization')
+        if (import.meta.dev) console.log('SignalR auto-connected on app initialization')
       } catch (error) {
-        console.error('Failed to auto-connect SignalR on app load:', error)
+        if (import.meta.dev) console.error('Failed to auto-connect SignalR on app load:', error)
         // Don't throw - SignalR is not critical for app initialization
       }
     }, 500)
   } else {
-    console.log('No authenticated user on app load, skipping SignalR auto-connect')
+    if (import.meta.dev) console.log('No authenticated user on app load, skipping SignalR auto-connect')
   }
 })

@@ -52,7 +52,7 @@ let authStoreInstance: AuthStore | null = null
 
 // Set auth store instance (called from plugin)
 export function setAuthStore(authStore: AuthStore): void {
-  console.log('🔌 Setting auth store instance:', {
+  if (import.meta.dev) console.log('Setting auth store instance:', {
     hasAccessToken: !!authStore.accessToken,
     hasRefreshToken: !!authStore.refreshToken,
     hasSetTokens: typeof authStore.setTokens === 'function',
@@ -63,7 +63,7 @@ export function setAuthStore(authStore: AuthStore): void {
 
 function processQueue(error: unknown): void {
   const queueLength = failedQueue.length
-  console.log(`🔄 Token refresh: Processing ${queueLength} queued requests...`)
+  if (import.meta.dev) console.log(`Token refresh: Processing ${queueLength} queued requests...`)
 
   failedQueue.forEach((promise) => {
     if (error) {
@@ -75,7 +75,7 @@ function processQueue(error: unknown): void {
   })
 
   failedQueue = []
-  console.log('✅ Token refresh: Queue processing completed')
+  if (import.meta.dev) console.log('Token refresh: Queue processing completed')
 }
 
 // ============================================================================
@@ -87,15 +87,6 @@ function processQueue(error: unknown): void {
  * Handles response transformation and logging
  */
 export function responseInterceptor(response: AxiosResponse): AxiosResponse {
-  // Log successful responses in development
-  if (process.env.NODE_ENV === 'development') {
-    // console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-    //   status: response.status,
-    //   requestId: response.config.headers['X-Request-ID'],
-    //   data: response.data
-    // })
-  }
-
   // Handle specific response transformations
   const url = response.config.url ?? ''
 
@@ -131,17 +122,22 @@ export async function responseErrorInterceptor(error: AxiosError): Promise<Axios
   globalErrorTracker.track(normalizedError)
 
   // Log error in development
-  if (process.env.NODE_ENV === 'development' && !!originalRequest) {
-    console.error(`❌ API Error: ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`, {
+  if (import.meta.dev && !!originalRequest) {
+    console.error(`API Error: ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`, {
       status: error.response?.status,
       requestId: originalRequest.headers['X-Request-ID'],
       error: normalizedError
     })
   }
 
+  // Skip token refresh for requests that already opted out (e.g., the refresh request itself)
+  if (originalRequest.skipAuthRefresh) {
+    return Promise.reject(normalizedError)
+  }
+
   // Handle 401 Unauthorized - attempt token refresh
   if (error.response?.status === 401 && !originalRequest._retry) {
-    console.log('🔄 Token refresh: 401 error detected, initiating token refresh...')
+    if (import.meta.dev) console.log('Token refresh: 401 error detected, initiating token refresh...')
     return handleTokenRefresh(originalRequest)
   }
 
@@ -199,13 +195,13 @@ async function handleTokenRefresh(
     // Extract and store new tokens
     const tokens = extractTokensFromResponse(refreshResponse.data.data)
     if (authStoreInstance) {
-      console.log('🔄 Token refresh: Storing new tokens...')
+      if (import.meta.dev) console.log('Token refresh: Storing new tokens...')
       await authStoreInstance.setTokens(tokens.accessToken, tokens.refreshToken)
-      console.log('✅ Token refresh: Tokens stored successfully')
+      if (import.meta.dev) console.log('Token refresh: Tokens stored successfully')
     }
 
     // If refresh successful, process queued requests
-    console.log('🔄 Token refresh: Processing queued requests...')
+    if (import.meta.dev) console.log('Token refresh: Processing queued requests...')
     processQueue(null)
 
     // Retry the original request
@@ -222,11 +218,12 @@ async function handleTokenRefresh(
       authStoreInstance.clearAuth()
     }
 
-    console.error('Token refresh failed, redirecting to login')
+    if (import.meta.dev) console.error('Token refresh failed, redirecting to login')
 
     // Immediate redirect to login
     if (typeof window !== 'undefined') {
-      window.location.href = '/login'
+      const baseUrl = (window as any).__NUXT__?.config?.app?.baseURL || '/'
+      window.location.href = `${baseUrl}login`
     }
 
     return Promise.reject(normalizedRefreshError)
@@ -258,7 +255,7 @@ async function handleRateLimitRetry(
   const jitter = Math.random() * 0.1 * delay
   const finalDelay = delay + jitter
 
-  console.log(`Rate limited. Retrying in ${finalDelay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`)
+  if (import.meta.dev) console.log(`Rate limited. Retrying in ${finalDelay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`)
 
   // Wait and retry
   await new Promise(resolve => setTimeout(resolve, finalDelay))
@@ -281,7 +278,7 @@ async function handleServiceUnavailableRetry(
     return Promise.reject(normalizeApiError(error))
   }
 
-  console.log(`Service unavailable. Retrying in ${delay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`)
+  if (import.meta.dev) console.log(`Service unavailable. Retrying in ${delay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`)
 
   // Wait and retry
   await new Promise(resolve => setTimeout(resolve, delay))
@@ -353,7 +350,7 @@ export function getCachedResponse(config: InternalAxiosRequestConfig): AxiosResp
     return
   }
 
-  console.log(`🎯 Serving cached response for ${cacheKey}`)
+  if (import.meta.dev) console.log(`Serving cached response for ${cacheKey}`)
 
   // Return cached response
   return {

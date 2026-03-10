@@ -52,10 +52,10 @@ export class SignalRService {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(this.config.hubUrl, {
         accessTokenFactory: () => accessToken,
-        transport: signalR.HttpTransportType.LongPolling,
+        transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.ServerSentEvents | signalR.HttpTransportType.LongPolling,
       })
       .withAutomaticReconnect(this.config.reconnectDelays)
-      .configureLogging(signalR.LogLevel.Information)
+      .configureLogging(signalR.LogLevel.Warning)
       .build();
 
     // Setup lifecycle handlers

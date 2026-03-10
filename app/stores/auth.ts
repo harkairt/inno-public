@@ -4,6 +4,7 @@ import { err, ok, type Result } from "neverthrow";
 import { authService } from "@/lib/api/services/AuthService";
 import { normalizeApiError } from "@/lib/errors/normalize";
 import { AppError } from "@/lib/errors/types";
+import { UserDTOSchema } from "@/types/api/schemas";
 import type { LoginRequestDTO, UserDTO } from "@/types/api/schemas";
 import { ErrorCode } from "@/types/enums";
 import { sha512 } from 'js-sha512'
@@ -87,10 +88,15 @@ function loadAuthStateFromStorage(): { user: UserDTO | null; accessToken: string
     if (!stored) return { user: null, accessToken: null, refreshToken: null };
 
     const authData = JSON.parse(stored);
+
+    // Validate user data shape
+    const userResult = authData.user ? UserDTOSchema.safeParse(authData.user) : { success: true as const, data: null }
+    const user = userResult.success ? (userResult.data ?? null) : null
+
     return {
-      user: authData.user || null,
-      accessToken: authData.accessToken || null,
-      refreshToken: authData.refreshToken || null
+      user,
+      accessToken: typeof authData.accessToken === 'string' ? authData.accessToken : null,
+      refreshToken: typeof authData.refreshToken === 'string' ? authData.refreshToken : null
     };
   } catch (error) {
     console.warn(`Failed to load auth state from ${storageMode}:`, error);
@@ -165,8 +171,6 @@ export const useAuthStore = defineStore(
           lastError.value = result.error;
           return err(result.error);
         }
-        console.log(JSON.stringify(result.value, null, 2));
-
         // Extract and store tokens
         const tokens = extractTokensFromResponse(result.value.data);
 
@@ -179,12 +183,9 @@ export const useAuthStore = defineStore(
 
           // Initialize SignalR connection after successful login
           try {
-            console.log('🔗 Login successful, connecting to SignalR...')
             const { connect } = useSignalR()
             await connect(tokens.accessToken || undefined)
-            console.log('✅ SignalR connected after login')
           } catch (error) {
-            console.error('⚠️ SignalR connection failed after login:', error)
             // Don't block login flow if SignalR fails - it's not critical
             // User can still use the app, SignalR will retry on next action
           }
@@ -208,12 +209,9 @@ export const useAuthStore = defineStore(
 
       // Disconnect SignalR before clearing auth state (best-effort)
       try {
-        console.log('🔌 Disconnecting SignalR before logout...')
         const { disconnect } = useSignalR()
         await disconnect()
-        console.log('✅ SignalR disconnected successfully')
       } catch (error) {
-        console.error('⚠️ Error disconnecting SignalR during logout:', error)
         // Continue with logout even if SignalR disconnect fails
       }
 
@@ -301,40 +299,16 @@ export const useAuthStore = defineStore(
     }
 
     function setTokens(access: string | null, refresh: string | null): Promise<void> {
-      console.log('🔄 setTokens called with:', {
-        hasAccessToken: !!access,
-        accessTokenLength: access?.length || 0,
-        hasRefreshToken: !!refresh,
-        refreshTokenLength: refresh?.length || 0
-      });
-
       // Validate tokens before storing
       const validatedAccessToken = access && access.trim() !== '' ? access : null;
       const validatedRefreshToken = refresh && refresh.trim() !== '' ? refresh : null;
-
-      console.log('🔄 setTokens validated:', {
-        validatedAccessToken: !!validatedAccessToken,
-        validatedRefreshToken: !!validatedRefreshToken
-      });
 
       // Update reactive state immediately
       accessToken.value = validatedAccessToken;
       refreshToken.value = validatedRefreshToken;
 
-      console.log('🔄 setTokens updated reactive state:', {
-        accessTokenValue: !!accessToken.value,
-        refreshTokenValue: !!refreshToken.value
-      });
-
       // Save auth state to localStorage when tokens are updated and return Promise
-      return saveAuthStateToStorage(user.value, accessToken.value, refreshToken.value)
-        .then(() => {
-          console.log('✅ setTokens: localStorage saved successfully');
-        })
-        .catch((error) => {
-          console.error('❌ setTokens: localStorage save failed:', error);
-          throw error;
-        });
+      return saveAuthStateToStorage(user.value, accessToken.value, refreshToken.value);
     }
 
     function clearError(): void {
@@ -367,11 +341,5 @@ export const useAuthStore = defineStore(
       setTokens,
       clearError,
     };
-  },
-  {
-    persist: {
-      key: "innochat-auth",
-      pick: ["user", "accessToken", "refreshToken"], // Persist user and auth tokens in localStorage
-    },
   }
 );

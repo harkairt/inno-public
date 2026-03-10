@@ -10,7 +10,6 @@ interface UserDTO {
   updatedAt: string | null
   name: string
   email: string
-  passwordHash: string | null
   status: 'active' | 'inactive' | 'suspended' | 'pending'
   invitationAccepted: boolean
   roles: string[]
@@ -30,7 +29,7 @@ export const mockUsers = {
     updatedAt: null,
     name: 'Test User',
     email: 'test@example.com',
-    passwordHash: null,
+
     status: 'active',
     invitationAccepted: true,
     roles: ['user'],
@@ -49,7 +48,7 @@ export const mockUsers = {
     updatedAt: null,
     name: 'Admin User',
     email: 'admin@example.com',
-    passwordHash: null,
+
     status: 'active',
     invitationAccepted: true,
     roles: ['admin', 'user'],
@@ -68,7 +67,7 @@ export const mockUsers = {
     updatedAt: null,
     name: 'AI Assistant',
     email: 'ai@virtual.agent',
-    passwordHash: null,
+
     status: 'active',
     invitationAccepted: true,
     roles: ['agent'],
@@ -87,7 +86,7 @@ export const mockUsers = {
     updatedAt: null,
     name: 'Code Helper',
     email: 'code@virtual.agent',
-    passwordHash: null,
+
     status: 'active',
     invitationAccepted: true,
     roles: ['agent'],
@@ -106,7 +105,7 @@ export const mockUsers = {
     updatedAt: null,
     name: 'Inactive User',
     email: 'inactive@example.com',
-    passwordHash: null,
+
     status: 'inactive',
     invitationAccepted: false,
     roles: ['user'],

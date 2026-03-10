@@ -11,7 +11,6 @@ function createMockUser(overrides: Partial<UserDTO> = {}): UserDTO {
     updatedAt: null,
     name: 'John Doe',
     email: 'john@example.com',
-    passwordHash: null,
     status: 'Active' as any,
     invitationAccepted: true,
     roles: [],

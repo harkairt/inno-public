@@ -129,7 +129,8 @@ const handleLogin = async () => {
         }
         // Redirect to the intended page or home
         const redirect = (route.query.redirect as string) || '/'
-        await router.push(redirect)
+        const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://') ? redirect : '/'
+        await router.push(safeRedirect)
       },
       onError: (error: unknown) => {
         loginError.value = error instanceof Error ? error.message : t('login.invalidCredentials')
@@ -142,7 +143,8 @@ const handleLogin = async () => {
 onMounted(() => {
   if (authStore.isAuthenticated) {
     const redirect = (route.query.redirect as string) || '/'
-    router.push(redirect)
+    const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://') ? redirect : '/'
+    router.push(safeRedirect)
   }
 
   // Sync dev email after hydration (fixes SSR/client mismatch)
