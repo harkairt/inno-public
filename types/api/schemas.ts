@@ -26,7 +26,7 @@ import { AppError } from '@/lib/errors/types'
 const AI_ANSWER_TYPE_VALUES = [
   'text',
   'command',
-  'datatable',
+  'dataTable',
   'options',
   'url',
   'question',
@@ -38,7 +38,7 @@ const AI_ANSWER_TYPE_VALUES = [
 const aiAnswerTypeMap: Record<typeof AI_ANSWER_TYPE_VALUES[number], AIAnswerType> = {
   'text': AIAnswerType.Text,
   'command': AIAnswerType.Command,
-  'datatable': AIAnswerType.DataTable,
+  'dataTable': AIAnswerType.DataTable,
   'options': AIAnswerType.Options,
   'url': AIAnswerType.URL,
   'question': AIAnswerType.Question,
