@@ -1,6 +1,9 @@
 <template>
   <div class="flex flex-col h-full overflow-hidden" data-testid="chat-list-panel">
-    <div class="p-3">
+    <div class="border-b border-[hsl(var(--border)/0.5)] px-4 py-3">
+      <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
+        {{ t('navigation.conversations') }}
+      </h1>
       <UInput
         v-model="sessionSearchQuery"
         icon="i-heroicons-magnifying-glass"

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/vue-query'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
 import { toValue, watch, type MaybeRefOrGetter } from 'vue'
@@ -78,6 +78,7 @@ export function useChatSession(sessionId: string, options?: {
   includeMessages?: boolean
 }) {
   const authStore = useAuthStore()
+  const queryClient = useQueryClient()
 
   const query = useQuery({
     queryKey: chatQueryKeys.session(sessionId),
@@ -101,7 +102,14 @@ export function useChatSession(sessionId: string, options?: {
     enabled: options?.enabled ?? (authStore.isAuthenticated && !!sessionId),
     staleTime: options?.staleTime ?? 10 * 1000, // 10 seconds - messages update frequently
     gcTime: 2 * 60 * 1000, // 2 minutes
-    placeholderData: (previousData) => previousData, // Use cached data while refetching
+    placeholderData: (previousData) => {
+      const headers = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+      const header = headers?.find(h => h.sessionId === sessionId)
+      if (header) {
+        return { ...header, messages: [] } as AISessionDTO
+      }
+      return previousData
+    },
     refetchOnMount: true, // Always refetch to get real server data
     refetchOnWindowFocus: false, // Don't refetch on focus for sessions
     refetchOnReconnect: true,

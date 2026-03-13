@@ -27,6 +27,7 @@
   },
   "navigation": {
     "chats": "Chats",
+    "conversations": "Conversations",
     "users": "Users",
     "profile": "Profile",
     "mainNavigation": "Main navigation"

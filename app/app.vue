@@ -3,7 +3,7 @@
     <div>
       <NuxtRouteAnnouncer />
       <NuxtLayout>
-        <NuxtPage />
+        <NuxtPage :transition="{ name: 'fade' }" />
       </NuxtLayout>
       <UNotifications />
       <AppUpdateBanner />

@@ -27,6 +27,7 @@
   },
   "navigation": {
     "chats": "Csevegések",
+    "conversations": "Beszélgetések",
     "users": "Felhasználók",
     "profile": "Profil",
     "mainNavigation": "Fő navigáció"

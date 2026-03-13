@@ -2,7 +2,7 @@
   <NuxtErrorBoundary @error="handleError">
     <div class="flex flex-col h-full w-full">
     <!-- Header Section -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)]">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)] min-h-[73px]">
       <!-- Mobile: back button to session list -->
       <UButton
         v-if="isMobile"
@@ -50,6 +50,12 @@
         <p v-if="otherParticipantNames" class="text-sm text-muted-foreground truncate">
           {{ otherParticipantNames }}
         </p>
+      </div>
+
+      <!-- Shimmer skeleton fallback when session data isn't available yet -->
+      <div v-else class="min-w-0 flex-1 space-y-2">
+        <USkeleton class="h-6 w-48" />
+        <USkeleton class="h-4 w-32" />
       </div>
 
       <!-- Session Members Avatar Stack (hidden for primary sessions) -->
