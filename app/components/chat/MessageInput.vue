@@ -43,6 +43,7 @@
               ref="textareaRef"
               v-model="messageText"
               :placeholder="inputPlaceholder"
+              :aria-label="inputPlaceholder"
               :rows="textareaRows"
               :maxrows="5"
               autoresize
@@ -68,6 +69,7 @@
             :loading="isTranscribing"
             :disabled="isTranscribing"
             size="lg"
+            :aria-label="isRecording ? t('chat.messageInput.stopRecording') : t('chat.messageInput.startRecording')"
             data-testid="voice-record-button"
             @click="toggleRecording"
             @pointerdown="onMicPointerDown"
@@ -83,6 +85,7 @@
             size="lg"
             color="primary"
             class="shrink-0"
+            :aria-label="t('chat.messageInput.send')"
             data-testid="send-button"
           />
         </div>
@@ -191,8 +194,8 @@ const {
   setTranscribing,
   error: voiceError,
 } = useVoiceRecording({
-  onError: (err) => {
-    console.error('Voice recording error:', err)
+  onError: (_err) => {
+    // Voice error handled via voiceError watcher + toast
   },
 })
 
@@ -258,8 +261,7 @@ async function transcribeAudio(blob: Blob) {
         color: 'error',
       })
     }
-  } catch (error) {
-    console.error('Transcription error:', error)
+  } catch {
     toast.add({
       title: t('voice.transcriptionFailed'),
       color: 'error',
@@ -366,10 +368,9 @@ async function handleSubmit() {
 
     // Emit message sent event after successful send
     emit('messageSent')
-  } catch (error) {
+  } catch {
     // Error is handled by mutation error state
     // Draft remains in store - user can retry
-    console.error('Failed to send message:', error)
   }
 }
 

@@ -22,7 +22,8 @@ export default defineNuxtConfig({
         {
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'
-        }
+        },
+        { name: 'color-scheme', content: 'light dark' }
       ]
     }
   },
@@ -118,9 +119,8 @@ export default defineNuxtConfig({
     registerType: 'prompt',
 
     workbox: {
-      // Disable navigateFallback - let GitHub Pages 404.html handle SPA routing
-      // Using absolute '/index.html' breaks when app is hosted at a subdirectory (e.g., /vonno/)
-      navigateFallback: null,
+      navigateFallback: '/offline.html',
+      navigateFallbackDenylist: [/^\/api\//, /^\/chatHub\//, /^\/assets\//],
       globPatterns: ['**/*.{js,css,html,png,svg,ico,txt}'],
       skipWaiting: true,
       clientsClaim: true,
@@ -281,6 +281,8 @@ export default defineNuxtConfig({
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' wss: ws: https://api.iconify.design; worker-src 'self' blob:;",
       },
     },
     '/api/**': {

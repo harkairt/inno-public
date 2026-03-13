@@ -45,7 +45,8 @@
   },
   "common": {
     "loading": "Loading...",
-    "error": "An error occurred"
+    "error": "An error occurred",
+    "skipToContent": "Skip to content"
   },
   "chat": {
     "messageInput": {
@@ -55,14 +56,17 @@
       "retry": "Retry",
       "failedToSend": "Failed to send message",
       "anErrorOccurred": "An error occurred while sending your message",
-      "pressEnterToSend": "Press Enter to send, Shift+Enter for new line"
+      "pressEnterToSend": "Press Enter to send, Shift+Enter for new line",
+      "startRecording": "Start voice recording",
+      "stopRecording": "Stop recording"
     },
     "messages": {
       "noMessages": "No messages yet",
       "emptyState": "Be the first to say something!",
       "sending": "Sending...",
       "sent": "Sent",
-      "failedToSend": "Failed to send"
+      "failedToSend": "Failed to send",
+      "ariaLabel": "Chat messages"
     },
     "typing": {
       "single": "{name} is typing",

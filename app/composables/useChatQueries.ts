@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
-import { toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { toValue, type MaybeRefOrGetter } from 'vue'
 import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
-import type { AppError } from '@/lib/errors/types'
+import { isServerError, type AppError } from '@/lib/errors/types'
 
 // Query keys
 export const chatQueryKeys = {
@@ -125,21 +125,6 @@ export function useChatSession(sessionId: string, options?: {
     },
   })
 
-  // Debug: Log message timestamps and contents whenever they change
-  watch(
-    () => query.data.value?.messages,
-    (messages) => {
-      if (messages) {
-        console.log('[useChatSession] Messages changed:', messages.map(m => ({
-          messageID: m.messageID,
-          sendDate: m.sendDate,
-          messageText: m.messageText?.substring(0, 100) + (m.messageText && m.messageText.length > 100 ? '...' : ''),
-        })))
-      }
-    },
-    { deep: true }
-  )
-
   return query
 }
 
@@ -182,6 +167,13 @@ export function useUnreadMessageCounts(options?: {
 }
 
 /**
+ * Tracks agent IDs that returned a server error (500) for welcome text.
+ * These agents don't have a welcome message configured, so we skip
+ * subsequent fetches for the lifetime of the browser session.
+ */
+const agentsWithoutWelcomeMessage = new Set<number>()
+
+/**
  * Welcome message query composable
  * Fetches welcome message for a specific agent
  */
@@ -204,6 +196,10 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
         throw new Error('Agent ID is required')
       }
 
+      if (agentsWithoutWelcomeMessage.has(unwrappedAgentId)) {
+        return { message: '' }
+      }
+
       const result = await chatService.getWelcomeMessage({
         userCode: authStore.user.email,
         sessionId: options?.sessionId ?? '',
@@ -216,6 +212,10 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
       })
 
       if (result.isErr()) {
+        if (isServerError(result.error)) {
+          agentsWithoutWelcomeMessage.add(unwrappedAgentId)
+          return { message: '' }
+        }
         throw result.error
       }
 

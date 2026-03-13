@@ -45,7 +45,8 @@
   },
   "common": {
     "loading": "Betöltés...",
-    "error": "Hiba történt"
+    "error": "Hiba történt",
+    "skipToContent": "Ugrás a tartalomhoz"
   },
   "chat": {
     "messageInput": {
@@ -55,14 +56,17 @@
       "retry": "Újra",
       "failedToSend": "Nem sikerült elküldeni az üzenetet",
       "anErrorOccurred": "Hiba történt az üzenet küldése közben",
-      "pressEnterToSend": "Enter a küldéshez, Shift+Enter új sorhoz"
+      "pressEnterToSend": "Enter a küldéshez, Shift+Enter új sorhoz",
+      "startRecording": "Hangfelvétel indítása",
+      "stopRecording": "Felvétel leállítása"
     },
     "messages": {
       "noMessages": "Még nincsenek üzenetek",
       "emptyState": "Legyen Ön az első, aki mond valamit!",
       "sending": "Küldés...",
       "sent": "Elküldve",
-      "failedToSend": "Nem sikerült elküldeni"
+      "failedToSend": "Nem sikerült elküldeni",
+      "ariaLabel": "Chat üzenetek"
     },
     "typing": {
       "single": "{name} gépel",

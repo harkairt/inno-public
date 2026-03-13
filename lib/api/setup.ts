@@ -39,7 +39,6 @@ interface AuthStore {
  */
 export function setupApiClient(authStore: AuthStore): void {
   if (isSetup) {
-    console.warn('API client already setup')
     return
   }
 
@@ -87,7 +86,6 @@ export function setupApiClient(authStore: AuthStore): void {
   }
 
   isSetup = true
-  console.log('✅ API client setup complete')
 }
 
 /**
@@ -108,7 +106,7 @@ export function setupApiClientForNuxt(authStore: AuthStore): void {
  */
 export function getApiClient() {
   if (!isSetup) {
-    console.warn('API client not setup. Call setupApiClient() first.')
+    throw new Error('API client not setup. Call setupApiClient() first.')
   }
   return apiClient
 }
@@ -123,7 +121,6 @@ export function resetApiClient(): void {
   apiClient.interceptors.response.clear()
 
   isSetup = false
-  console.log('🔄 API client reset complete')
 }
 
 /**
@@ -193,7 +190,6 @@ export function setupApiClientWithConfig(
   }
 
   isSetup = true
-  console.log('✅ API client setup complete with custom configuration')
 }
 
 // Export for backward compatibility
