@@ -8,7 +8,7 @@
         v-model="userSearchQuery"
         icon="i-heroicons-magnifying-glass"
         :placeholder="t('sidebar.searchUsers')"
-        size="sm"
+        size="md"
         class="w-full"
         :ui="{ root: 'w-full' }"
         data-testid="user-search-input"

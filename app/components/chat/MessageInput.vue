@@ -119,6 +119,7 @@ interface Props {
   selectableAgents?: UserDTO[]
   selectedAgentId?: number | undefined // undefined = no selection
   selectedAgentName?: string           // Name of selected agent for placeholder
+  isNewConversation?: boolean          // Show "How can I help?" instead of "Reply..."
   disableSignalR?: boolean             // Disable SignalR typing indicators (for public mode)
   disableVoice?: boolean               // Disable voice recording button (for public mode)
 }
@@ -129,6 +130,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectableAgents: () => [],
   selectedAgentId: undefined,
   selectedAgentName: undefined,
+  isNewConversation: false,
   disableSignalR: false,
   disableVoice: false,
 })
@@ -297,12 +299,15 @@ function toggleAgent(agentId: number) {
   }
 }
 
-// Dynamic placeholder based on selected agent
+// Dynamic placeholder based on selected agent and conversation state
 const inputPlaceholder = computed(() => {
   if (props.selectedAgentName) {
     return t('chat.messageInput.askFromAgent', { name: props.selectedAgentName })
   }
-  return t('chat.messageInput.placeholder')
+  if (props.isNewConversation) {
+    return t('chat.messageInput.placeholderNew')
+  }
+  return t('chat.messageInput.placeholderReply')
 })
 
 // Computed: Can send message

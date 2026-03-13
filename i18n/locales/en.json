@@ -48,7 +48,8 @@
   },
   "chat": {
     "messageInput": {
-      "placeholder": "Type your message...",
+      "placeholderNew": "How can I help you?",
+      "placeholderReply": "Reply...",
       "askFromAgent": "Ask from {name}",
       "send": "Send",
       "retry": "Retry",

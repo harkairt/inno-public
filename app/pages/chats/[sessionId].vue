@@ -47,7 +47,9 @@
           @blur="saveTitle"
         >
 
-        <div class="flex items-center text-sm text-muted-foreground"/>
+        <p v-if="otherParticipantNames" class="text-sm text-muted-foreground truncate">
+          {{ otherParticipantNames }}
+        </p>
       </div>
 
       <!-- Session Members Avatar Stack (hidden for primary sessions) -->
@@ -159,6 +161,7 @@
         :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
         :selected-agent-name="selectedAgentName"
         :members="session.members || []"
+        :is-new-conversation="messages.length === 0"
         class="flex-shrink-0 sticky bottom-0"
         @message-sent="handleMessageSent"
         @scroll-to-bottom="scrollToBottom"
@@ -497,6 +500,19 @@ const selectedAgentName = computed(() => {
   }
   const agent = selectableTargetAgents.value.find(a => a.id === selectedTargetAgentId.value)
   return agent?.name
+})
+
+// Participant names for header subtitle (excludes current user)
+const otherParticipantNames = computed(() => {
+  if (!session.value?.members || !selectableUsers.value) return ''
+  const currentEmail = authStore.user?.email
+  return session.value.members
+    .filter(email => email !== currentEmail)
+    .map(email => {
+      const user = selectableUsers.value!.find(u => u.email === email)
+      return user?.name ?? email
+    })
+    .join(', ')
 })
 
 // Handle target agent change

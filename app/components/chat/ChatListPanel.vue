@@ -5,7 +5,7 @@
         v-model="sessionSearchQuery"
         icon="i-heroicons-magnifying-glass"
         :placeholder="t('sidebar.searchSessions')"
-        size="sm"
+        size="md"
         class="w-full"
         :ui="{ root: 'w-full' }"
         data-testid="session-search-input"

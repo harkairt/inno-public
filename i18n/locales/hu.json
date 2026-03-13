@@ -48,7 +48,8 @@
   },
   "chat": {
     "messageInput": {
-      "placeholder": "Írja be üzenetét...",
+      "placeholderNew": "Miben segíthetek?",
+      "placeholderReply": "Válaszoljon...",
       "askFromAgent": "Kérdezze {name}-t",
       "send": "Küldés",
       "retry": "Újra",
