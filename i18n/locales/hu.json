@@ -49,8 +49,7 @@
   "chat": {
     "messageInput": {
       "placeholderNew": "Miben segíthetek?",
-      "placeholderReply": "Válaszoljon...",
-      "askFromAgent": "Kérdezze {name}-t",
+      "placeholderReply": "Válasz..",
       "send": "Küldés",
       "retry": "Újra",
       "failedToSend": "Nem sikerült elküldeni az üzenetet",

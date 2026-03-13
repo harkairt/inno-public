@@ -299,11 +299,8 @@ function toggleAgent(agentId: number) {
   }
 }
 
-// Dynamic placeholder based on selected agent and conversation state
+// Dynamic placeholder based on conversation state
 const inputPlaceholder = computed(() => {
-  if (props.selectedAgentName) {
-    return t('chat.messageInput.askFromAgent', { name: props.selectedAgentName })
-  }
   if (props.isNewConversation) {
     return t('chat.messageInput.placeholderNew')
   }
