@@ -57,12 +57,10 @@ export const useConfigStore = defineStore('config', () => {
         loadError.value = null
       } else {
         // Silent failure - use defaults
-        console.warn('Config load failed, using defaults:', result.error)
         loadError.value = result.error
         isLoaded.value = true // Mark as loaded even on failure
       }
     } catch (error) {
-      console.warn('Config load error, using defaults:', error)
       loadError.value = error as Error
       isLoaded.value = true
     }

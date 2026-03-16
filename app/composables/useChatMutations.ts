@@ -249,7 +249,7 @@ export function useSendMessage() {
         }
       }
 
-      console.error("Send message failed:", error);
+      // Error handled by mutation error state
     },
 
     // NOTE: No onSettled invalidations needed - this was causing a cascade of 26+ requests
@@ -297,8 +297,8 @@ export function useUpdateSessionName() {
       );
     },
 
-    onError: (error: AppError) => {
-      console.error("Update session name failed:", error);
+    onError: (_error: AppError) => {
+      // Error handled by mutation error state
     },
 
     // Always refetch after mutation settles to ensure server sync
@@ -351,8 +351,8 @@ export function useDeleteSession() {
       queryClient.invalidateQueries({ queryKey: chatQueryKeys.unread() });
     },
 
-    onError: (error: AppError) => {
-      console.error("Delete session failed:", error);
+    onError: (_error: AppError) => {
+      // Error handled by mutation error state
     },
   });
 }
@@ -416,7 +416,7 @@ export function useRateMessage() {
           context.previousSession
         );
       }
-      console.error("Rate message failed:", error);
+      // Error handled by mutation error state
     },
 
     onSettled: (_, __, params) => {
@@ -486,7 +486,7 @@ export function useMarkMessagesRead() {
       if (context?.previousUnread) {
         queryClient.setQueryData(chatQueryKeys.unread(), context.previousUnread);
       }
-      console.error("Mark messages read failed:", error);
+      // Error handled by mutation error state
     },
 
     onSuccess: (_, params) => {
@@ -553,8 +553,8 @@ export function useReactToMessage() {
       });
     },
 
-    onError: (error: AppError) => {
-      console.error("React to message failed:", error);
+    onError: (_error: AppError) => {
+      // Error handled by mutation error state
     },
   });
 }
@@ -584,8 +584,8 @@ export function useAddUserToSession() {
       queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() });
     },
 
-    onError: (error: AppError) => {
-      console.error("Add user to session failed:", error);
+    onError: (_error: AppError) => {
+      // Error handled by mutation error state
     },
   });
 }
@@ -617,8 +617,8 @@ export function useRemoveUserFromSession() {
       queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() });
     },
 
-    onError: (error: AppError) => {
-      console.error("Remove user from session failed:", error);
+    onError: (_error: AppError) => {
+      // Error handled by mutation error state
     },
   });
 }
@@ -648,8 +648,8 @@ export function useStartPublicChat() {
       queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() });
     },
 
-    onError: (error: AppError) => {
-      console.error("Start public chat failed:", error);
+    onError: (_error: AppError) => {
+      // Error handled by mutation error state
     },
   });
 }

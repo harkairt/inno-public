@@ -11,8 +11,6 @@ import type { InnoChatConfig } from '@/types/api/schemas'
 export default defineNuxtPlugin({
   name: 'config-init',
   async setup() {
-    console.log('⚙️ Loading application configuration...')
-
     const configStore = useConfigStore()
 
     await configStore.loadConfig()
@@ -20,17 +18,11 @@ export default defineNuxtPlugin({
     if (configStore.isLoaded) {
       // Apply axios timeout
       apiClient.defaults.timeout = configStore.axiosTimeout
-      console.log(`⏱️ Axios timeout set to ${configStore.axiosTimeout}ms from config`)
 
       // Apply CSS variables to :root
       if (import.meta.client) {
         applyConfigCssVariables(configStore.config)
-        console.log('🎨 CSS variables applied from config')
       }
-
-      console.log('✅ Application configuration loaded successfully')
-    } else {
-      console.warn('⚠️ Configuration loaded with defaults due to error')
     }
 
     return {

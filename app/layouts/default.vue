@@ -1,17 +1,16 @@
 <template>
   <div v-if="isMobile" class="flex flex-col h-dvh">
-    <main class="flex-1 overflow-hidden" :class="{ 'pb-20': showBottomTabBar }">
+    <main class="relative flex-1 overflow-hidden" :class="{ 'pb-20': showBottomTabBar }">
       <slot />
     </main>
     <AppBottomTabBar v-if="showBottomTabBar" />
   </div>
   <div v-else class="flex h-dvh">
     <AppRail v-if="showRail" />
-    <main class="flex-1 flex flex-col overflow-hidden">
+    <main class="relative flex-1 flex flex-col overflow-hidden">
       <slot />
     </main>
   </div>
-
 </template>
 
 <script setup lang="ts">
