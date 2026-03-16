@@ -182,7 +182,7 @@
         :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
         :selected-agent-name="selectedAgentName"
         :members="session.members || []"
-        :is-new-conversation="messages.length === 0"
+        :is-new-conversation="isPlaceholderData ? undefined : messages.length === 0"
         class="flex-shrink-0 sticky bottom-0"
         @message-sent="handleMessageSent"
         @scroll-to-bottom="scrollToBottom"
@@ -290,6 +290,9 @@ const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(
 // Track if user was at bottom when they sent their message
 // Used to decide scroll behavior when AI responds
 const wasAtBottomWhenUserSentMessage = ref(true)
+
+// Track whether initial scroll-to-bottom has happened (prevents duplicate scrolls)
+const hasInitiallyScrolled = ref(false)
 
 // Inline edit state
 const isEditingTitle = ref(false)
@@ -701,10 +704,21 @@ watch(
   { deep: true }
 )
 
+// Scroll to bottom when messages become ready (handles cached data where Transition @after-enter won't fire).
+// When data is cached, isMessagesReady is true from the first render — the shimmer is never shown,
+// so the Transition never fires @after-enter. This watch catches that case.
+watch(isMessagesReady, (ready) => {
+  if (ready && !hasInitiallyScrolled.value) {
+    hasInitiallyScrolled.value = true
+    nextTick(() => scrollToBottom(true))
+  }
+}, { immediate: true })
+
 // Scroll to bottom when the message thread enters the DOM (after shimmer → messages transition).
 // Using @after-enter on the Transition ensures the ChatMessages DOM is fully rendered,
 // which is necessary because mode="out-in" delays the enter phase until the leave animation finishes.
 function onMessagesEntered() {
+  hasInitiallyScrolled.value = true
   scrollToBottom(true)
 }
 </script>

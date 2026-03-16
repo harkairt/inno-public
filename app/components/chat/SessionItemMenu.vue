@@ -23,6 +23,7 @@
           v-model="editedName"
           :placeholder="t('chat.sessionMenu.sessionNamePlaceholder')"
           :disabled="isPending"
+          size="lg"
           class="mb-4"
         />
         <div class="flex justify-end gap-2">

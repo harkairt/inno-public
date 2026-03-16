@@ -8,7 +8,7 @@
         v-model="userSearchQuery"
         icon="i-heroicons-magnifying-glass"
         :placeholder="t('sidebar.searchUsers')"
-        size="md"
+        size="lg"
         class="w-full"
         :ui="{ root: 'w-full' }"
         data-testid="user-search-input"
@@ -50,11 +50,7 @@
             {{ user.isVirtual ? t('users.aiAgent') : user.email }}
           </p>
         </div>
-        <UIcon
-          v-if="user.isVirtual"
-          name="i-heroicons-sparkles"
-          class="size-4 text-[hsl(var(--primary)/0.6)] flex-shrink-0"
-        />
+
       </button>
     </div>
   </div>

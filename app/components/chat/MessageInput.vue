@@ -3,17 +3,16 @@
     <div class="px-3 py-2">
       <form class="flex flex-col gap-1" @submit.prevent="handleSubmit">
         <!-- Agent Selection - only show if virtual agents exist -->
-        <div v-if="virtualAgents.length > 0" class="flex items-center gap-2 flex-wrap">
+        <div v-if="virtualAgents.length > 0" class="flex items-center gap-2 flex-wrap max-h-[4.5rem] overflow-hidden">
           <UButton
             v-for="agent in virtualAgents"
             :key="agent.id"
             :variant="agent.id === selectedAgentId ? 'solid' : 'soft'"
+            :label="agent.name"
             size="sm"
-            class="transition-all duration-150"
+            class="transition-all duration-150 max-w-48 truncate"
             @click="toggleAgent(agent.id)"
-          >
-            {{ agent.name }}
-          </UButton>
+          />
         </div>
 
         <!-- Error Message Display -->
@@ -51,7 +50,7 @@
               class="w-full"
               :disabled="isTranscribing"
               data-testid="message-input"
-              :ui="{ root: 'relative flex items-center' }"
+              :ui="{ root: 'relative flex items-center', base: 'placeholder:text-dimmed/40' }"
               @keydown="handleKeyDown"
             />
           </div>
@@ -122,7 +121,7 @@ interface Props {
   selectableAgents?: UserDTO[]
   selectedAgentId?: number | undefined // undefined = no selection
   selectedAgentName?: string           // Name of selected agent for placeholder
-  isNewConversation?: boolean          // Show "How can I help?" instead of "Reply..."
+  isNewConversation?: boolean | undefined // true = "How can I help?", false = "Reply...", undefined = messages not loaded yet
   disableSignalR?: boolean             // Disable SignalR typing indicators (for public mode)
   disableVoice?: boolean               // Disable voice recording button (for public mode)
 }
@@ -133,7 +132,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectableAgents: () => [],
   selectedAgentId: undefined,
   selectedAgentName: undefined,
-  isNewConversation: false,
+  isNewConversation: undefined,
   disableSignalR: false,
   disableVoice: false,
 })
@@ -302,7 +301,9 @@ function toggleAgent(agentId: number) {
 }
 
 // Dynamic placeholder based on conversation state
+// undefined = messages not loaded yet, show no placeholder to avoid flash of wrong text
 const inputPlaceholder = computed(() => {
+  if (props.isNewConversation === undefined) return ''
   if (props.isNewConversation) {
     return t('chat.messageInput.placeholderNew')
   }

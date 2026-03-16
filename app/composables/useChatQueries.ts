@@ -3,7 +3,7 @@ import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
 import { toValue, type MaybeRefOrGetter } from 'vue'
 import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
-import { isServerError, type AppError } from '@/lib/errors/types'
+import type { AppError } from '@/lib/errors/types'
 
 // Query keys
 export const chatQueryKeys = {
@@ -212,7 +212,7 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
       })
 
       if (result.isErr()) {
-        if (isServerError(result.error)) {
+        if (result.error.statusCode !== undefined && result.error.statusCode >= 500) {
           agentsWithoutWelcomeMessage.add(unwrappedAgentId)
           return { message: '' }
         }
