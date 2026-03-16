@@ -41,7 +41,7 @@
           />
           <button
             type="button"
-            class="absolute inset-y-0 right-0 flex items-center pr-3 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] rounded-md transition-colors"
             @click="showPassword = !showPassword"
           >
             <UIcon v-if="showPassword" name="i-heroicons-eye-slash" class="size-5" />

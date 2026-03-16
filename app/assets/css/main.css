@@ -239,7 +239,6 @@
   /* Refined sidebar item - minimal aesthetic */
   .sidebar-item {
     @apply relative pl-4 py-2 transition-all duration-200 cursor-pointer;
-    opacity: 0.7;
   }
 
   .sidebar-item::before {
@@ -249,7 +248,7 @@
   }
 
   .sidebar-item:hover {
-    opacity: 1;
+    background: hsl(var(--accent));
   }
 
   .sidebar-item:hover::before {
@@ -257,7 +256,6 @@
   }
 
   .sidebar-item-active {
-    opacity: 1;
     background: hsl(var(--accent));
   }
 
