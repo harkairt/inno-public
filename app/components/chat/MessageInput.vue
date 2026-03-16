@@ -3,17 +3,16 @@
     <div class="px-3 py-2">
       <form class="flex flex-col gap-1" @submit.prevent="handleSubmit">
         <!-- Agent Selection - only show if virtual agents exist -->
-        <div v-if="virtualAgents.length > 0" class="flex items-center gap-2 flex-wrap">
+        <div v-if="virtualAgents.length > 0" class="flex items-center gap-2 flex-wrap max-h-[4.5rem] overflow-hidden">
           <UButton
             v-for="agent in virtualAgents"
             :key="agent.id"
             :variant="agent.id === selectedAgentId ? 'solid' : 'soft'"
+            :label="agent.name"
             size="sm"
-            class="transition-all duration-150"
+            class="transition-all duration-150 max-w-48 truncate"
             @click="toggleAgent(agent.id)"
-          >
-            {{ agent.name }}
-          </UButton>
+          />
         </div>
 
         <!-- Error Message Display -->
@@ -43,6 +42,7 @@
               ref="textareaRef"
               v-model="messageText"
               :placeholder="inputPlaceholder"
+              :aria-label="inputPlaceholder"
               :rows="textareaRows"
               :maxrows="5"
               autoresize
@@ -50,7 +50,7 @@
               class="w-full"
               :disabled="isTranscribing"
               data-testid="message-input"
-              :ui="{ root: 'relative flex items-center' }"
+              :ui="{ root: 'relative flex items-center', base: 'placeholder:text-dimmed/40' }"
               @keydown="handleKeyDown"
             />
           </div>
@@ -68,6 +68,7 @@
             :loading="isTranscribing"
             :disabled="isTranscribing"
             size="lg"
+            :aria-label="isRecording ? t('chat.messageInput.stopRecording') : t('chat.messageInput.startRecording')"
             data-testid="voice-record-button"
             @click="toggleRecording"
             @pointerdown="onMicPointerDown"
@@ -83,6 +84,7 @@
             size="lg"
             color="primary"
             class="shrink-0"
+            :aria-label="t('chat.messageInput.send')"
             data-testid="send-button"
           />
         </div>
@@ -119,6 +121,7 @@ interface Props {
   selectableAgents?: UserDTO[]
   selectedAgentId?: number | undefined // undefined = no selection
   selectedAgentName?: string           // Name of selected agent for placeholder
+  isNewConversation?: boolean | undefined // true = "How can I help?", false = "Reply...", undefined = messages not loaded yet
   disableSignalR?: boolean             // Disable SignalR typing indicators (for public mode)
   disableVoice?: boolean               // Disable voice recording button (for public mode)
 }
@@ -129,6 +132,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectableAgents: () => [],
   selectedAgentId: undefined,
   selectedAgentName: undefined,
+  isNewConversation: undefined,
   disableSignalR: false,
   disableVoice: false,
 })
@@ -189,8 +193,8 @@ const {
   setTranscribing,
   error: voiceError,
 } = useVoiceRecording({
-  onError: (err) => {
-    console.error('Voice recording error:', err)
+  onError: (_err) => {
+    // Voice error handled via voiceError watcher + toast
   },
 })
 
@@ -256,8 +260,7 @@ async function transcribeAudio(blob: Blob) {
         color: 'error',
       })
     }
-  } catch (error) {
-    console.error('Transcription error:', error)
+  } catch {
     toast.add({
       title: t('voice.transcriptionFailed'),
       color: 'error',
@@ -297,12 +300,14 @@ function toggleAgent(agentId: number) {
   }
 }
 
-// Dynamic placeholder based on selected agent
+// Dynamic placeholder based on conversation state
+// undefined = messages not loaded yet, show no placeholder to avoid flash of wrong text
 const inputPlaceholder = computed(() => {
-  if (props.selectedAgentName) {
-    return t('chat.messageInput.askFromAgent', { name: props.selectedAgentName })
+  if (props.isNewConversation === undefined) return ''
+  if (props.isNewConversation) {
+    return t('chat.messageInput.placeholderNew')
   }
-  return t('chat.messageInput.placeholder')
+  return t('chat.messageInput.placeholderReply')
 })
 
 // Computed: Can send message
@@ -364,10 +369,9 @@ async function handleSubmit() {
 
     // Emit message sent event after successful send
     emit('messageSent')
-  } catch (error) {
+  } catch {
     // Error is handled by mutation error state
     // Draft remains in store - user can retry
-    console.error('Failed to send message:', error)
   }
 }
 

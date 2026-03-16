@@ -28,12 +28,10 @@ export function useSignalRChat(options?: {
   // Failures are silently handled - SignalR is optional for basic functionality
   const connect = async () => {
     if (!authStore.isAuthenticated || !authStore.user) {
-      console.warn('Cannot connect to SignalR: User not authenticated')
       return
     }
 
     if (isConnected.value || isConnecting.value) {
-      console.log('SignalR already connected or connecting')
       return
     }
 
@@ -42,17 +40,13 @@ export function useSignalRChat(options?: {
       const token = authStore.accessToken
 
       if (!token) {
-        console.warn('Cannot connect to SignalR: No access token available')
         return // Silent fail - app works without SignalR
       }
 
-      console.log('🔗 Connecting to SignalR with JWT token...')
       await signalr.connect(token)
-      console.log('✅ SignalR chat connected')
-    } catch (error) {
+    } catch {
       // Silent fail - SignalR is for real-time updates only
       // App still works via HTTP polling
-      console.warn('SignalR connection failed (app will use polling):', error)
     }
   }
 
@@ -60,16 +54,14 @@ export function useSignalRChat(options?: {
   const disconnect = async () => {
     try {
       await signalr.disconnect()
-      console.log('✅ SignalR chat disconnected')
-    } catch (error) {
-      console.error('❌ Failed to disconnect from SignalR chat:', error)
+    } catch {
+      // Silently ignore disconnect errors
     }
   }
 
   // Setup event listeners
   const setupEventListeners = () => {
     if (!signalr.isReady()) {
-      console.warn('SignalR not ready, cannot setup event listeners')
       return
     }
 
@@ -77,8 +69,6 @@ export function useSignalRChat(options?: {
 
     // User started typing
     const unsubscribeStartTyping = signalr.onEvent('SendStartTypingInfo', (name: string, email: string, sessionId: string) => {
-      console.log('⌨️  User started typing:', { name, email, sessionId })
-
       // Don't show typing indicator for current user
       if (email !== authStore.user?.email) {
         chatStore.addTypingUser(sessionId, name)
@@ -87,8 +77,6 @@ export function useSignalRChat(options?: {
 
     // User stopped typing
     const unsubscribeStopTyping = signalr.onEvent('SendStopTypingInfo', (name: string, email: string, sessionId: string) => {
-      console.log('⌨️  User stopped typing:', { name, email, sessionId })
-
       // Remove typing indicator for this user
       chatStore.removeTypingUser(sessionId, name)
     })
@@ -128,13 +116,10 @@ export function useSignalRChat(options?: {
       // 2. Both old and new tokens exist (not logout)
       // 3. We're currently connected
       if (newToken && oldToken && newToken !== oldToken && isConnected.value) {
-        console.log('🔄 Access token refreshed, reconnecting SignalR with new token...')
         try {
           await signalr.forceReconnect(newToken)
-          console.log('✅ SignalR reconnected with new token')
-        } catch (error) {
+        } catch {
           // Silent fail - app works without SignalR
-          console.warn('SignalR reconnect failed (app will use polling):', error)
         }
       }
     }

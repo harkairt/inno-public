@@ -9,6 +9,9 @@ export interface SignalRConfig {
   hubUrl: string
   automaticReconnect: boolean
   reconnectDelays: number[]  // ms delays between reconnect attempts
+  connectionTimeoutMs?: number     // Default: 15000
+  serverTimeoutMs?: number         // Default: 30000
+  keepAliveIntervalMs?: number     // Default: 15000
 }
 
 export interface SignalRMessage {

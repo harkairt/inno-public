@@ -38,14 +38,12 @@ export class SignalRService {
    */
   async connect(accessToken: string): Promise<void> {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      console.log("🟢 SignalR already connected");
       return;
     }
 
     // Stop existing connection if any
     await this.disconnect();
 
-    console.log("🔗 Connecting to SignalR hub:", this.config.hubUrl);
     this.emit("stateChange", "connecting");
 
     // Create new connection
@@ -58,19 +56,17 @@ export class SignalRService {
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
+    this.connection.serverTimeoutInMilliseconds = this.config.serverTimeoutMs ?? 30_000
+    this.connection.keepAliveIntervalInMilliseconds = this.config.keepAliveIntervalMs ?? 15_000
+
     // Setup lifecycle handlers
     this.connection.onreconnecting((error) => {
-      console.log(
-        "🔄 SignalR reconnecting:",
-        error?.message ?? "Unknown error"
-      );
       this.reconnectAttempts++;
       this.lastError = error?.message ?? "Reconnection failed";
       this.emit("stateChange", "reconnecting");
     });
 
     this.connection.onreconnected((connectionId) => {
-      console.log("✅ SignalR reconnected:", connectionId);
       this.reconnectAttempts = 0;
       this.lastError = null;
       this.emit("stateChange", "connected");
@@ -78,10 +74,6 @@ export class SignalRService {
     });
 
     this.connection.onclose((error) => {
-      console.log(
-        "❌ SignalR connection closed:",
-        error?.message ?? "Unknown error"
-      );
       this.lastError = error?.message ?? "Connection closed";
       this.emit("stateChange", "disconnected");
       this.emit("closed", error);
@@ -90,15 +82,20 @@ export class SignalRService {
     // Re-register all event handlers
     this.registerAllEventHandlers();
 
-    // Start connection
+    // Start connection with timeout
     try {
-      await this.connection.start();
-      console.log("✅ SignalR connected successfully");
+      const timeoutMs = this.config.connectionTimeoutMs ?? 15_000
+      await Promise.race([
+        this.connection.start(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`SignalR connection timed out after ${timeoutMs}ms`)), timeoutMs)
+        ),
+      ])
       this.reconnectAttempts = 0;
       this.lastError = null;
       this.emit("stateChange", "connected");
     } catch (error) {
-      console.error("❌ Failed to connect to SignalR:", error);
+      await this.connection?.stop().catch(() => {})  // Clean up on timeout/failure
       this.lastError =
         error instanceof Error ? error.message : "Connection failed";
       this.emit("stateChange", "failed");
@@ -113,9 +110,8 @@ export class SignalRService {
     if (this.connection) {
       try {
         await this.connection.stop();
-        console.log("🔌 SignalR disconnected");
-      } catch (error) {
-        console.warn("⚠️ Error disconnecting SignalR:", error);
+      } catch {
+        // Silently ignore disconnect errors
       } finally {
         this.connection = null;
         this.emit("stateChange", "disconnected");
@@ -194,10 +190,6 @@ export class SignalRService {
     try {
       return await this.connection.invoke<TResult>(methodName, ...args);
     } catch (error) {
-      console.error(
-        `❌ SignalR invoke failed for method '${methodName}':`,
-        error
-      );
       this.lastError = error instanceof Error ? error.message : "Invoke failed";
       throw error;
     }
@@ -208,17 +200,12 @@ export class SignalRService {
    */
   send(methodName: string, ...args: unknown[]): void {
     if (this.connection?.state !== signalR.HubConnectionState.Connected) {
-      console.warn("⚠️ SignalR not connected - cannot send message");
       return;
     }
 
     try {
       this.connection.send(methodName, ...args);
     } catch (error) {
-      console.error(
-        `❌ SignalR send failed for method '${methodName}':`,
-        error
-      );
       this.lastError = error instanceof Error ? error.message : "Send failed";
       throw error;
     }
@@ -266,11 +253,8 @@ export class SignalRService {
       for (const handler of handlers) {
         try {
           handler(...args);
-        } catch (error) {
-          console.error(
-            `❌ Error in SignalR event handler for '${eventName}':`,
-            error
-          );
+        } catch {
+          // Silently ignore event handler errors
         }
       }
     }
@@ -298,7 +282,6 @@ export class SignalRService {
    * Force reconnection
    */
   async forceReconnect(accessToken: string): Promise<void> {
-    console.log("🔄 Forcing SignalR reconnection...");
     await this.disconnect();
     await this.connect(accessToken);
   }

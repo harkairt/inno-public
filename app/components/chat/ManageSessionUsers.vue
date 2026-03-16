@@ -20,6 +20,7 @@
             :placeholder="t('chat.manageUsers.searchPlaceholder')"
             icon="i-heroicons-magnifying-glass-20-solid"
             autocomplete="off"
+            size="lg"
             class="w-full"
             :ui="{ root: 'w-full' }"
           />
