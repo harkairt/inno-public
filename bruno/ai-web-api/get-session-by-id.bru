@@ -1,0 +1,51 @@
+meta {
+  name: GetSessionById
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/GetSessionById
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "sessionId": "{{sessionId}}",
+    "agentId": {{agentId}}
+  }
+}
+
+docs {
+  Gets full session details including messages
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return session data", function() {
+    expect(res.body.data).to.have.property("sessionId");
+    expect(res.body.data).to.have.property("sessionName");
+  });
+
+  test("should return messages array", function() {
+    expect(res.body.data.messages).to.be.an("array");
+  });
+
+  test("session should have required fields", function() {
+    expect(res.body.data).to.have.property("agentId");
+    expect(res.body.data).to.have.property("members");
+  });
+}

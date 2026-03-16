@@ -1,0 +1,38 @@
+meta {
+  name: addUserToSession
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/addUserToSession
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "sessionId": "{{sessionId}}",
+    "agentId": {{agentId}},
+    "userCode": "levente@innochat.hu"
+  }
+}
+
+docs {
+  Adds a user to an existing chat session
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

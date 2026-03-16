@@ -1,0 +1,38 @@
+meta {
+  name: Set_SessionMessagesRead
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/Set_SessionMessagesRead
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "sessionID": "{{sessionId}}",
+    "agent": 46,
+    "userCode": "{{email}}"
+  }
+}
+
+docs {
+  Marks session messages as read by user
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

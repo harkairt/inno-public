@@ -1,0 +1,51 @@
+meta {
+  name: GetSessionHeadersByUserId
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/GetSessionHeadersByUserId
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "userCode": "{{email}}",
+    "agents": [],
+    "filterText": ""
+  }
+}
+
+docs {
+  Gets all chat session headers for a user
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return array", function() {
+    expect(res.body.data).to.be.an("array");
+  });
+
+  test("sessions should have required fields", function() {
+    if (res.body.data.length > 0) {
+      const session = res.body.data[0];
+      expect(session).to.have.property("sessionId");
+      expect(session).to.have.property("sessionName");
+      expect(session).to.have.property("agentId");
+    }
+  });
+}

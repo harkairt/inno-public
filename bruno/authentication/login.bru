@@ -1,0 +1,79 @@
+meta {
+  name: login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/authentication/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "mode": 0,
+    "email": "{{email}}",
+    "password": ""
+  }
+}
+
+script:pre-request {
+  const CryptoJS = require('crypto-js');
+  const password = bru.getEnvVar("password");
+  const email = bru.getEnvVar("email");
+
+  if (password) {
+    const hashedPassword = CryptoJS.SHA512(password).toString();
+
+    req.setBody({
+      mode: 0,
+      email: email,
+      password: hashedPassword
+    });
+
+    console.log("✓ Password hashed with SHA-512");
+  } else {
+    console.warn("⚠ No password set - please set the password secret variable");
+  }
+}
+
+docs {
+  Authenticates user and returns access/refresh tokens
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return access token", function() {
+    expect(res.body.data).to.have.property("accessToken");
+    expect(res.body.data.accessToken).to.be.a("string");
+  });
+
+  test("should return refresh token", function() {
+    expect(res.body.data).to.have.property("refreshToken");
+  });
+
+  test("should handle invalid credentials", function() {
+    if (res.status !== 200) {
+      expect(res.body).to.have.property("error");
+    }
+  });
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.data?.accessToken) {
+    bru.setVar("accessToken", res.body.data.accessToken);
+    bru.setVar("refreshToken", res.body.data.refreshToken);
+    console.log("✓ Tokens stored successfully!");
+  } else if (res.body.error) {
+    console.error("✗ Login failed:", res.body.error);
+  }
+}

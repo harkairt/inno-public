@@ -27,7 +27,10 @@ export function usePWAUpdate() {
     import('virtual:pwa-register/vue').then(({ useRegisterSW }) => {
       const { needRefresh: nr, offlineReady: or, updateServiceWorker } = useRegisterSW({
         immediate: true,
-        onRegisteredSW(_swUrl, registration) {
+        onRegisteredSW(swUrl, registration) {
+          // Service worker registered
+          console.log('[PWA] Service worker registered:', swUrl)
+
           // Check for updates periodically (every 10 minutes)
           if (registration) {
             setInterval(() => {
@@ -35,8 +38,8 @@ export function usePWAUpdate() {
             }, 10 * 60 * 1000)
           }
         },
-        onRegisterError(_error) {
-          // Silently ignore SW registration errors
+        onRegisterError(error) {
+          console.error('[PWA] Service worker registration error:', error)
         }
       }) as RegisterSWResult
 
@@ -50,8 +53,8 @@ export function usePWAUpdate() {
       }, { immediate: true })
 
       updateSW = updateServiceWorker
-    }).catch(() => {
-      // Silently ignore PWA module load errors
+    }).catch((error) => {
+      console.error('[PWA] Failed to load PWA register module:', error)
     })
   }
 

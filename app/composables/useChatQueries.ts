@@ -1,7 +1,7 @@
-import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { useQuery } from '@tanstack/vue-query'
 import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
-import { toValue, type MaybeRefOrGetter } from 'vue'
+import { toValue, watch, type MaybeRefOrGetter } from 'vue'
 import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
 
@@ -78,7 +78,6 @@ export function useChatSession(sessionId: string, options?: {
   includeMessages?: boolean
 }) {
   const authStore = useAuthStore()
-  const queryClient = useQueryClient()
 
   const query = useQuery({
     queryKey: chatQueryKeys.session(sessionId),
@@ -102,14 +101,7 @@ export function useChatSession(sessionId: string, options?: {
     enabled: options?.enabled ?? (authStore.isAuthenticated && !!sessionId),
     staleTime: options?.staleTime ?? 10 * 1000, // 10 seconds - messages update frequently
     gcTime: 2 * 60 * 1000, // 2 minutes
-    placeholderData: (previousData) => {
-      const headers = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
-      const header = headers?.find(h => h.sessionId === sessionId)
-      if (header) {
-        return { ...header, messages: [] } as AISessionDTO
-      }
-      return previousData
-    },
+    placeholderData: (previousData) => previousData, // Use cached data while refetching
     refetchOnMount: true, // Always refetch to get real server data
     refetchOnWindowFocus: false, // Don't refetch on focus for sessions
     refetchOnReconnect: true,
@@ -124,6 +116,21 @@ export function useChatSession(sessionId: string, options?: {
       return failureCount < 2
     },
   })
+
+  // Debug: Log message timestamps and contents whenever they change
+  watch(
+    () => query.data.value?.messages,
+    (messages) => {
+      if (messages) {
+        console.log('[useChatSession] Messages changed:', messages.map(m => ({
+          messageID: m.messageID,
+          sendDate: m.sendDate,
+          messageText: m.messageText?.substring(0, 100) + (m.messageText && m.messageText.length > 100 ? '...' : ''),
+        })))
+      }
+    },
+    { deep: true }
+  )
 
   return query
 }
@@ -167,13 +174,6 @@ export function useUnreadMessageCounts(options?: {
 }
 
 /**
- * Tracks agent IDs that returned a server error (500) for welcome text.
- * These agents don't have a welcome message configured, so we skip
- * subsequent fetches for the lifetime of the browser session.
- */
-const agentsWithoutWelcomeMessage = new Set<number>()
-
-/**
  * Welcome message query composable
  * Fetches welcome message for a specific agent
  */
@@ -196,10 +196,6 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
         throw new Error('Agent ID is required')
       }
 
-      if (agentsWithoutWelcomeMessage.has(unwrappedAgentId)) {
-        return { message: '' }
-      }
-
       const result = await chatService.getWelcomeMessage({
         userCode: authStore.user.email,
         sessionId: options?.sessionId ?? '',
@@ -212,10 +208,6 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
       })
 
       if (result.isErr()) {
-        if (result.error.statusCode !== undefined && result.error.statusCode >= 500) {
-          agentsWithoutWelcomeMessage.add(unwrappedAgentId)
-          return { message: '' }
-        }
         throw result.error
       }
 

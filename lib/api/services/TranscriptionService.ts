@@ -40,6 +40,9 @@ export class TranscriptionService {
    */
   private async getClient(): Promise<Client> {
     if (!this.client) {
+      console.log('[TranscriptionService] Connecting to:', this.serviceUrl)
+      console.log('[TranscriptionService] Token present:', !!this.hfToken, 'starts with hf_:', this.hfToken?.startsWith('hf_'))
+
       const options = this.hfToken ? { token: this.hfToken } : undefined
       // @ts-expect-error - @gradio/client types may not match runtime API
       this.client = await Client.connect(this.serviceUrl, options)

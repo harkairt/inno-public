@@ -16,8 +16,6 @@
     "vitest.config.ts",
     "eslint.config.mjs",
     "playwright.config.ts",
-    "sentry.client.config.ts",
-    "sentry.server.config.ts",
     "tests/**/*"
   ],
   "exclude": [

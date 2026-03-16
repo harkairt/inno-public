@@ -20,9 +20,6 @@
         <h1 class="text-xl font-semibold text-foreground truncate">
           {{ selectedUser.name || selectedUser.email }}
         </h1>
-        <p v-if="selectedUser?.email" class="text-sm text-muted-foreground truncate">
-          {{ selectedUser.email }}
-        </p>
       </div>
     </div>
 
@@ -63,7 +60,6 @@
         :selectable-agents="isSingleVirtualAgentSession ? [] : [selectedUser]"
         :selected-agent-name="selectedAgentName"
         :members="members"
-        :is-new-conversation="messages.length === 0"
         @message-sent="handleMessageSent"
         @scroll-to-bottom="scrollToBottom"
         @target-agent-changed="handleTargetAgentChanged"

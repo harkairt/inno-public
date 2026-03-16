@@ -57,6 +57,10 @@ export function requestInterceptor(
  * Request error interceptor for handling request configuration errors
  */
 export function requestErrorInterceptor(error: unknown): Promise<never> {
+  console.error("❌ Request Error:", error);
+
+  // This error occurs before the request is sent
+  // Could be due to invalid request configuration
   return Promise.reject(error);
 }
 

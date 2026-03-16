@@ -21,7 +21,8 @@ export const useMarkdown = () => {
     parse: (markdown: string): string => {
       try {
         return markdownInstance!.render(markdown);
-      } catch {
+      } catch (error) {
+        console.error("Markdown parsing failed:", error);
         return sanitizeHTML(markdown); // Fallback to sanitized text
       }
     },

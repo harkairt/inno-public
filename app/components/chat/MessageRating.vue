@@ -10,7 +10,7 @@
           ? 'text-gray-600 dark:text-gray-300 cursor-default'
           : props.isRated
             ? 'text-gray-300 dark:text-gray-600 cursor-default'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-[hsl(var(--accent))] rounded-md hover:scale-110 cursor-pointer'
+            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:scale-110 cursor-pointer'
       ]"
       :aria-label="t('chat.rating.thumbsUp')"
       @click="handleRate(true)"
@@ -31,7 +31,7 @@
           ? 'text-gray-600 dark:text-gray-300 cursor-default'
           : props.isRated
             ? 'text-gray-300 dark:text-gray-600 cursor-default'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-[hsl(var(--accent))] rounded-md hover:scale-110 cursor-pointer'
+            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:scale-110 cursor-pointer'
       ]"
       :aria-label="t('chat.rating.thumbsDown')"
       @click="handleRate(false)"

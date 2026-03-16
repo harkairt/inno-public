@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4" data-testid="messages-container" role="log" aria-live="polite" :aria-label="t('chat.messages.ariaLabel')">
+  <div class="space-y-4" data-testid="messages-container">
     <!-- Message Groups -->
     <div
       v-for="group in messageGroups"
@@ -8,7 +8,7 @@
     >
       <!-- Date Separator -->
       <div class="flex items-center gap-4 my-6 px-1">
-        <span role="heading" aria-level="2" class="text-[11px] font-medium tracking-wide uppercase text-[hsl(var(--muted-foreground)/0.7)] shrink-0">{{ group.date }}</span>
+        <span class="text-[11px] font-medium tracking-wide uppercase text-[hsl(var(--muted-foreground)/0.7)] shrink-0">{{ group.date }}</span>
         <div class="flex-1 h-px bg-[hsl(var(--border)/0.4)]" />
       </div>
 
@@ -177,6 +177,11 @@ type ExtendedMessage = AISessionMessageDTO & {
   status?: MessageStatus
 }
 
+interface MessageGroup {
+  date: string
+  messages: ExtendedMessage[]
+}
+
 interface Props {
   messages?: ExtendedMessage[]
   welcomeMessage?: string
@@ -242,25 +247,36 @@ const messageGroups = computed(() => {
     return []
   }
 
-  const groups = new Map<string, { messages: ExtendedMessage[]; timestamp: number }>()
+  const groups: Map<string, ExtendedMessage[]> = new Map()
 
   allMessages.value.forEach((message) => {
-    const dateObj = new Date(message.sendDate)
-    const dateKey = formatDate(dateObj)
-    if (!groups.has(dateKey)) {
-      groups.set(dateKey, { messages: [], timestamp: dateObj.getTime() })
+    const date = formatDate(new Date(message.sendDate))
+    if (!groups.has(date)) {
+      groups.set(date, [])
     }
-    groups.get(dateKey)!.messages.push(message)
+    groups.get(date)!.push(message)
   })
 
-  return Array.from(groups.entries())
-    .sort(([, a], [, b]) => a.timestamp - b.timestamp)
-    .map(([date, { messages }]) => ({
+  // Convert to array and sort messages within each group by time
+  const result: MessageGroup[] = []
+  groups.forEach((messages, date) => {
+    result.push({
       date,
       messages: messages.sort((a, b) =>
         new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime()
       ),
-    }))
+    })
+  })
+
+  // Sort groups by date (most recent first)
+  return result.sort((a, b) => {
+    const dateA = new Date(a.date)
+    const dateB = new Date(b.date)
+    if (dateA.toDateString() === dateB.toDateString()) {
+      return 0 // Same day, keep original order
+    }
+    return dateB.getTime() - dateA.getTime() // Most recent first
+  })
 })
 
 function formatDate(date: Date): string {
@@ -301,7 +317,8 @@ function formatTime(dateString: string): string {
       minute: '2-digit',
       hour12: false
     })
-  } catch {
+  } catch (error) {
+    console.warn('Error formatting time:', dateString, error)
     return ''
   }
 }

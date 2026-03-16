@@ -1,5 +1,5 @@
 <template>
-  <div class="h-6 px-4" data-testid="typing-indicator" role="status" aria-live="polite">
+  <div class="h-6 px-4" data-testid="typing-indicator">
     <Transition name="typing-indicator">
       <span v-if="typingText" class="text-xs text-[hsl(var(--muted-foreground))] italic">
         {{ typingText }}{{ animatedDots }}

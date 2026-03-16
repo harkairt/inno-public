@@ -49,7 +49,8 @@ export const useShiki = () => {
         })
         isLoaded.value = true
         return highlighterInstance
-      } catch {
+      } catch (error) {
+        console.error('Failed to load syntax highlighter:', error)
         return null
       } finally {
         isLoading.value = false
@@ -81,7 +82,8 @@ export const useShiki = () => {
         lang,
         theme: 'github-dark-dimmed',
       })
-    } catch {
+    } catch (error) {
+      console.warn('Code highlighting failed:', error)
       return code
     }
   }

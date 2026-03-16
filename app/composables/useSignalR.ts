@@ -76,13 +76,15 @@ export function useSignalR() {
       const token = accessToken ?? authStore.accessToken ?? ''
 
       if (!token) {
+        console.warn('No access token available for SignalR connection')
         return // Silent fail - app works without SignalR
       }
 
       await service.connect(token)
       connectionInfo.value = service.getConnectionInfo()
-    } catch {
+    } catch (error) {
       // Silent fail - SignalR is for real-time updates only, app uses HTTP polling as fallback
+      console.warn('SignalR connection failed (app will use polling):', error)
       connectionInfo.value = service.getConnectionInfo()
     }
   }
@@ -95,6 +97,7 @@ export function useSignalR() {
       await service.disconnect()
       connectionInfo.value = service.getConnectionInfo()
     } catch (error) {
+      console.error('Failed to disconnect from SignalR:', error)
       connectionInfo.value = service.getConnectionInfo()
       throw error
     }
@@ -111,13 +114,15 @@ export function useSignalR() {
       const token = accessToken ?? authStore.accessToken ?? ''
 
       if (!token) {
+        console.warn('No access token available for SignalR reconnection')
         return // Silent fail
       }
 
       await service.forceReconnect(token)
       connectionInfo.value = service.getConnectionInfo()
-    } catch {
+    } catch (error) {
       // Silent fail - app works without SignalR
+      console.warn('SignalR reconnection failed (app will use polling):', error)
       connectionInfo.value = service.getConnectionInfo()
     }
   }

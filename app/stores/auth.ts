@@ -76,6 +76,7 @@ function saveAuthStateToStorage(user: UserDTO | null, accessToken: string | null
       getStorage().setItem(AUTH_STORAGE_KEY, JSON.stringify(authData));
       resolve();
     } catch (error) {
+      console.warn(`Failed to save auth state to ${storageMode}:`, error);
       reject(error);
     }
   });
@@ -97,7 +98,8 @@ function loadAuthStateFromStorage(): { user: UserDTO | null; accessToken: string
       accessToken: typeof authData.accessToken === 'string' ? authData.accessToken : null,
       refreshToken: typeof authData.refreshToken === 'string' ? authData.refreshToken : null
     };
-  } catch {
+  } catch (error) {
+    console.warn(`Failed to load auth state from ${storageMode}:`, error);
     return { user: null, accessToken: null, refreshToken: null };
   }
 }
@@ -105,8 +107,8 @@ function loadAuthStateFromStorage(): { user: UserDTO | null; accessToken: string
 function clearAuthStateFromStorage() {
   try {
     getStorage().removeItem(AUTH_STORAGE_KEY);
-  } catch {
-    // Silently ignore storage clear errors
+  } catch (error) {
+    console.warn(`Failed to clear auth state from ${storageMode}:`, error);
   }
 }
 

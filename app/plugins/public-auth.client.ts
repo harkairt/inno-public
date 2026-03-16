@@ -19,17 +19,22 @@ export default defineNuxtPlugin({
 
     // Only run in public mode
     if (!isPublicMode.value) {
+      console.log('🔐 Not in public mode, skipping public auth')
       return
     }
 
+    console.log('🔐 Public mode detected, initiating auto-authentication...')
+
     // Set storage mode to sessionStorage for public mode
     setStorageMode('sessionStorage')
+    console.log('📦 Storage mode set to sessionStorage')
 
     // Clear any existing auth state to ensure fresh session
     authStore.clearAuth()
 
     // Check if we have credentials configured
     if (!hasPublicCredentials.value) {
+      console.error('❌ Public mode enabled but credentials not configured')
       configStore.setPublicAuthError(true)
       return
     }
@@ -42,10 +47,14 @@ export default defineNuxtPlugin({
         mode: AuthenticationMode.Basic,
       })
 
-      if (result.isErr()) {
+      if (result.isOk()) {
+        console.log('✅ Public mode auto-authentication successful')
+      } else {
+        console.error('❌ Public mode auto-authentication failed:', result.error)
         configStore.setPublicAuthError(true)
       }
-    } catch {
+    } catch (error) {
+      console.error('❌ Public mode auto-authentication error:', error)
       configStore.setPublicAuthError(true)
     }
   },

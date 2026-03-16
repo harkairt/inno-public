@@ -4,7 +4,6 @@
  */
 
 import { ErrorCode } from "@/types/enums";
-import { reportToSentry } from "./sentry";
 import { AppError, NetworkError, ValidationError } from "./types";
 
 // ============================================================================
@@ -160,6 +159,7 @@ export function logError(
   if (process.env.NODE_ENV === "development") {
     console.error("Application Error:", logData);
   } else {
+    // In production, you might send this to a logging service
     console.error("Application Error:", {
       code: error.code,
       message: error.message,
@@ -168,9 +168,6 @@ export function logError(
       context,
     });
   }
-
-  // Report to Sentry (filtering is handled inside reportToSentry)
-  reportToSentry(error, context);
 }
 
 export function logValidationError(

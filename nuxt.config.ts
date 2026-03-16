@@ -4,17 +4,17 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   ssr: false,
-  compatibilityDate: '2026-02-26',
+	compatibilityDate: '2026-02-26',
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL ?? '/',
     head: {
       link: [
-        // Google Fonts: Outfit (headings) + DM Sans (body)
+        // Google Fonts: Plus Jakarta Sans (headings) + Inter (body)
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap'
+          href: 'https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap'
         }
       ],
       meta: [
@@ -22,8 +22,7 @@ export default defineNuxtConfig({
         {
           name: 'viewport',
           content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'
-        },
-        { name: 'color-scheme', content: 'light dark' }
+        }
       ]
     }
   },
@@ -35,11 +34,10 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@pinia/nuxt',
     '@nuxt/eslint',
-    '@sentry/nuxt/module',
     '@nuxt/ui',
     '@nuxt/icon',
     ...(process.env.NODE_ENV === 'test' ? ['@nuxt/test-utils'] : []),
-    '@nuxtjs/i18n',
+    '@nuxtjs/i18n'
   ],
 
   i18n: {
@@ -66,10 +64,9 @@ export default defineNuxtConfig({
     storageKey: 'nuxt-color-mode',
   },
 
-
   sourcemap: {
     server: true,
-    client: 'hidden',
+    client: false,
   },
 
   pinia: {
@@ -109,8 +106,6 @@ export default defineNuxtConfig({
       devLoginEmail: '',
       // Transcription service (Hugging Face Spaces)
       transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL ?? '',
-      // Sentry
-      sentryDsn: process.env.NUXT_PUBLIC_SENTRY_DSN ?? '',
     },
   },
 
@@ -119,8 +114,9 @@ export default defineNuxtConfig({
     registerType: 'prompt',
 
     workbox: {
-      navigateFallback: '/offline.html',
-      navigateFallbackDenylist: [/^\/api\//, /^\/chatHub\//, /^\/assets\//],
+      // Disable navigateFallback - let GitHub Pages 404.html handle SPA routing
+      // Using absolute '/index.html' breaks when app is hosted at a subdirectory (e.g., /vonno/)
+      navigateFallback: null,
       globPatterns: ['**/*.{js,css,html,png,svg,ico,txt}'],
       skipWaiting: true,
       clientsClaim: true,
@@ -281,8 +277,6 @@ export default defineNuxtConfig({
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
-        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' wss: ws: https://api.iconify.design; worker-src 'self' blob:;",
       },
     },
     '/api/**': {

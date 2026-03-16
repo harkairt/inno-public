@@ -1,8 +1,8 @@
 <template>
   <NuxtErrorBoundary @error="handleError">
-    <main id="main-content" class="flex flex-col h-full w-full">
+    <div class="flex flex-col h-full w-full">
     <!-- Header Section -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)] min-h-[73px]">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)]">
       <!-- Mobile: back button to session list -->
       <UButton
         v-if="isMobile"
@@ -25,7 +25,7 @@
           <button
             v-if="!isPrimarySession"
             type="button"
-            class="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-[hsl(var(--accent))] rounded-md flex-shrink-0"
+            class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground flex-shrink-0"
             :aria-label="t('chat.sessionMenu.editName')"
             data-testid="edit-title-button"
             @click="startEditingTitle"
@@ -47,15 +47,7 @@
           @blur="saveTitle"
         >
 
-        <p v-if="otherParticipantNames" class="text-sm text-muted-foreground truncate">
-          {{ otherParticipantNames }}
-        </p>
-      </div>
-
-      <!-- Shimmer skeleton fallback when session data isn't available yet -->
-      <div v-else class="min-w-0 flex-1 space-y-2">
-        <USkeleton class="h-6 w-48" />
-        <USkeleton class="h-4 w-32" />
+        <div class="flex items-center text-sm text-muted-foreground"/>
       </div>
 
       <!-- Session Members Avatar Stack (hidden for primary sessions) -->
@@ -134,37 +126,22 @@
       <div class="relative flex-1 overflow-hidden min-h-0">
         <div ref="messagesContainer" class="h-full overflow-y-auto p-4 flex flex-col">
           <div class="flex-1" />
-          <Transition name="fade" mode="out-in" @after-enter="onMessagesEntered">
-            <!-- Show bubble-shaped skeletons while waiting for real data -->
-            <div v-if="!isMessagesReady" key="shimmer" class="space-y-3">
-              <div class="flex justify-start" :style="{ animation: 'fade-in 0.5s ease 1.2s both' }">
-                <USkeleton class="h-32 w-[70%] rounded-2xl rounded-bl-md" />
-              </div>
-              <div class="flex justify-end" :style="{ animation: 'fade-in 0.5s ease 0.9s both' }">
-                <USkeleton class="h-24 w-[55%] rounded-2xl rounded-br-md" />
-              </div>
-              <div class="flex justify-start" :style="{ animation: 'fade-in 0.5s ease 0.6s both' }">
-                <USkeleton class="h-40 w-[65%] rounded-2xl rounded-bl-md" />
-              </div>
-              <div class="flex justify-start" :style="{ animation: 'fade-in 0.5s ease 0.3s both' }">
-                <USkeleton class="h-20 w-[45%] rounded-2xl rounded-bl-md" />
-              </div>
-              <div class="flex justify-end" :style="{ animation: 'fade-in 0.5s ease both' }">
-                <USkeleton class="h-28 w-[60%] rounded-2xl rounded-br-md" />
-              </div>
-            </div>
-            <ChatMessages
-              v-else
-              key="messages"
-              :messages="messages"
-              :welcome-message="trimmedWelcomeMessage"
-              :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
-              :agent-name="virtualAgentFromSecondMessage?.agentName"
-              :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
-              :active-options-message-id="lastUnansweredOptionsMessageId"
-              @option-submitted="handleOptionSubmitted"
-            />
-          </Transition>
+          <!-- Show skeleton while waiting for welcome message data to be ready -->
+          <div v-if="!isMessagesReady" class="space-y-3">
+            <USkeleton class="h-20 w-48" />
+            <USkeleton class="h-20 w-40 ml-auto" />
+            <USkeleton class="h-20 w-52" />
+          </div>
+          <ChatMessages
+            v-else
+            :messages="messages"
+            :welcome-message="trimmedWelcomeMessage"
+            :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
+            :agent-name="virtualAgentFromSecondMessage?.agentName"
+            :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
+            :active-options-message-id="lastUnansweredOptionsMessageId"
+            @option-submitted="handleOptionSubmitted"
+          />
         </div>
         <!-- Bottom fade gradient -->
         <div class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none" />
@@ -182,7 +159,6 @@
         :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
         :selected-agent-name="selectedAgentName"
         :members="session.members || []"
-        :is-new-conversation="isPlaceholderData ? undefined : messages.length === 0"
         class="flex-shrink-0 sticky bottom-0"
         @message-sent="handleMessageSent"
         @scroll-to-bottom="scrollToBottom"
@@ -212,7 +188,7 @@
       </div>
     </div>
 
-    </main>
+    </div>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
       <div class="min-h-screen flex items-center justify-center p-6 bg-background">
@@ -291,9 +267,6 @@ const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(
 // Used to decide scroll behavior when AI responds
 const wasAtBottomWhenUserSentMessage = ref(true)
 
-// Track whether initial scroll-to-bottom has happened (prevents duplicate scrolls)
-const hasInitiallyScrolled = ref(false)
-
 // Inline edit state
 const isEditingTitle = ref(false)
 const editedTitle = ref('')
@@ -305,7 +278,6 @@ const {
   data: session,
   isLoading,
   isError,
-  isPlaceholderData,
   error: chatError,
   refetch,
 } = useChatSession(sessionId)
@@ -424,8 +396,8 @@ async function handleOptionSubmitted(answer: string) {
   try {
     await optionMutation.mutateAsync(request)
     scrollToBottom()
-  } catch {
-    // Error handled by mutation error state
+  } catch (error) {
+    console.error('Failed to send option answer:', error)
   }
 }
 
@@ -484,9 +456,6 @@ const trimmedWelcomeMessage = computed(() => {
 // We wait for selectableUsers to load so we can check if welcome message is needed,
 // and if it is, we also wait for the welcome message to load
 const isMessagesReady = computed(() => {
-  // Placeholder data has messages: [] — don't render messages yet
-  if (isPlaceholderData.value) return false
-
   // Must have selectableUsers loaded to determine if we need welcome message
   if (isSelectableUsersLoading.value) return false
 
@@ -528,19 +497,6 @@ const selectedAgentName = computed(() => {
   }
   const agent = selectableTargetAgents.value.find(a => a.id === selectedTargetAgentId.value)
   return agent?.name
-})
-
-// Participant names for header subtitle (excludes current user)
-const otherParticipantNames = computed(() => {
-  if (!session.value?.members || !selectableUsers.value) return ''
-  const currentEmail = authStore.user?.email
-  return session.value.members
-    .filter(email => email !== currentEmail)
-    .map(email => {
-      const user = selectableUsers.value!.find(u => u.email === email)
-      return user?.name ?? email
-    })
-    .join(', ')
 })
 
 // Handle target agent change
@@ -636,8 +592,8 @@ useSeoMeta({
 })
 
 // Error boundary handler
-function handleError(_error: unknown) {
-  // Error boundary catches rendering errors
+function handleError(error: unknown) {
+  console.error('Chat session error:', error)
 }
 
 // Error message normalization
@@ -704,21 +660,12 @@ watch(
   { deep: true }
 )
 
-// Scroll to bottom when messages become ready (handles cached data where Transition @after-enter won't fire).
-// When data is cached, isMessagesReady is true from the first render — the shimmer is never shown,
-// so the Transition never fires @after-enter. This watch catches that case.
+// Scroll to bottom when messages become ready (after welcome message loads)
+// Use instant scroll (no animation) for initial load
+// Use immediate: true to handle cached data that's already ready on mount
 watch(isMessagesReady, (ready) => {
-  if (ready && !hasInitiallyScrolled.value) {
-    hasInitiallyScrolled.value = true
-    nextTick(() => scrollToBottom(true))
+  if (ready) {
+    scrollToBottom(true)
   }
 }, { immediate: true })
-
-// Scroll to bottom when the message thread enters the DOM (after shimmer → messages transition).
-// Using @after-enter on the Transition ensures the ChatMessages DOM is fully rendered,
-// which is necessary because mode="out-in" delays the enter phase until the leave animation finishes.
-function onMessagesEntered() {
-  hasInitiallyScrolled.value = true
-  scrollToBottom(true)
-}
 </script>

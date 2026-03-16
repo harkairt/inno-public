@@ -227,13 +227,7 @@ export function parseOptionsPayload(
 ): OptionsMessagePayload | null {
   if (!messageText) return null
   try {
-    // Backend may return multi-encoded JSON strings (e.g. "\"{\\\"Text\\\": ...}\"")
-    // Unwrap iteratively until we get a non-string value
-    let parsed: unknown = messageText
-    for (let i = 0; i < 5 && typeof parsed === 'string'; i++) {
-      parsed = JSON.parse(parsed)
-    }
-    const result = OptionsMessagePayloadSchema.safeParse(parsed)
+    const result = OptionsMessagePayloadSchema.safeParse(JSON.parse(messageText))
     return result.success ? result.data : null
   } catch {
     return null

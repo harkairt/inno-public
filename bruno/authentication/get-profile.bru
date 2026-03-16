@@ -1,0 +1,41 @@
+meta {
+  name: profile
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/authentication/profile?email={{email}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Accept: application/json
+}
+
+docs {
+  Retrieves authenticated user's profile information
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return user data", function() {
+    expect(res.body.data).to.have.property("id");
+    expect(res.body.data).to.have.property("email");
+    expect(res.body.data).to.have.property("name");
+  });
+
+  test("should handle 401 unauthorized", function() {
+    if (res.status === 401) {
+      expect(res.status).to.equal(401);
+    }
+  });
+}

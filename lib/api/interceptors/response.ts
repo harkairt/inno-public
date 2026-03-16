@@ -6,7 +6,6 @@
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { apiClient } from '../client'
 import { normalizeApiError } from '@/lib/errors/normalize'
-import { reportToSentry } from '@/lib/errors/sentry'
 import { globalErrorTracker } from '@/lib/errors/utils'
 import { extractTokensFromResponse } from '@/lib/api/utils/tokens'
 
@@ -133,7 +132,6 @@ export async function responseErrorInterceptor(error: AxiosError): Promise<Axios
 
   // Skip token refresh for requests that already opted out (e.g., the refresh request itself)
   if (originalRequest.skipAuthRefresh) {
-    reportToSentry(normalizedError, { endpoint: originalRequest.url, phase: 'skipAuthRefresh' })
     return Promise.reject(normalizedError)
   }
 
@@ -153,8 +151,7 @@ export async function responseErrorInterceptor(error: AxiosError): Promise<Axios
     return handleServiceUnavailableRetry(originalRequest, error)
   }
 
-  // For all other errors, normalize, report to Sentry, and reject
-  reportToSentry(normalizedError, { endpoint: originalRequest.url })
+  // For all other errors, normalize and reject
   return Promise.reject(normalizedError)
 }
 
@@ -215,7 +212,6 @@ async function handleTokenRefresh(
 
     // Normalize the refresh error
     const normalizedRefreshError = normalizeApiError(refreshError)
-    reportToSentry(normalizedRefreshError, { phase: 'tokenRefreshFailed' })
 
     // Clear auth state
     if (authStoreInstance) {
@@ -249,9 +245,7 @@ async function handleRateLimitRetry(
   originalRequest._retryCount = (originalRequest._retryCount ?? 0) + 1
 
   if (originalRequest._retryCount > maxRetries) {
-    const normalizedError = normalizeApiError(error)
-    reportToSentry(normalizedError, { endpoint: originalRequest.url, phase: 'rateLimitRetriesExhausted' })
-    return Promise.reject(normalizedError)
+    return Promise.reject(normalizeApiError(error))
   }
 
   // Calculate delay with exponential backoff

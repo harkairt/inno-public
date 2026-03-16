@@ -1,0 +1,39 @@
+meta {
+  name: negotiate
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/chatHub/negotiate?negotiateVersion=1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Accept: */*
+  X-Requested-With: XMLHttpRequest
+  X-SignalR-User-Agent: Microsoft SignalR/8.0 (8.0.7; Unknown OS; Browser; Unknown Runtime Version)
+}
+
+docs {
+  Initiates SignalR connection negotiation
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return connectionId", function() {
+    expect(res.body).to.have.property("connectionId");
+  });
+
+  test("should return available transports", function() {
+    expect(res.body.availableTransports).to.be.an("array");
+  });
+}

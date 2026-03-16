@@ -1,0 +1,40 @@
+meta {
+  name: GetUnreadMessages
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/AIWebAPI/GetUnreadMessages
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+}
+
+body:json {
+  {
+    "userCode": "{{email}}"
+  }
+}
+
+docs {
+  Retrieves unread messages for current user
+}
+
+tests {
+  test("should return 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("should return array", function() {
+    expect(res.body.data).to.be.an("array");
+  });
+}
