@@ -215,6 +215,8 @@ export function useSendMessage() {
           chatQueryKeys.session(request.sessionId),
           syntheticSession
         );
+
+        chatStore.executeNewSessionCallback(request.sessionId);
       }
 
       // Note: No invalidation here - onSettled handles sessions/unread, SignalR handles real-time sync

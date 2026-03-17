@@ -64,7 +64,6 @@
         :selected-agent-name="selectedAgentName"
         :members="members"
         :is-new-conversation="messages.length === 0"
-        @message-sent="handleMessageSent"
         @scroll-to-bottom="scrollToBottom"
         @target-agent-changed="handleTargetAgentChanged"
       />
@@ -129,6 +128,16 @@ const chatStore = useChatStore()
 
 const userId = computed(() => route.params.userId as string)
 const sessionId = ref(generateUUID())
+
+// Register navigation callback for when server confirms the new session
+chatStore.onNewSessionConfirmed(sessionId.value, () => {
+  chatStore.clearDraft(`new-${userId.value}`)
+  navigateTo(`/chats/${sessionId.value}`, { replace: true })
+})
+
+onUnmounted(() => {
+  chatStore.removeNewSessionCallback(sessionId.value)
+})
 
 const { data: users, isLoading: isLoadingUsers } = useSelectableUsers()
 
@@ -252,12 +261,6 @@ function scrollToBottom() {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   })
-}
-
-function handleMessageSent() {
-  // Clear the new session draft before navigation
-  chatStore.clearDraft(`new-${userId.value}`)
-  navigateTo(`/chats/${sessionId.value}`, { replace: true })
 }
 
 function handleError(error: unknown) {
