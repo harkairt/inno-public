@@ -26,7 +26,6 @@ export const chatQueryKeys = {
 export function useChatSessions(options?: {
   enabled?: boolean
   staleTime?: number
-  refetchInterval?: number
 }) {
   const authStore = useAuthStore()
 
@@ -50,9 +49,8 @@ export function useChatSessions(options?: {
       return result.value
     },
     enabled: options?.enabled ?? authStore.isAuthenticated,
-    staleTime: options?.staleTime ?? 30 * 1000, // 30 seconds - sessions update frequently
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes - SignalR pushes updates; long staleTime prevents needless refetches on navigation
     gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: options?.refetchInterval ?? 60 * 1000, // Poll every minute by default
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: (failureCount, error) => {
@@ -135,7 +133,6 @@ export function useChatSession(sessionId: string, options?: {
 export function useUnreadMessageCounts(options?: {
   enabled?: boolean
   staleTime?: number
-  refetchInterval?: number
 }) {
   const authStore = useAuthStore()
 
@@ -157,9 +154,8 @@ export function useUnreadMessageCounts(options?: {
       return result.value
     },
     enabled: options?.enabled ?? authStore.isAuthenticated,
-    staleTime: options?.staleTime ?? 15 * 1000, // 15 seconds
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes - SignalR pushes updates; long staleTime prevents needless refetches on navigation
     gcTime: 3 * 60 * 1000, // 3 minutes
-    refetchInterval: options?.refetchInterval ?? 30 * 1000, // Poll every 30 seconds
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 2,

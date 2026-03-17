@@ -1,4 +1,4 @@
-import { onMounted, onUnmounted, computed, watch } from 'vue'
+import { onUnmounted, computed, watch } from 'vue'
 import { useSignalR } from './useSignalR'
 import { useChatStore } from '@/app/stores/chat'
 import { useAuthStore } from '@/app/stores/auth'
@@ -104,7 +104,6 @@ export function useSignalRChat(options?: {
         await disconnect()
       }
     },
-    { immediate: true }
   )
 
   // Watch for token refresh and reconnect
@@ -139,12 +138,6 @@ export function useSignalRChat(options?: {
   )
 
   // Lifecycle management
-  onMounted(async () => {
-    if (authStore.isAuthenticated && (options?.autoConnect ?? true)) {
-      await connect()
-    }
-  })
-
   onUnmounted(async () => {
     cleanupEventListeners()
     await disconnect()

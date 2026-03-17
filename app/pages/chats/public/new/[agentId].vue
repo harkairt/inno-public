@@ -28,7 +28,6 @@
       :disable-signal-r="true"
       :disable-voice="true"
       :disabled="!canSend"
-      @message-sent="handleMessageSent"
       @scroll-to-bottom="scrollToBottom"
     />
   </div>
@@ -69,6 +68,16 @@ const agentId = computed(() => publicAgentId.value ?? routeAgentId.value)
 
 // Generate a fresh session ID for each new chat
 const sessionId = ref(generateUUID())
+
+// Register navigation callback for when server confirms the new session
+chatStore.onNewSessionConfirmed(sessionId.value, () => {
+  chatStore.clearDraft(`public-${agentId.value}`)
+  navigateTo(`/chats/public/${sessionId.value}`, { replace: true })
+})
+
+onUnmounted(() => {
+  chatStore.removeNewSessionCallback(sessionId.value)
+})
 
 // Capture chat start time for welcome message ordering (must be before any user messages)
 const chatStartTime = new Date().toISOString()
@@ -135,14 +144,6 @@ function scrollToBottom() {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   })
-}
-
-// Handle message sent - navigate to session page with replace
-function handleMessageSent() {
-  // Clear draft before navigation
-  chatStore.clearDraft(`public-${agentId.value}`)
-  // Navigate to session page, replacing the current history entry
-  navigateTo(`/chats/public/${sessionId.value}`, { replace: true })
 }
 
 // Page meta

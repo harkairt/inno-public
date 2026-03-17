@@ -27,10 +27,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         queryKey: chatQueryKeys.session(sessionId),
       })
       queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.sessions(),
-        exact: true,
-      })
-      queryClient.invalidateQueries({
         queryKey: chatQueryKeys.unread(),
         exact: true,
       })

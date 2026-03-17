@@ -12,8 +12,8 @@ export const useChatStore = defineStore('chat', () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const typingUsers = ref<Map<string, Set<string>>>(new Map()) // sessionId -> Set of user names
-  const failedMessages = ref<Map<string, FailedMessage[]>>(new Map()) // sessionId -> failed messages (DTO format)
-  const draftMessages = ref<Map<string, string>>(new Map()) // key -> draft text
+  const failedMessages = ref<Record<string, FailedMessage[]>>({}) // sessionId -> failed messages (DTO format)
+  const draftMessages = ref<Record<string, string>>({}) // key -> draft text
 
   // Actions
   function setActiveSession(sessionId: string | null) {
@@ -30,38 +30,60 @@ export const useChatStore = defineStore('chat', () => {
 
   // Failed messages management
   function addFailedMessage(sessionId: string, message: FailedMessage) {
-    const messages = failedMessages.value.get(sessionId) ?? []
-    failedMessages.value.set(sessionId, [...messages, message])
+    const messages = failedMessages.value[sessionId] ?? []
+    failedMessages.value[sessionId] = [...messages, message]
   }
 
   function removeFailedMessage(sessionId: string, messageId: string) {
-    const messages = failedMessages.value.get(sessionId) ?? []
-    failedMessages.value.set(sessionId, messages.filter(m => m.messageID !== messageId))
+    const messages = failedMessages.value[sessionId] ?? []
+    failedMessages.value[sessionId] = messages.filter(m => m.messageID !== messageId)
   }
 
   function removeAllFailedMessages(sessionId: string) {
-    failedMessages.value.delete(sessionId)
+    const { [sessionId]: _, ...rest } = failedMessages.value
+    failedMessages.value = rest
   }
 
   function getFailedMessages(sessionId: string): FailedMessage[] {
-    return failedMessages.value.get(sessionId) ?? []
+    return failedMessages.value[sessionId] ?? []
   }
 
   // Draft messages management
   function saveDraft(key: string, text: string) {
     if (text.trim()) {
-      draftMessages.value.set(key, text)
+      draftMessages.value[key] = text
     } else {
-      draftMessages.value.delete(key)
+      const { [key]: _, ...rest } = draftMessages.value
+      draftMessages.value = rest
     }
   }
 
   function getDraft(key: string): string {
-    return draftMessages.value.get(key) ?? ''
+    return draftMessages.value[key] ?? ''
   }
 
   function clearDraft(key: string) {
-    draftMessages.value.delete(key)
+    const { [key]: _, ...rest } = draftMessages.value
+    draftMessages.value = rest
+  }
+
+  // New session callback registry (not persisted)
+  const newSessionCallbacks = new Map<string, () => void>()
+
+  function onNewSessionConfirmed(sessionId: string, callback: () => void) {
+    newSessionCallbacks.set(sessionId, callback)
+  }
+
+  function executeNewSessionCallback(sessionId: string) {
+    const callback = newSessionCallbacks.get(sessionId)
+    if (callback) {
+      newSessionCallbacks.delete(sessionId)
+      callback()
+    }
+  }
+
+  function removeNewSessionCallback(sessionId: string) {
+    newSessionCallbacks.delete(sessionId)
   }
 
   // Typing indicator management
@@ -107,6 +129,11 @@ export const useChatStore = defineStore('chat', () => {
     addTypingUser,
     removeTypingUser,
     getTypingUsers,
+
+    // New session callbacks
+    onNewSessionConfirmed,
+    executeNewSessionCallback,
+    removeNewSessionCallback,
   }
 }, {
   persist: {
