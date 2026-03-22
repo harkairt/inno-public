@@ -72,6 +72,7 @@ const sessionId = ref(generateUUID())
 // Register navigation callback for when server confirms the new session
 chatStore.onNewSessionConfirmed(sessionId.value, () => {
   chatStore.clearDraft(`public-${agentId.value}`)
+  chatStore.skipNextEntranceAnimation = true
   navigateTo(`/chats/public/${sessionId.value}`, { replace: true })
 })
 

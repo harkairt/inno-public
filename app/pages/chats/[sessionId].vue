@@ -87,13 +87,13 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center h-full">
-      <div class="text-center">
-        <USkeleton class="h-8 w-64 mb-4 mx-auto" />
-        <div class="space-y-3 max-w-md mx-auto">
-          <USkeleton class="h-16 w-full" />
-          <USkeleton class="h-16 w-3/4 ml-auto" />
-          <USkeleton class="h-16 w-full" />
+    <div v-if="isLoading" class="flex items-center justify-center h-full p-4">
+      <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
+        <div class="flex justify-end">
+          <USkeleton class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
+        </div>
+        <div class="flex justify-start">
+          <USkeleton class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
         </div>
       </div>
     </div>
@@ -134,23 +134,14 @@
       <div class="relative flex-1 overflow-hidden min-h-0">
         <div ref="messagesContainer" class="h-full overflow-y-auto p-4 flex flex-col">
           <div class="flex-1" />
-          <Transition name="fade" mode="out-in" @after-enter="onMessagesEntered">
+          <Transition name="shimmer-swap" mode="out-in" @enter="onMessagesEnter" @after-enter="onMessagesEntered">
             <!-- Show bubble-shaped skeletons while waiting for real data -->
-            <div v-if="!isMessagesReady" key="shimmer" class="space-y-3">
-              <div class="flex justify-start" :style="{ animation: 'fade-in 0.5s ease 1.2s both' }">
-                <USkeleton class="h-32 w-[70%] rounded-2xl rounded-bl-md" />
+            <div v-if="!isMessagesReady" key="shimmer" class="space-y-3 animate-[fade-in_0.4s_ease_both]">
+              <div class="flex justify-end">
+                <USkeleton class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
               </div>
-              <div class="flex justify-end" :style="{ animation: 'fade-in 0.5s ease 0.9s both' }">
-                <USkeleton class="h-24 w-[55%] rounded-2xl rounded-br-md" />
-              </div>
-              <div class="flex justify-start" :style="{ animation: 'fade-in 0.5s ease 0.6s both' }">
-                <USkeleton class="h-40 w-[65%] rounded-2xl rounded-bl-md" />
-              </div>
-              <div class="flex justify-start" :style="{ animation: 'fade-in 0.5s ease 0.3s both' }">
-                <USkeleton class="h-20 w-[45%] rounded-2xl rounded-bl-md" />
-              </div>
-              <div class="flex justify-end" :style="{ animation: 'fade-in 0.5s ease both' }">
-                <USkeleton class="h-28 w-[60%] rounded-2xl rounded-br-md" />
+              <div class="flex justify-start">
+                <USkeleton class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
               </div>
             </div>
             <ChatMessages
@@ -161,7 +152,9 @@
               :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
               :agent-name="virtualAgentFromSecondMessage?.agentName"
               :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
+              :member-count="session?.members?.length ?? 2"
               :active-options-message-id="lastUnansweredOptionsMessageId"
+              :skip-entrance-animation="skipEntranceAnimation"
               @option-submitted="handleOptionSubmitted"
             />
           </Transition>
@@ -271,6 +264,10 @@ const sessionId = route.params.sessionId as string
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
+
+// Consume one-shot flag: skip entrance animation when arriving from /chats/new/*
+const skipEntranceAnimation = chatStore.skipNextEntranceAnimation
+chatStore.skipNextEntranceAnimation = false
 
 // Navigation visibility for mobile detection
 const { isMobile } = useNavigationVisibility()
@@ -676,9 +673,10 @@ watch(
     const isUserMessage = latestMessage?.senderUserCode === userEmail
 
     if (isUserMessage) {
-      // Capture scroll state BEFORE scrolling - used when AI responds
-      wasAtBottomWhenUserSentMessage.value = isAtBottom.value
-      // User sent a message - always scroll to bottom to show their message
+      // User actively sent a message — they want to follow the conversation
+      // regardless of where they were scrolled. The isAtBottom check when AI
+      // responds still protects against scrolling up after sending.
+      wasAtBottomWhenUserSentMessage.value = true
       scrollToBottom()
     } else {
       // AI responded - only scroll if user was at bottom when they sent message AND still at bottom
@@ -714,11 +712,28 @@ watch(isMessagesReady, (ready) => {
   }
 }, { immediate: true })
 
-// Scroll to bottom when the message thread enters the DOM (after shimmer → messages transition).
-// Using @after-enter on the Transition ensures the ChatMessages DOM is fully rendered,
-// which is necessary because mode="out-in" delays the enter phase until the leave animation finishes.
+// Scroll to bottom as soon as messages enter the DOM (while still invisible at opacity: 0).
+// The @enter hook fires before the fade-in CSS transition starts, so the user never sees
+// the top of the thread — the scroll position is already at the bottom when messages become visible.
+function onMessagesEnter() {
+  hasInitiallyScrolled.value = true
+  scrollToBottom(true)
+}
+
+// Safety net: ensure scroll position is correct after the fade-in animation completes.
 function onMessagesEntered() {
   hasInitiallyScrolled.value = true
   scrollToBottom(true)
 }
 </script>
+
+<style scoped>
+.shimmer-swap-enter-active,
+.shimmer-swap-leave-active {
+  transition: opacity 0.15s ease;
+}
+.shimmer-swap-enter-from,
+.shimmer-swap-leave-to {
+  opacity: 0;
+}
+</style>

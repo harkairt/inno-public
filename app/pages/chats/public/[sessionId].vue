@@ -12,6 +12,7 @@
           :agent-name="agentName"
           :hide-sender-names="true"
           :active-options-message-id="lastUnansweredOptionsMessageId"
+          :skip-entrance-animation="skipEntranceAnimation"
           @option-submitted="handleOptionSubmitted"
         >
           <template #empty />
@@ -46,6 +47,7 @@
 <script setup lang="ts">
 import { useChatSession, useWelcomeMessage } from '@/app/composables/useChatQueries'
 import { useSendMessage } from '@/app/composables/useChatMutations'
+import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { usePublicMode } from '@/app/composables/usePublicMode'
@@ -62,6 +64,10 @@ const chatStore = useChatStore()
 const { publicAgentId, getPublicChatUrl } = usePublicMode()
 
 const sessionId = route.params.sessionId as string
+
+// Consume one-shot flag: skip entrance animation when arriving from /chats/public/new/*
+const skipEntranceAnimation = chatStore.skipNextEntranceAnimation
+chatStore.skipNextEntranceAnimation = false
 
 // Session data comes from Vue Query cache (populated by useSendMessage mutation).
 // getSessionById is not available in public mode, so disable the query.
@@ -169,28 +175,28 @@ const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
 
-function scrollToBottom() {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
-}
+// Use the same auto-scroll composable as the private chat
+const { scrollToBottom } = useChatAutoScroll(messagesContainer)
+
+// Scroll to bottom on initial render so the page doesn't show the top of the thread
+onMounted(() => {
+  scrollToBottom(true)
+})
 
 // Handle message sent
 function handleMessageSent() {
-  // Scroll to bottom after message sent
   scrollToBottom()
 }
 
-// Auto-scroll when new messages arrive
+// Auto-scroll when new messages arrive (user or AI)
 watch(
-  () => messages.value.length,
-  (newLength, oldLength) => {
-    if (newLength > (oldLength || 0)) {
+  messages,
+  (newMessages, oldMessages) => {
+    if ((newMessages?.length ?? 0) > (oldMessages?.length ?? 0)) {
       scrollToBottom()
     }
-  }
+  },
+  { deep: true }
 )
 
 // Page meta

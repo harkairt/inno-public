@@ -22,10 +22,12 @@
           :class="{
             'justify-end': isUserMessage(message),
             'justify-start': !isUserMessage(message),
+            'message-enter-stagger': messageEnterDelays.has(message.messageID),
           }"
+          :style="messageEnterDelays.has(message.messageID) ? { animationDelay: messageEnterDelays.get(message.messageID) } : undefined"
         >
           <div
-            class="max-w-[85%] md:max-w-[75%] sm:max-w-[70%] px-4 py-3"
+            class="max-w-[85%] md:max-w-[75%] sm:max-w-[70%] px-3 py-2"
             :class="{
               'rounded-br-md': isUserMessage(message),
               'rounded-bl-md': !isUserMessage(message),
@@ -33,7 +35,7 @@
             :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
           >
             <!-- Sender Name + Rating Controls -->
-            <div v-if="!props.hideSenderNames" class="flex items-start justify-between gap-2">
+            <div v-if="showSenderName(message)" class="flex items-start justify-between gap-2">
               <div
                 class="text-xs font-medium mb-1.5"
                 :class="{
@@ -66,7 +68,6 @@
               <MarkdownContent
                 v-if="!parseOptionsPayload(message.messageText)"
                 :content="message.messageText"
-                class="text-sm leading-relaxed"
               />
               <OptionsMessage
                 v-else
@@ -78,7 +79,6 @@
             <MarkdownContent
               v-else
               :content="message.messageText"
-              class="text-sm leading-relaxed"
             />
 
             <!-- Message Status and Time -->
@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type CSSProperties } from 'vue'
+import { computed, onMounted, ref, type CSSProperties } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { parseOptionsPayload } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
@@ -184,7 +184,9 @@ interface Props {
   agentName?: string
   welcomeMessageDate?: string
   hideSenderNames?: boolean
+  memberCount?: number
   activeOptionsMessageId?: string
+  skipEntranceAnimation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -194,7 +196,9 @@ const props = withDefaults(defineProps<Props>(), {
   agentName: undefined,
   welcomeMessageDate: undefined,
   hideSenderNames: false,
+  memberCount: 2,
   activeOptionsMessageId: undefined,
+  skipEntranceAnimation: false,
 })
 
 const emit = defineEmits<{
@@ -203,9 +207,42 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore()
 
+// Staggered entrance animation for initial load
+const STAGGER_COUNT = 8
+const STAGGER_STEP_MS = 50
+const ANIMATION_DURATION_MS = 300
+
+const isInitialRender = ref(!props.skipEntranceAnimation)
+
+onMounted(() => {
+  setTimeout(() => {
+    isInitialRender.value = false
+  }, STAGGER_COUNT * STAGGER_STEP_MS + ANIMATION_DURATION_MS + 100)
+})
+
+const messageEnterDelays = computed<Map<string, string>>(() => {
+  if (!isInitialRender.value) return new Map()
+  const msgs = allMessages.value
+  const count = msgs.length
+  const from = Math.max(0, count - STAGGER_COUNT)
+  const delays = new Map<string, string>()
+  for (let i = from; i < count; i++) {
+    const fromEnd = count - 1 - i
+    delays.set(msgs[i]!.messageID, `${fromEnd * STAGGER_STEP_MS}ms`)
+  }
+  return delays
+})
+
 // Helper to determine if a message is from the current user
 const isUserMessage = (message: ExtendedMessage) => {
   return message.senderUserCode === authStore.user?.email
+}
+
+// Show sender name only for other people's messages in group chats (3+ members)
+const showSenderName = (message: ExtendedMessage) => {
+  if (props.hideSenderNames) return false
+  if (isUserMessage(message)) return false
+  return props.memberCount > 2
 }
 
 // Create welcome message if provided
@@ -307,3 +344,20 @@ function formatTime(dateString: string): string {
 }
 
 </script>
+
+<style scoped>
+.message-enter-stagger {
+  animation: message-enter 0.3s ease both;
+}
+
+@keyframes message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

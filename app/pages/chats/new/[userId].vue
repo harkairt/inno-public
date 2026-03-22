@@ -27,12 +27,13 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoadingUsers" class="flex items-center justify-center h-full">
-      <div class="text-center">
-        <USkeleton class="h-8 w-64 mb-4 mx-auto" />
-        <div class="space-y-3 max-w-md mx-auto">
-          <USkeleton class="h-16 w-full" />
-          <USkeleton class="h-16 w-3/4 ml-auto" />
+    <div v-if="isLoadingUsers" class="flex items-center justify-center h-full p-4">
+      <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
+        <div class="flex justify-end">
+          <USkeleton class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
+        </div>
+        <div class="flex justify-start">
+          <USkeleton class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
         </div>
       </div>
     </div>
@@ -132,6 +133,7 @@ const sessionId = ref(generateUUID())
 // Register navigation callback for when server confirms the new session
 chatStore.onNewSessionConfirmed(sessionId.value, () => {
   chatStore.clearDraft(`new-${userId.value}`)
+  chatStore.skipNextEntranceAnimation = true
   navigateTo(`/chats/${sessionId.value}`, { replace: true })
 })
 
