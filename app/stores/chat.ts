@@ -14,6 +14,7 @@ export const useChatStore = defineStore('chat', () => {
   const typingUsers = ref<Map<string, Set<string>>>(new Map()) // sessionId -> Set of user names
   const failedMessages = ref<Record<string, FailedMessage[]>>({}) // sessionId -> failed messages (DTO format)
   const draftMessages = ref<Record<string, string>>({}) // key -> draft text
+  const skipNextEntranceAnimation = ref(false)
 
   // Actions
   function setActiveSession(sessionId: string | null) {
@@ -129,6 +130,9 @@ export const useChatStore = defineStore('chat', () => {
     addTypingUser,
     removeTypingUser,
     getTypingUsers,
+
+    // Animation control
+    skipNextEntranceAnimation,
 
     // New session callbacks
     onNewSessionConfirmed,
