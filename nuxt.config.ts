@@ -5,6 +5,9 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   ssr: false,
   compatibilityDate: '2026-02-26',
+  devServer: {
+    host: '0.0.0.0',
+  },
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL ?? '/',
     head: {
@@ -282,7 +285,7 @@ export default defineNuxtConfig({
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' wss: ws: https://api.iconify.design; worker-src 'self' blob:;",
+        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://api.iconify.design; worker-src 'self' blob:;",
       },
     },
     '/api/**': {

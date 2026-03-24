@@ -31,6 +31,7 @@ const config: Config = {
     'span',
     'div',
     'hr',
+    'img',
     // KaTeX math rendering elements:
     'svg',
     'path',
@@ -56,6 +57,9 @@ const config: Config = {
   ],
   ALLOWED_ATTR: [
     'href',
+    'src',
+    'alt',
+    'title',
     'class',
     'data-language',
     // KaTeX attributes (SVG + inline styles for positioning):
