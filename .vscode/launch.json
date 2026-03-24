@@ -24,8 +24,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
-        "dev",
-        "--host"
+        "dev"
       ],
       "env": {
         "NODE_OPTIONS": "--inspect"

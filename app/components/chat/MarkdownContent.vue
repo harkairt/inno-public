@@ -2,6 +2,7 @@
   <!-- eslint-disable vue/no-v-html -- sanitized via DOMPurify in sanitizeHTML() -->
   <div
     v-if="renderedHTML"
+    v-viewer.rebuild="hasImages ? {} : false"
     class="markdown-content"
     v-html="renderedHTML"
   />
@@ -9,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useMarkdown } from '@/app/composables/useMarkdown'
 import { useShiki } from '@/app/composables/useShiki'
 import { sanitizeHTML } from '@/app/utils/sanitize'
@@ -26,6 +27,9 @@ const { isLoaded: shikiLoaded, loadHighlighter, highlightCode } = useShiki()
 
 // Rendered HTML (reactive to trigger re-render when highlighter loads)
 const renderedHTML = ref('')
+
+// Only activate v-viewer when rendered HTML contains images (avoids rebuild overhead during streaming)
+const hasImages = computed(() => renderedHTML.value.includes('<img '))
 
 // Check if content contains code blocks (markdown fenced code)
 const hasCodeBlocks = (content: string | null | undefined): boolean => {
@@ -68,8 +72,7 @@ const highlightCodeBlocks = (html: string): string => {
       }
 
       return highlighted
-    } catch (error) {
-      console.warn('Code highlighting failed:', error)
+    } catch {
       return match
     }
   })
@@ -95,8 +98,7 @@ const renderContent = () => {
 
     // Always sanitize as final step
     renderedHTML.value = sanitizeHTML(html)
-  } catch (error) {
-    console.error('Failed to parse markdown:', error)
+  } catch {
     // Fallback to plain text with escaping
     renderedHTML.value = props.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
