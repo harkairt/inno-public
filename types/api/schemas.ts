@@ -243,7 +243,16 @@ export function parseOptionsPayload(
 export const AISessionMessageDTOSchema = z.object({
   isRated: z.boolean(),
   messageID: z.string(),
-  messageText: z.string().nullable().optional(),
+  messageText: z.string().nullable().optional().transform((val) => {
+    // Backend may double-encode messageText (e.g. "\"Milyen d\\u00f6nt\\u00e9sek...\"")
+    // Unwrap one level of extra JSON encoding if detected
+    if (typeof val !== 'string') return val
+    try {
+      const parsed = JSON.parse(val)
+      if (typeof parsed === 'string') return parsed
+    } catch { /* not double-encoded, return as-is */ }
+    return val
+  }),
   messageType: AIAnswerTypeSchema,
   rating: z.number().nullable().optional(),
   readByUsers: z.array(z.string()).nullable().optional(),
