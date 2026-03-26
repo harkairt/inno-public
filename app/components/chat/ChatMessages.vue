@@ -15,7 +15,7 @@
       <!-- Messages in this group -->
       <div class="space-y-3">
         <div
-          v-for="message in group.messages"
+          v-for="(message, messageIndex) in group.messages"
           :key="message.messageID"
           :data-testid="`message-${message.messageID}`"
           class="group flex"
@@ -73,6 +73,7 @@
                 v-else
                 :payload="parseOptionsPayload(message.messageText)!"
                 :is-active="message.messageID === props.activeOptionsMessageId"
+                :selected-answer="getSelectedAnswer(group.messages, messageIndex)"
                 @submit="(answer) => emit('optionSubmitted', answer)"
               />
             </template>
@@ -236,6 +237,17 @@ const messageEnterDelays = computed<Map<string, string>>(() => {
 // Helper to determine if a message is from the current user
 const isUserMessage = (message: ExtendedMessage) => {
   return message.senderUserCode === authStore.user?.email
+}
+
+// Find the user's answer to an Options message by looking at the next user message after it
+function getSelectedAnswer(messages: ExtendedMessage[], currentIndex: number): string | undefined {
+  const userEmail = authStore.user?.email
+  for (let i = currentIndex + 1; i < messages.length; i++) {
+    if (messages[i]!.senderUserCode === userEmail) {
+      return messages[i]!.messageText ?? undefined
+    }
+  }
+  return undefined
 }
 
 // Show sender name only for other people's messages in group chats (3+ members)
