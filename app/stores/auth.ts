@@ -10,6 +10,8 @@ import { ErrorCode } from "@/types/enums";
 import { sha512 } from 'js-sha512'
 import { extractTokensFromResponse } from "@/lib/api/utils/tokens";
 import { useSignalR } from '@/app/composables/useSignalR'
+import { useChatStore } from '@/app/stores/chat'
+import { useQueryClient } from '@tanstack/vue-query'
 
 // Manual localStorage persistence functions (fallback for Pinia persistence issues)
 const AUTH_STORAGE_KEY = "innochat-auth";
@@ -222,6 +224,21 @@ export const useAuthStore = defineStore(
 
       // Clear auth state from localStorage
       clearAuthStateFromStorage();
+
+      // Clear all user-scoped caches
+      try {
+        const chatStore = useChatStore()
+        chatStore.resetUserData()
+      } catch {
+        // Chat store may not be initialized yet
+      }
+
+      try {
+        const queryClient = useQueryClient()
+        queryClient.clear()
+      } catch {
+        // Query client may not be available
+      }
     }
 
     async function refreshAuthToken(): Promise<Result<void, AppError>> {
@@ -294,6 +311,21 @@ export const useAuthStore = defineStore(
 
       // Clear auth state from localStorage
       clearAuthStateFromStorage();
+
+      // Clear all user-scoped caches
+      try {
+        const chatStore = useChatStore()
+        chatStore.resetUserData()
+      } catch {
+        // Chat store may not be initialized yet
+      }
+
+      try {
+        const queryClient = useQueryClient()
+        queryClient.clear()
+      } catch {
+        // Query client may not be available
+      }
     }
 
     function setTokens(access: string | null, refresh: string | null): Promise<void> {

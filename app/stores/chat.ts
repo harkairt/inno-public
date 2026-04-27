@@ -68,6 +68,18 @@ export const useChatStore = defineStore('chat', () => {
     draftMessages.value = rest
   }
 
+  // Reset all user-scoped state (called on logout)
+  function resetUserData() {
+    activeSessionId.value = null
+    isLoading.value = false
+    error.value = null
+    typingUsers.value = new Map()
+    failedMessages.value = {}
+    draftMessages.value = {}
+    skipNextEntranceAnimation.value = false
+    newSessionCallbacks.clear()
+  }
+
   // New session callback registry (not persisted)
   const newSessionCallbacks = new Map<string, () => void>()
 
@@ -138,6 +150,9 @@ export const useChatStore = defineStore('chat', () => {
     onNewSessionConfirmed,
     executeNewSessionCallback,
     removeNewSessionCallback,
+
+    // Cleanup
+    resetUserData,
   }
 }, {
   persist: {

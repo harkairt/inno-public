@@ -1,9 +1,4 @@
 {
-  "enabledPlugins": {
-    "security-guidance@claude-plugins-official": true,
-    "feature-dev@claude-plugins-official": true,
-    "interface-design@interface-design": true
-  },
   "hooks": {
     "Stop": [
       {
@@ -19,5 +14,11 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true,
+    "feature-dev@claude-plugins-official": true,
+    "interface-design@interface-design": true,
+    "typescript-lsp@claude-plugins-official": true
   }
 }
