@@ -117,7 +117,9 @@
       "thanks": "Köszönjük a visszajelzést!"
     },
     "options": {
-      "submit": "Küldés"
+      "submit": "Küldés",
+      "customOption": "Egyéb",
+      "plainTextPlaceholder": "Írja be válaszát..."
     }
   },
   "errors": {
