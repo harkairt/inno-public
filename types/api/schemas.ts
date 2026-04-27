@@ -215,6 +215,8 @@ export const MessageOptionSchema = z.object({
 export const OptionsMessagePayloadSchema = z.object({
   Text: z.string(),
   MultiSelectEnabled: z.boolean(),
+  IsPlainTextEnabled: z.boolean().optional().default(false),
+  UIControlType: z.number().optional().default(0),
   Items: z.array(z.object({
     Key: z.string(),
     Value: z.string()

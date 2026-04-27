@@ -98,6 +98,12 @@ export enum MessageStatus {
   FAILED = 'failed'
 }
 
+// UI control types for options messages
+export enum OptionsUIControlType {
+  RadioButton = 0,
+  Combobox = 1
+}
+
 // Theme modes for UI preferences
 export enum ThemeMode {
   LIGHT = 'light',

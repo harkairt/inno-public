@@ -3,8 +3,29 @@
     <!-- Question text -->
     <MarkdownContent v-if="payload.Text" :content="payload.Text" />
 
-    <!-- Single-select items -->
-    <div v-if="!payload.MultiSelectEnabled" class="space-y-1.5">
+    <!-- Combobox (single-select only) -->
+    <div v-if="isCombobox" class="grid grid-cols-1" :class="selectedCombobox === CUSTOM_SENTINEL ? 'grid-rows-[auto_auto]' : 'grid-rows-[auto_0fr]'" @focusin="handleGridFocus">
+      <USelect
+        v-model="selectedCombobox"
+        :items="comboboxItems"
+        :disabled="!isActive"
+        :content="{ side: 'top' }"
+        class="w-full"
+      />
+      <div ref="plainTextWrapper" class="overflow-hidden min-h-0">
+        <div class="pt-3">
+          <UInput
+            v-model="plainText"
+            :placeholder="t('chat.options.plainTextPlaceholder')"
+            :disabled="!isActive"
+            class="w-full"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Single-select radio list -->
+    <div v-else-if="!payload.MultiSelectEnabled" class="space-y-1.5">
       <div
         v-for="item in payload.Items"
         :key="item.Key"
@@ -14,13 +35,35 @@
           selectedSingle === item.Value ? 'shadow-[inset_0_0_0_1.5px_hsl(var(--foreground))]' : '',
           !isActive && selectedSingle !== item.Value ? 'opacity-50' : ''
         ]"
-        @click="isActive && (selectedSingle = item.Value)"
+        @click="isActive && selectSingle(item.Value)"
       >
         <span class="text-sm">{{ item.Value }}</span>
       </div>
+      <div
+        v-if="payload.IsPlainTextEnabled"
+        class="px-3 py-2 rounded-lg border border-[hsl(var(--foreground))] transition-all duration-150"
+        :class="[
+          isActive ? 'hover:bg-[hsl(var(--accent))] cursor-pointer' : 'cursor-default',
+          selectedSingle === CUSTOM_SENTINEL ? 'shadow-[inset_0_0_0_1.5px_hsl(var(--foreground))]' : '',
+          !isActive && selectedSingle !== CUSTOM_SENTINEL ? 'opacity-50' : ''
+        ]"
+        @click="isActive && selectSingle(CUSTOM_SENTINEL)"
+      >
+        <template v-if="selectedSingle === CUSTOM_SENTINEL">
+          <UInput
+            v-model="plainText"
+            :placeholder="t('chat.options.plainTextPlaceholder')"
+            :disabled="!isActive"
+            variant="none"
+            class="w-full"
+            @click.stop
+          />
+        </template>
+        <span v-else class="text-sm">{{ t('chat.options.customOption') }}</span>
+      </div>
     </div>
 
-    <!-- Multi-select items -->
+    <!-- Multi-select list -->
     <div v-else class="space-y-1.5">
       <div
         v-for="item in payload.Items"
@@ -51,9 +94,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watch, watchEffect, useTemplateRef } from 'vue'
 import type { OptionsMessagePayload } from '@/types/api/schemas'
+import { OptionsUIControlType } from '@/types/enums'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
+
+const CUSTOM_SENTINEL = '__custom__'
 
 const { t } = useI18n()
 
@@ -72,8 +118,36 @@ const emit = defineEmits<{
 
 const selectedSingle = ref<string>('')
 const selectedMultiple = ref<string[]>([])
+const selectedCombobox = ref<string>('')
+const plainText = ref<string>('')
+const plainTextWrapper = useTemplateRef<HTMLDivElement>('plainTextWrapper')
+let pendingFocusRedirect = false
 
-// Pre-select the answer for previously answered options messages
+watch(selectedCombobox, (val) => {
+  pendingFocusRedirect = val === CUSTOM_SENTINEL
+})
+
+function handleGridFocus(e: FocusEvent) {
+  if (!pendingFocusRedirect) return
+  const input = plainTextWrapper.value?.querySelector<HTMLInputElement>('input')
+  if (input && e.target !== input) {
+    pendingFocusRedirect = false
+    input.focus()
+  }
+}
+
+const isCombobox = computed(
+  () => !props.payload.MultiSelectEnabled && props.payload.UIControlType === OptionsUIControlType.Combobox,
+)
+
+const comboboxItems = computed(() => {
+  const items = props.payload.Items.map(item => ({ label: item.Value, value: item.Value }))
+  if (props.payload.IsPlainTextEnabled) {
+    items.push({ label: t('chat.options.customOption'), value: CUSTOM_SENTINEL })
+  }
+  return items
+})
+
 watchEffect(() => {
   if (props.selectedAnswer && !props.isActive) {
     if (props.payload.MultiSelectEnabled) {
@@ -81,17 +155,41 @@ watchEffect(() => {
         props.payload.Items.some(item => item.Value === v),
       )
     } else {
-      selectedSingle.value = props.selectedAnswer
+      const matchesItem = props.payload.Items.some(item => item.Value === props.selectedAnswer)
+      if (matchesItem) {
+        if (isCombobox.value) {
+          selectedCombobox.value = props.selectedAnswer
+        } else {
+          selectedSingle.value = props.selectedAnswer
+        }
+      } else if (props.payload.IsPlainTextEnabled) {
+        plainText.value = props.selectedAnswer
+        if (isCombobox.value) {
+          selectedCombobox.value = CUSTOM_SENTINEL
+        } else {
+          selectedSingle.value = CUSTOM_SENTINEL
+        }
+      }
     }
   }
 })
 
 const hasSelection = computed(() => {
-  if (props.payload.MultiSelectEnabled) {
-    return selectedMultiple.value.length > 0
+  if (props.payload.MultiSelectEnabled) return selectedMultiple.value.length > 0
+  if (isCombobox.value) {
+    if (selectedCombobox.value === CUSTOM_SENTINEL) return plainText.value.trim() !== ''
+    return selectedCombobox.value !== ''
   }
+  if (selectedSingle.value === CUSTOM_SENTINEL) return plainText.value.trim() !== ''
   return selectedSingle.value !== ''
 })
+
+function selectSingle(value: string) {
+  selectedSingle.value = value
+  if (value !== CUSTOM_SENTINEL) {
+    plainText.value = ''
+  }
+}
 
 function toggleMultiple(value: string) {
   const idx = selectedMultiple.value.indexOf(value)
@@ -104,9 +202,13 @@ function toggleMultiple(value: string) {
 
 function handleSubmit() {
   if (!hasSelection.value) return
-  const answer = props.payload.MultiSelectEnabled
-    ? selectedMultiple.value.join(', ')
-    : selectedSingle.value
-  emit('submit', answer)
+  if (props.payload.MultiSelectEnabled) {
+    emit('submit', selectedMultiple.value.join(', '))
+    return
+  }
+  const isCustom = isCombobox.value
+    ? selectedCombobox.value === CUSTOM_SENTINEL
+    : selectedSingle.value === CUSTOM_SENTINEL
+  emit('submit', isCustom ? plainText.value.trim() : (isCombobox.value ? selectedCombobox.value : selectedSingle.value))
 }
 </script>

@@ -117,7 +117,9 @@
       "thanks": "Thanks for your feedback!"
     },
     "options": {
-      "submit": "Submit"
+      "submit": "Submit",
+      "customOption": "Other",
+      "plainTextPlaceholder": "Type your answer..."
     }
   },
   "errors": {
