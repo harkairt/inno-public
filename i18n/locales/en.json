@@ -19,6 +19,8 @@
     "searchSessions": "Search sessions...",
     "noUsersFound": "No users found",
     "noSessionsFound": "No chat sessions found",
+    "draftChats": "Drafts",
+    "clearDraft": "Clear draft",
     "justNow": "Just now",
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
