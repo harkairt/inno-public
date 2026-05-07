@@ -1,62 +1,44 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "npm run dev + chrome",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev:clean",
+      "cwd": "${workspaceFolder}",
+      "serverReadyAction": {
+        "action": "startDebugging",
+        "name": "Launch Chrome",
+        "killOnServerStop": true,
+        "pattern": "Vite client warmed up in",
+      },
+    },
+    {
+      "name": "Launch Chrome",
       "type": "chrome",
       "request": "launch",
-      "name": "client: chrome",
-      "url": "http://localhost:3000",
-      // this should point to your Nuxt `srcDir`, which is `app` by default
-      "webRoot": "${workspaceFolder}/app",
-      "runtimeArgs": [
-        "--remote-debugging-port=9222"
-      ],
-      // "presentation": {
-      //   "hidden": true
-      // }
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "server: nuxt",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev"
-      ],
-      "env": {
-        "NODE_OPTIONS": "--inspect"
-      },
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
       "presentation": {
-        "hidden": true
-      }
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "⚡ build & localhost:3333",
-      "program": "${workspaceFolder}/.output/server/index.mjs",
-      "env": {
-        "PORT": "3333",
-        "NITRO_PORT": "3333"
+        "hidden": true,
       },
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "preLaunchTask": "nuxt-build"
+      "url": "http://localhost:3000",
+      "runtimeArgs": [
+        "--remote-debugging-port=9222",
+        "--user-data-dir=/tmp/chrome-remote-debug",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--metrics-recording-only",
+        "--disable-default-apps",
+        "--mute-audio",
+        "--auto-open-devtools-for-tabs",
+        "--no-service-autorun",
+        "--disable-breakpad",
+        "--disable-features=Translate,AutofillServerCommunication,OptimizationHints,MediaRouter",
+        "--disable-popup-blocking",
+      ]
     },
   ],
-  "compounds": [
-    {
-      "stopAll": true,
-      "name": "🚧 debug",
-      "configurations": [
-        "server: nuxt",
-        "client: chrome"
-      ]
-    }
-  ]
 }

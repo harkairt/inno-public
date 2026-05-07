@@ -16,7 +16,7 @@ description: Use when writing tests for vonno/InnoChat — unit tests, component
 | Pinia (test instance) | Store setup via `createPinia()` / `setActivePinia()` |
 | Playwright | E2E browser tests |
 
-**Coverage target:** 80% branches, functions, lines, statements (enforced in `vitest.config.ts`)
+**Coverage target:** 80% branches/functions/lines/statements (goal). Current enforced thresholds in `vitest.config.ts` are lower: 66% branches, 42% functions, 33% lines, 33% statements — the project is below target.
 
 ---
 
@@ -44,7 +44,7 @@ Already configured globally — you don't need to repeat this in tests:
 - Nuxt globals: `definePageMeta`, `navigateTo`, `defineNuxtRouteMiddleware`
 - Pinia: `setActivePinia(createPinia())` called in `beforeAll`
 - VueQueryPlugin installed on a test app in `beforeAll`
-- MSW: `server.listen()` before all, `server.resetHandlers()` after each, `server.close()` after all
+- **MSW is NOT wired into the global setup.** Tests mock `apiClient` directly with `vi.mock('@/lib/api/client', ...)`. MSW handlers in `tests/msw/` exist but are not connected to Vitest. Do not rely on MSW for unit/component tests — mock `apiClient` instead.
 
 ---
 
@@ -265,6 +265,43 @@ npm run typecheck      # vue-tsc type check
 | Asserting `result.value` without checking `result.isOk()` first | Always check `isOk()` / `isErr()` before accessing `.value` / `.error` |
 | Importing Nuxt auto-imports (`useI18n`, `useRouter`) | These are global stubs — no import needed in test files |
 | Not using `data-testid` in component | Add to component, query with `getByTestId` in tests |
+
+---
+
+## Factory Functions (`tests/utils/factories.ts`)
+
+```typescript
+import { makeUser, makeSession, makeMessage, makeApiResponse, makeAxiosError, resetUserIdCounter } from '@/tests/utils/factories'
+
+// Wrap any response data in the backend's ApiResponse<T> envelope
+makeApiResponse(data)  // → { data: { data, success: null, warning: null, error: null } }
+
+// Typed entity factories with auto-incrementing IDs
+makeUser(overrides?)      // → UserDTO
+makeSession(overrides?)   // → AISessionHeaderDTO
+makeMessage(overrides?)   // → AISessionMessageDTO
+
+// Rejection testing
+makeAxiosError(404)       // → Error & { response: { status: 404 } }
+
+// Reset auto-incrementing counters in beforeEach when stable IDs matter
+resetUserIdCounter()
+```
+
+Always use `makeApiResponse()` when mocking `apiClient` responses — tests fail silently if the wrapper is missing.
+
+---
+
+## Coverage Measured Paths
+
+Coverage is measured on:
+- `lib/**/*.{js,ts}`
+- `stores/**/*.{js,ts}`
+- `composables/**/*.{js,ts}`
+- `utils/**/*.{js,ts}`
+- `types/**/*.ts`
+
+**`app/components/**` and `app/pages/**` are NOT in the coverage include list.** Component and page tests still run, but they don't count toward coverage thresholds.
 
 ---
 

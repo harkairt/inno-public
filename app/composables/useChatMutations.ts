@@ -149,7 +149,7 @@ export function useSendMessage() {
     },
 
     // On success, add server response (keep temp user message - will be replaced by refetch)
-    onSuccess: (serverMessage, request, context) => {
+    onSuccess: async (serverMessage, request, context) => {
       // Remove virtual agent typing indicator before adding the response message
       if (context?.virtualAgentName) {
         chatStore.removeTypingUser(request.sessionId, context.virtualAgentName);
@@ -215,6 +215,10 @@ export function useSendMessage() {
           chatQueryKeys.session(request.sessionId),
           syntheticSession
         );
+
+        // Ensure sidebar sessions list is up to date before navigating away
+        await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() });
+        await queryClient.refetchQueries({ queryKey: chatQueryKeys.sessions(), type: "active" });
 
         chatStore.executeNewSessionCallback(request.sessionId);
       }

@@ -324,4 +324,54 @@ const { isMobile, isActiveChat, showBottomTabBar, showRail } = useNavigationVisi
 
 ---
 
+---
+
+## i18n
+
+Default language is Hungarian (`hu`). **Always add keys to BOTH locale files:**
+
+```bash
+i18n/locales/en.json   # English
+i18n/locales/hu.json   # Hungarian (default)
+```
+
+Use nested objects for namespacing; kebab-case keys. Access via auto-imported `useI18n()`:
+
+```typescript
+const { t } = useI18n()  // no import needed — Nuxt auto-imports
+t('chat.send-message')
+```
+
+---
+
+## Console.log / Debug Logging
+
+**Never leave bare `console.log` calls in production code.** Wrap all debug logging in `import.meta.dev` guard:
+
+```typescript
+if (import.meta.dev) {
+  console.log('debug info', value)
+}
+```
+
+ESLint enforces `no-console: warn` in production. Bare `console.log` calls in scroll handlers, plugins, or composables will fire on every event in production builds. For production-visible errors use `console.error`.
+
+---
+
+## Key ESLint Rules (enforced)
+
+These are errors, not warnings — code won't pass lint if violated:
+
+| Rule | Required pattern |
+|---|---|
+| `prefer-nullish-coalescing` | Use `??` not `\|\|` for null/undefined fallbacks |
+| `prefer-optional-chain` | Use `?.` not `&&` chains |
+| `no-floating-promises` | Always `await` or `.catch()` promises |
+| `no-unused-vars` | Remove all unused variables/imports |
+| `no-explicit-any` | No `as any` except in test files |
+| `no-deprecated` | Don't use deprecated APIs |
+| `prefer-const` | `const` over `let` for non-reassigned bindings |
+
+---
+
 See `references/patterns.md` for extended code examples of optimistic updates, public mode patterns, and SignalR cache integration.

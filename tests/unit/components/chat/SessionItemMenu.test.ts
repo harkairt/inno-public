@@ -156,6 +156,12 @@ describe('SessionItemMenu — rename', () => {
 describe('SessionItemMenu — delete', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(global.useRoute).mockReturnValue({
+      params: {},
+      query: {},
+      path: '/',
+      fullPath: '/',
+    } as any)
   })
 
   it('opens delete confirmation when delete is clicked', async () => {
@@ -167,5 +173,21 @@ describe('SessionItemMenu — delete', () => {
     const modals = screen.getAllByTestId('modal')
     const deleteModal = modals.find(m => m.getAttribute('data-title') === 'chat.sessionMenu.deleteConfirmTitle')
     expect(deleteModal).toBeTruthy()
+  })
+
+  it('navigates to /chats when deleting the active session', async () => {
+    vi.mocked(global.useRoute).mockReturnValue({
+      params: { sessionId: 'session-1' },
+      query: {},
+      path: '/chats/session-1',
+      fullPath: '/chats/session-1',
+    } as any)
+
+    await renderMenu({ isPrimarySession: false })
+
+    await fireEvent.click(screen.getByText('chat.sessionMenu.delete'))
+    await fireEvent.click(screen.getAllByText('chat.sessionMenu.delete')[1]!)
+
+    expect(global.navigateTo).toHaveBeenCalledWith('/chats', { replace: true })
   })
 })

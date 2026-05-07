@@ -83,6 +83,7 @@ import { useUpdateSessionName, useDeleteSession } from '~/composables/useChatMut
 
 const { t } = useI18n()
 const toast = useToast()
+const route = useRoute()
 
 const props = defineProps<{
   sessionId: string
@@ -178,6 +179,14 @@ async function handleDelete() {
       sessionId: props.sessionId,
       agentId: props.agentId
     })
+
+    const activeSessionId = typeof route.params.sessionId === 'string'
+      ? route.params.sessionId
+      : undefined
+    if (activeSessionId === props.sessionId) {
+      await navigateTo('/chats', { replace: true })
+    }
+
     toast.add({
       title: t('chat.sessionMenu.deleteSuccess'),
       color: 'success'
