@@ -24,7 +24,7 @@
     </UAlert>
 
     <UEmpty
-      v-else-if="filteredSessions.length === 0"
+      v-else-if="filteredSessions.length === 0 && filteredDraftSessions.length === 0"
       :description="t('sidebar.noSessionsFound')"
       class="py-8"
     />
@@ -34,6 +34,61 @@
       ref="scrollContainer"
       class="flex-1 overflow-y-auto"
     >
+      <div v-if="filteredDraftSessions.length > 0" class="px-3 pt-3 pb-2">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
+          {{ t('sidebar.draftChats') }}
+        </h2>
+      </div>
+      <div
+        v-for="draft in filteredDraftSessions"
+        :key="draft.draftId"
+        class="group relative"
+      >
+        <NuxtLink
+          :to="draft.route"
+          class="sidebar-item block pr-10"
+          :data-testid="`draft-item-${draft.userId}`"
+        >
+          <div class="flex items-center gap-2">
+            <SessionMembers
+              :members="[draft.userEmail]"
+              :selectable-users="users || []"
+              size="2xs"
+              class="flex-shrink-0"
+            />
+            <h3 class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0">
+              {{ draft.userName }}
+            </h3>
+          </div>
+
+          <p class="flex items-center gap-1.5 text-xs text-muted tracking-wide mt-1">
+            <span class="line-clamp-1 italic">
+              {{ draft.preview }}
+            </span>
+          </p>
+        </NuxtLink>
+
+        <div
+          class="absolute top-3 right-2 transition-opacity"
+          :class="isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+        >
+          <UButton
+            icon="i-heroicons-trash"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            :aria-label="t('sidebar.clearDraft')"
+            :data-testid="`draft-clear-${draft.userId}`"
+            @click.stop="handleClearDraft(draft.draftKey, draft.route)"
+          />
+        </div>
+      </div>
+
+      <div v-if="filteredDraftSessions.length > 0" class="px-3 pt-3 pb-2">
+        <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
+          {{ t('sidebar.chatSessions') }}
+        </h2>
+      </div>
       <div
         v-for="session in filteredSessions"
         :key="session.sessionId"
@@ -99,6 +154,7 @@ const { isMobile } = useNavigationVisibility()
 const {
   users,
   filteredSessions,
+  filteredDraftSessions,
   isLoadingSessions,
   sessionsError,
   sessionSearchQuery,
@@ -107,10 +163,18 @@ const {
   getMemberNames,
   getDisplayName,
   isPrimarySessionCheck,
+  clearDraftConversation,
   formatRelativeDate,
 } = useChatListData()
 
 const activeSessionId = computed(() => route.params.sessionId as string)
+
+async function handleClearDraft(draftKey: string, draftRoute: string) {
+  clearDraftConversation(draftKey)
+  if (route.path === draftRoute) {
+    await navigateTo('/chats')
+  }
+}
 
 // Scroll position persistence
 const scrollContainer = ref<HTMLElement>()

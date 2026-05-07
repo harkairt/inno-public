@@ -121,6 +121,7 @@ export const useChatStore = defineStore('chat', () => {
     isLoading,
     error,
     failedMessages,
+    draftMessages,
 
     // Actions
     setActiveSession,

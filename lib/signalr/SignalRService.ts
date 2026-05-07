@@ -198,13 +198,13 @@ export class SignalRService {
   /**
    * Send message to server without waiting for response
    */
-  send(methodName: string, ...args: unknown[]): void {
+  async send(methodName: string, ...args: unknown[]): Promise<void> {
     if (this.connection?.state !== signalR.HubConnectionState.Connected) {
       return;
     }
 
     try {
-      this.connection.send(methodName, ...args);
+      await this.connection.send(methodName, ...args);
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : "Send failed";
       throw error;

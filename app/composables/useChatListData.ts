@@ -3,6 +3,7 @@ import { useSelectableUsers } from '~/composables/useUsers'
 import { useChatSessions, useUnreadMessageCounts } from '~/composables/useChatQueries'
 import { useClientSideUserSearch } from '~/composables/useClientSideUserSearch'
 import { useAuthStore } from '~/stores/auth'
+import { useChatStore } from '~/stores/chat'
 import { useRelativeDate } from '~/composables/useRelativeDate'
 import {
   getSessionDisplayName,
@@ -10,8 +11,19 @@ import {
   getPrimarySessionForUser,
 } from '~/composables/usePrimarySession'
 
+export interface DraftConversationListItem {
+  draftId: string
+  draftKey: string
+  userId: number
+  userName: string
+  userEmail: string
+  preview: string
+  route: string
+}
+
 export function useChatListData() {
   const authStore = useAuthStore()
+  const chatStore = useChatStore()
   const { formatRelativeDate } = useRelativeDate()
 
   const currentUserEmail = computed(() => authStore.user?.email ?? '')
@@ -50,6 +62,41 @@ export function useChatListData() {
 
       return new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime()
     })
+  })
+
+  const filteredDraftSessions = computed<DraftConversationListItem[]>(() => {
+    if (!users.value) return []
+
+    const query = sessionSearchQuery.value.toLowerCase().trim()
+    const drafts = Object.entries(chatStore.draftMessages)
+      .filter(([key, text]) => key.startsWith('new-') && text.trim().length > 0)
+      .flatMap(([key, text]) => {
+        const userIdPart = key.replace(/^new-/, '')
+        const userId = Number.parseInt(userIdPart, 10)
+        if (!Number.isFinite(userId)) return []
+
+        const user = users.value?.find(u => u.id === userId)
+        if (!user) return []
+
+        const preview = text.trim().replace(/\s+/g, ' ')
+        return [{
+          draftId: `draft-${key}`,
+          draftKey: key,
+          userId,
+          userName: user.name || user.email,
+          userEmail: user.email,
+          preview,
+          route: `/chats/new/${userId}`,
+        }]
+      })
+
+    if (!query) return drafts
+
+    return drafts.filter(draft =>
+      draft.userName.toLowerCase().includes(query)
+      || draft.userEmail.toLowerCase().includes(query)
+      || draft.preview.toLowerCase().includes(query),
+    )
   })
 
   // Total unread count across all sessions
@@ -121,6 +168,10 @@ export function useChatListData() {
     return `/chats/new/${userId}`
   }
 
+  function clearDraftConversation(draftKey: string) {
+    chatStore.clearDraft(draftKey)
+  }
+
   return {
     // Query data
     users,
@@ -136,6 +187,7 @@ export function useChatListData() {
     sessionSearchQuery,
     filteredUsers,
     filteredSessions,
+    filteredDraftSessions,
 
     // Counts
     totalUnreadCount,
@@ -148,6 +200,7 @@ export function useChatListData() {
     getDisplayName,
     isPrimarySessionCheck: isPrimarySessionCheck_,
     handleUserClick,
+    clearDraftConversation,
     formatRelativeDate,
     currentUserEmail,
   }
