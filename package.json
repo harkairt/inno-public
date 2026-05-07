@@ -6,6 +6,10 @@
     "node": "^22.12.0"
   },
   "scripts": {
+    "clean": "rm -rf .nuxt",
+    "clean:plain": "env -u NODE_OPTIONS -u VSCODE_INSPECTOR_OPTIONS npm run clean",
+    "dev:plain": "env -u NODE_OPTIONS -u VSCODE_INSPECTOR_OPTIONS nuxt dev",
+    "dev:clean": "npm run clean:plain && npm run dev:plain",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
