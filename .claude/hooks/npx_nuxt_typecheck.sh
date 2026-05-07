@@ -27,7 +27,7 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
 fi
 
 # Run nuxt typecheck and capture output
-TYPECHECK_OUTPUT=$(npx nuxt typecheck 2>&1) || TYPECHECK_EXIT_CODE=$?
+TYPECHECK_OUTPUT=$(npm run typecheck 2>&1) || TYPECHECK_EXIT_CODE=$?
 TYPECHECK_EXIT_CODE=${TYPECHECK_EXIT_CODE:-0}
 
 if [ "$TYPECHECK_EXIT_CODE" -eq 0 ]; then
