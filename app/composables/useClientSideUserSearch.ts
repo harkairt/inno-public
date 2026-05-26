@@ -7,7 +7,7 @@ import type { UserDTO } from '@/types/api/schemas'
  */
 export function useClientSideUserSearch(
   users: Ref<UserDTO[] | undefined>,
-  searchQuery: Ref<string>
+  searchQuery: Ref<string>,
 ): { filteredUsers: ComputedRef<UserDTO[]> } {
   const filteredUsers = computed(() => {
     if (!users.value) {
@@ -19,7 +19,7 @@ export function useClientSideUserSearch(
       return users.value
     }
 
-    return users.value.filter(user => {
+    return users.value.filter((user) => {
       // Search in name field (primary)
       if (user.name?.toLowerCase().includes(query)) {
         return true

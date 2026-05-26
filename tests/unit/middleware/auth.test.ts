@@ -1,89 +1,95 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useAuthStore } from '@/app/stores/auth'
+import type { RouteLocationNormalized } from 'vue-router'
 
-// Mock the auth store
+const mockNavigateTo = vi.fn()
+
+const mockUseAuthStore = vi.fn()
+
+type MiddlewareFn = (...args: unknown[]) => unknown
+
 vi.mock('@/app/stores/auth', () => ({
-  useAuthStore: vi.fn()
+  useAuthStore: mockUseAuthStore,
 }))
 
-// Mock navigateTo
-const mockNavigateTo = vi.fn()
 vi.mock('#app', () => ({
   navigateTo: mockNavigateTo,
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- Mock matches Nuxt's defineNuxtRouteMiddleware signature
-  defineNuxtRouteMiddleware: (fn: Function) => fn
+  defineNuxtRouteMiddleware: (fn: MiddlewareFn) => fn,
 }))
 
+vi.stubGlobal('defineNuxtRouteMiddleware', (fn: MiddlewareFn) => fn)
+vi.stubGlobal('navigateTo', mockNavigateTo)
+vi.stubGlobal('useAuthStore', mockUseAuthStore)
+vi.stubGlobal('usePublicMode', () => ({
+  isPublicMode: { value: false },
+  isValidPublicAgent: vi.fn(),
+  getPublicChatUrl: vi.fn(),
+}))
+
+function makeRoute(overrides: Partial<RouteLocationNormalized>): RouteLocationNormalized {
+  return {
+    path: '/',
+    fullPath: '/',
+    query: {},
+    hash: '',
+    name: undefined,
+    params: {},
+    matched: [],
+    meta: {},
+    redirectedFrom: undefined,
+    ...overrides,
+  } as RouteLocationNormalized
+}
+
 describe('auth middleware', () => {
-  let mockAuthStore: any
+  let mockAuthStore: { isAuthenticated: boolean }
 
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
 
     mockAuthStore = {
-      isAuthenticated: false
+      isAuthenticated: false,
     }
-    vi.mocked(useAuthStore).mockReturnValue(mockAuthStore)
+    mockUseAuthStore.mockReturnValue(mockAuthStore)
   })
 
   it('redirects to login when user is not authenticated', async () => {
-    // Arrange
-    mockAuthStore.isAuthenticated = false
-
-    // Import after mocking
     const authMiddleware = await import('@/app/middleware/auth.global')
     const middleware = authMiddleware.default
 
-    // Act
-    await middleware(
-      { path: '/chats' },
-      { path: '/' }
-    )
+    await middleware(makeRoute({ path: '/chats', fullPath: '/chats' }), makeRoute({ path: '/' }))
 
-    // Assert
-    expect(mockNavigateTo).toHaveBeenCalledWith('/login', {
-      replace: true
-    })
+    expect(mockNavigateTo).toHaveBeenCalledWith({ path: '/login', query: { redirect: '/chats' } })
   })
 
   it('allows access when user is authenticated', async () => {
-    // Arrange
     mockAuthStore.isAuthenticated = true
 
-    // Import after mocking
     const authMiddleware = await import('@/app/middleware/auth.global')
     const middleware = authMiddleware.default
 
-    // Act
     const result = await middleware(
-      { path: '/chats' },
-      { path: '/login' }
+      makeRoute({ path: '/chats', fullPath: '/chats' }),
+      makeRoute({ path: '/login' }),
     )
 
-    // Assert
     expect(mockNavigateTo).not.toHaveBeenCalled()
     expect(result).toBeUndefined()
   })
 
-  it('works for any protected route', async () => {
-    // Arrange
-    mockAuthStore.isAuthenticated = false
-
-    // Import after mocking
+  it('redirects unauthenticated user from any protected route', async () => {
     const authMiddleware = await import('@/app/middleware/auth.global')
     const middleware = authMiddleware.default
 
-    // Act
     await middleware(
-      { path: '/some-protected-route' },
-      { path: '/login' }
+      makeRoute({ path: '/some-protected-route', fullPath: '/some-protected-route' }),
+      makeRoute({ path: '/login' }),
     )
 
-    // Assert
-    expect(mockNavigateTo).toHaveBeenCalledWith('/login', {
-      replace: true
+    expect(mockNavigateTo).toHaveBeenCalledWith({
+      path: '/login',
+      query: { redirect: '/some-protected-route' },
     })
   })
 })

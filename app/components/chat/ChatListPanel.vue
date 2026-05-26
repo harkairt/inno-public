@@ -1,5 +1,8 @@
 <template>
-  <div class="flex flex-col h-full overflow-hidden" data-testid="chat-list-panel">
+  <div
+    class="flex flex-col h-full overflow-hidden"
+    data-testid="chat-list-panel"
+  >
     <div class="border-b border-[hsl(var(--border)/0.5)] px-4 py-3">
       <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
         {{ t('navigation.conversations') }}
@@ -15,11 +18,23 @@
       />
     </div>
 
-    <div v-if="isLoadingSessions" class="space-y-2 px-3">
-      <USkeleton v-for="i in 3" :key="i" class="h-16" />
+    <div
+      v-if="isLoadingSessions"
+      class="space-y-2 px-3"
+    >
+      <USkeleton
+        v-for="i in 3"
+        :key="i"
+        class="h-16"
+      />
     </div>
 
-    <UAlert v-else-if="sessionsError" color="error" variant="soft" class="mx-3">
+    <UAlert
+      v-else-if="sessionsError"
+      color="error"
+      variant="soft"
+      class="mx-3"
+    >
       {{ sessionsError.message }}
     </UAlert>
 
@@ -34,7 +49,10 @@
       ref="scrollContainer"
       class="flex-1 overflow-y-auto"
     >
-      <div v-if="filteredDraftSessions.length > 0" class="px-3 pt-3 pb-2">
+      <div
+        v-if="filteredDraftSessions.length > 0"
+        class="px-3 pt-3 pb-2"
+      >
         <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
           {{ t('sidebar.draftChats') }}
         </h2>
@@ -84,7 +102,10 @@
         </div>
       </div>
 
-      <div v-if="filteredDraftSessions.length > 0" class="px-3 pt-3 pb-2">
+      <div
+        v-if="filteredDraftSessions.length > 0"
+        class="px-3 pt-3 pb-2"
+      >
         <h2 class="text-xs font-semibold uppercase tracking-wide text-muted">
           {{ t('sidebar.chatSessions') }}
         </h2>

@@ -9,7 +9,7 @@ const { t } = useI18n()
 const colorMode = useColorMode()
 
 const avatarUrl = computed(() =>
-  colorMode.value === 'dark' ? props.agent.darkImage : props.agent.image
+  colorMode.value === 'dark' ? props.agent.darkImage : props.agent.image,
 )
 </script>
 
@@ -31,6 +31,6 @@ const avatarUrl = computed(() =>
         <p class="font-medium text-default truncate">{{ agent.name }}</p>
         <p class="text-sm text-muted-foreground">{{ t('emptyPage.aiAssistant') }}</p>
       </div>
-          </div>
+    </div>
   </UCard>
 </template>

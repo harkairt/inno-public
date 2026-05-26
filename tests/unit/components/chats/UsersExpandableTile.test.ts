@@ -1,17 +1,18 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { ref, nextTick } from 'vue'
+import type { Component } from 'vue'
 
 // Mock the useSelectableUsers composable
 const mockUseSelectableUsers = vi.fn()
 vi.mock('@/composables/useUsers', () => ({
-  useSelectableUsers: mockUseSelectableUsers
+  useSelectableUsers: mockUseSelectableUsers,
 }))
 
 // Mock the useClientSideUserSearch composable
 const mockUseClientSideUserSearch = vi.fn()
 vi.mock('@/composables/useClientSideUserSearch', () => ({
-  useClientSideUserSearch: mockUseClientSideUserSearch
+  useClientSideUserSearch: mockUseClientSideUserSearch,
 }))
 
 // Mock the UserListItem component
@@ -19,9 +20,16 @@ vi.mock('@/app/components/chats/UserListItem.vue', () => ({
   default: {
     name: 'UserListItem',
     props: ['user'],
-    template: '<div data-testid="user-item">{{ user.name }}</div>'
-  }
+    template: '<div data-testid="user-item">{{ user.name }}</div>',
+  },
 }))
+
+async function importUsersExpandableTile(): Promise<Component> {
+  const mod = (await import('@/app/components/chats/UsersExpandableTile.vue')) as {
+    default: Component
+  }
+  return mod.default
+}
 
 describe('UsersExpandableTile', () => {
   beforeEach(() => {
@@ -35,11 +43,11 @@ describe('UsersExpandableTile', () => {
       isLoading: ref(true),
       isError: ref(false),
       error: ref(null),
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })
 
     // Import and mount component
-    const { default: UsersExpandableTile } = await import('@/app/components/chats/UsersExpandableTile.vue')
+    const UsersExpandableTile = await importUsersExpandableTile()
     const wrapper = mount(UsersExpandableTile)
 
     // Assert
@@ -54,11 +62,11 @@ describe('UsersExpandableTile', () => {
       isLoading: ref(false),
       isError: ref(true),
       error: ref(new Error('Failed to fetch users')),
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })
 
     // Import and mount component
-    const { default: UsersExpandableTile } = await import('@/app/components/chats/UsersExpandableTile.vue')
+    const UsersExpandableTile = await importUsersExpandableTile()
     const wrapper = mount(UsersExpandableTile)
 
     // Assert
@@ -70,7 +78,7 @@ describe('UsersExpandableTile', () => {
     // Arrange
     const mockUsers = [
       { id: 1, name: 'John Doe', email: 'john@example.com' },
-      { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
+      { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
     ]
 
     mockUseSelectableUsers.mockReturnValue({
@@ -78,15 +86,15 @@ describe('UsersExpandableTile', () => {
       isLoading: ref(false),
       isError: ref(false),
       error: ref(null),
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })
 
     mockUseClientSideUserSearch.mockReturnValue({
-      filteredUsers: ref(mockUsers)
+      filteredUsers: ref(mockUsers),
     })
 
     // Import and mount component
-    const { default: UsersExpandableTile } = await import('@/app/components/chats/UsersExpandableTile.vue')
+    const UsersExpandableTile = await importUsersExpandableTile()
     const wrapper = mount(UsersExpandableTile)
 
     // Assert
@@ -101,15 +109,15 @@ describe('UsersExpandableTile', () => {
       isLoading: ref(false),
       isError: ref(false),
       error: ref(null),
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })
 
     mockUseClientSideUserSearch.mockReturnValue({
-      filteredUsers: ref([])
+      filteredUsers: ref([]),
     })
 
     // Import and mount component
-    const { default: UsersExpandableTile } = await import('@/app/components/chats/UsersExpandableTile.vue')
+    const UsersExpandableTile = await importUsersExpandableTile()
     const wrapper = mount(UsersExpandableTile)
 
     // Assert
@@ -118,24 +126,22 @@ describe('UsersExpandableTile', () => {
 
   it('renders no results state when search has no matches', async () => {
     // Arrange
-    const mockUsers = [
-      { id: 1, name: 'John Doe', email: 'john@example.com' }
-    ]
+    const mockUsers = [{ id: 1, name: 'John Doe', email: 'john@example.com' }]
 
     mockUseSelectableUsers.mockReturnValue({
       data: ref(mockUsers),
       isLoading: ref(false),
       isError: ref(false),
       error: ref(null),
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })
 
     mockUseClientSideUserSearch.mockReturnValue({
-      filteredUsers: ref([])
+      filteredUsers: ref([]),
     })
 
     // Import and mount component
-    const { default: UsersExpandableTile } = await import('@/app/components/chats/UsersExpandableTile.vue')
+    const UsersExpandableTile = await importUsersExpandableTile()
     const wrapper = mount(UsersExpandableTile)
 
     // Simulate search query
@@ -153,15 +159,15 @@ describe('UsersExpandableTile', () => {
       isLoading: ref(false),
       isError: ref(false),
       error: ref(null),
-      refetch: vi.fn()
+      refetch: vi.fn(),
     })
 
     mockUseClientSideUserSearch.mockReturnValue({
-      filteredUsers: ref([])
+      filteredUsers: ref([]),
     })
 
     // Import and mount component
-    const { default: UsersExpandableTile } = await import('@/app/components/chats/UsersExpandableTile.vue')
+    const UsersExpandableTile = await importUsersExpandableTile()
     const wrapper = mount(UsersExpandableTile)
 
     // Initially expanded

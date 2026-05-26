@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- Diagnostics test purposefully logs to console to capture browser state for debugging */
 import { test } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
@@ -17,28 +18,28 @@ test.describe('Playwright White Screen Diagnostics', () => {
 
     // Capture console messages
     const consoleMessages: string[] = []
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const message = `[${msg.type()}] ${msg.text()}`
       consoleMessages.push(message)
       console.log('Browser console:', message)
     })
 
     // Capture network requests
-    const networkRequests: any[] = []
-    page.on('request', request => {
+    const networkRequests: Array<{ url: string; method: string; resourceType: string }> = []
+    page.on('request', (request) => {
       networkRequests.push({
         url: request.url(),
         method: request.method(),
-        resourceType: request.resourceType()
+        resourceType: request.resourceType(),
       })
     })
 
     // Capture failed requests
-    const failedRequests: any[] = []
-    page.on('requestfailed', request => {
+    const failedRequests: Array<{ url: string; failure: string | undefined }> = []
+    page.on('requestfailed', (request) => {
       const failure = {
         url: request.url(),
-        failure: request.failure()?.errorText
+        failure: request.failure()?.errorText,
       }
       failedRequests.push(failure)
       console.error('Failed request:', failure)
@@ -46,7 +47,7 @@ test.describe('Playwright White Screen Diagnostics', () => {
 
     // Capture page errors
     const pageErrors: string[] = []
-    page.on('pageerror', error => {
+    page.on('pageerror', (error) => {
       pageErrors.push(error.message)
       console.error('Page error:', error.message)
     })
@@ -79,10 +80,7 @@ test.describe('Playwright White Screen Diagnostics', () => {
 
     // Capture page content
     const htmlContent = await page.content()
-    fs.writeFileSync(
-      path.join(diagnosticsDir, 'page-content.html'),
-      htmlContent
-    )
+    fs.writeFileSync(path.join(diagnosticsDir, 'page-content.html'), htmlContent)
     console.log('\n✓ HTML content saved to page-content.html')
     console.log('HTML length:', htmlContent.length, 'characters')
 
@@ -115,27 +113,24 @@ test.describe('Playwright White Screen Diagnostics', () => {
     // Take screenshots at different states
     await page.screenshot({
       path: path.join(diagnosticsDir, 'full-page.png'),
-      fullPage: true
+      fullPage: true,
     })
     console.log('\n✓ Full page screenshot saved')
 
     await page.screenshot({
-      path: path.join(diagnosticsDir, 'viewport.png')
+      path: path.join(diagnosticsDir, 'viewport.png'),
     })
     console.log('✓ Viewport screenshot saved')
 
     // Save console messages
-    fs.writeFileSync(
-      path.join(diagnosticsDir, 'console.log'),
-      consoleMessages.join('\n')
-    )
+    fs.writeFileSync(path.join(diagnosticsDir, 'console.log'), consoleMessages.join('\n'))
     console.log('\n✓ Console messages saved')
     console.log('Total console messages:', consoleMessages.length)
 
     // Save network requests
     fs.writeFileSync(
       path.join(diagnosticsDir, 'network.json'),
-      JSON.stringify(networkRequests, null, 2)
+      JSON.stringify(networkRequests, null, 2),
     )
     console.log('\n✓ Network requests saved')
     console.log('Total requests:', networkRequests.length)
@@ -144,17 +139,14 @@ test.describe('Playwright White Screen Diagnostics', () => {
     if (failedRequests.length > 0) {
       fs.writeFileSync(
         path.join(diagnosticsDir, 'failed-requests.json'),
-        JSON.stringify(failedRequests, null, 2)
+        JSON.stringify(failedRequests, null, 2),
       )
       console.error('\n❌ Failed requests saved:', failedRequests.length)
     }
 
     // Save page errors
     if (pageErrors.length > 0) {
-      fs.writeFileSync(
-        path.join(diagnosticsDir, 'page-errors.log'),
-        pageErrors.join('\n')
-      )
+      fs.writeFileSync(path.join(diagnosticsDir, 'page-errors.log'), pageErrors.join('\n'))
       console.error('\n❌ Page errors saved:', pageErrors.length)
     }
 

@@ -8,11 +8,11 @@ vi.mock('@/lib/api/client', () => ({
   apiClient: {
     post: vi.fn(),
     get: vi.fn(),
-  }
+  },
 }))
 
 vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((error) => error)
+  normalizeApiError: vi.fn((error: unknown) => error),
 }))
 
 // ---------------------------------------------------------------------------
@@ -237,7 +237,9 @@ describe('ChatService.updateSessionName', () => {
   })
 
   it('returns MutationSuccess on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(JSON.stringify({ message: 'kész.' })))
+    vi.mocked(apiClient.post).mockResolvedValue(
+      makeApiResponse(JSON.stringify({ message: 'kész.' })),
+    )
 
     const result = await chatService.updateSessionName({
       sessionId: 'session-1',
@@ -274,7 +276,9 @@ describe('ChatService.deleteSession', () => {
   })
 
   it('returns MutationSuccess on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(JSON.stringify({ message: 'kész.' })))
+    vi.mocked(apiClient.post).mockResolvedValue(
+      makeApiResponse(JSON.stringify({ message: 'kész.' })),
+    )
 
     const result = await chatService.deleteSession({ sessionId: 'session-1', agentId: 1 })
 
@@ -342,10 +346,11 @@ describe('ChatService.markMessagesRead', () => {
     const result = await chatService.markMessagesRead('session-1', 1, 'testuser')
 
     expect(result.isOk()).toBe(true)
-    expect(apiClient.post).toHaveBeenCalledWith(
-      '/api/AIWebAPI/Set_SessionMessagesRead',
-      { sessionID: 'session-1', agent: 1, userCode: 'testuser' }
-    )
+    expect(apiClient.post).toHaveBeenCalledWith('/api/AIWebAPI/Set_SessionMessagesRead', {
+      sessionID: 'session-1',
+      agent: 1,
+      userCode: 'testuser',
+    })
   })
 })
 
@@ -360,7 +365,7 @@ describe('ChatService.getUnreadMessages', () => {
 
   it('returns unread message counts on success', async () => {
     vi.mocked(apiClient.post).mockResolvedValue(
-      makeApiResponse([{ sessionId: 'session-1', unreadMessageCount: 3 }])
+      makeApiResponse([{ sessionId: 'session-1', unreadMessageCount: 3 }]),
     )
 
     const result = await chatService.getUnreadMessages({ userCode: 'testuser' })
@@ -395,7 +400,10 @@ describe('ChatService.getSessionUnreadMessages', () => {
   it('returns count on success', async () => {
     vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(5))
 
-    const result = await chatService.getSessionUnreadMessages({ sessionId: 'session-1', agentId: 1 })
+    const result = await chatService.getSessionUnreadMessages({
+      sessionId: 'session-1',
+      agentId: 1,
+    })
 
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -406,7 +414,10 @@ describe('ChatService.getSessionUnreadMessages', () => {
   it('returns error when response is null', async () => {
     vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
 
-    const result = await chatService.getSessionUnreadMessages({ sessionId: 'session-1', agentId: 1 })
+    const result = await chatService.getSessionUnreadMessages({
+      sessionId: 'session-1',
+      agentId: 1,
+    })
 
     expect(result.isErr()).toBe(true)
   })
@@ -424,7 +435,11 @@ describe('ChatService.getMessage', () => {
   it('returns parsed message on success', async () => {
     vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(mockRawMessage))
 
-    const result = await chatService.getMessage({ messageId: 'msg-1', sessionId: 'session-1', agentId: 1 })
+    const result = await chatService.getMessage({
+      messageId: 'msg-1',
+      sessionId: 'session-1',
+      agentId: 1,
+    })
 
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -435,7 +450,11 @@ describe('ChatService.getMessage', () => {
   it('returns NOT_FOUND when data is null', async () => {
     vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
 
-    const result = await chatService.getMessage({ messageId: 'msg-1', sessionId: 'session-1', agentId: 1 })
+    const result = await chatService.getMessage({
+      messageId: 'msg-1',
+      sessionId: 'session-1',
+      agentId: 1,
+    })
 
     expect(result.isErr()).toBe(true)
   })
@@ -491,9 +510,7 @@ describe('ChatService.startPublicChat', () => {
   })
 
   it('returns AIPublicChatStartDTO on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(
-      makeApiResponse({ user: null, agent: null })
-    )
+    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse({ user: null, agent: null }))
 
     const result = await chatService.startPublicChat({ agentId: 1 })
 

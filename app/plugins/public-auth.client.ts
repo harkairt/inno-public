@@ -15,7 +15,8 @@ export default defineNuxtPlugin({
   async setup() {
     const configStore = useConfigStore()
     const authStore = useAuthStore()
-    const { isPublicMode, publicLoginEmail, publicLoginPassword, hasPublicCredentials } = usePublicMode()
+    const { isPublicMode, publicLoginEmail, publicLoginPassword, hasPublicCredentials } =
+      usePublicMode()
 
     // Only run in public mode
     if (!isPublicMode.value) {

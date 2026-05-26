@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/app/stores/auth'
 import { authService } from '@/lib/api/services/AuthService'
+import { createLogger } from '@/lib/utils/logger'
 import type { LoginRequestDTO, UserDTO } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
+
+const logger = createLogger('useAuth')
 
 // Query keys
 export const authQueryKeys = {
@@ -32,13 +35,13 @@ export function useLogin() {
     },
     onSuccess: (user) => {
       // Invalidate current user query to trigger refetch
-      queryClient.invalidateQueries({ queryKey: authQueryKeys.current() })
+      void queryClient.invalidateQueries({ queryKey: authQueryKeys.current() })
 
       // Set the current user query data immediately
       queryClient.setQueryData(authQueryKeys.current(), user)
     },
     onError: (error: AppError) => {
-      console.error('Login failed:', error)
+      logger.error('Login failed:', error)
       // Clear any existing user data on failed login
       queryClient.setQueryData(authQueryKeys.current(), null)
     },
@@ -69,7 +72,7 @@ export function useLogout() {
       queryClient.clear()
     },
     onError: (error: AppError) => {
-      console.error('Logout failed:', error)
+      logger.error('Logout failed:', error)
       // Even if something fails, clear local data
       queryClient.removeQueries({ queryKey: authQueryKeys.all })
       queryClient.setQueryData(authQueryKeys.current(), null)
@@ -91,7 +94,6 @@ export function useCurrentUser(options?: {
   return useQuery({
     queryKey: authQueryKeys.current(),
     queryFn: async (): Promise<UserDTO | null> => {
-      // Return user from store
       return authStore.user
     },
     enabled: options?.enabled ?? authStore.isAuthenticated,
@@ -106,16 +108,18 @@ export function useCurrentUser(options?: {
  * User profile query composable
  * Fetches user profile by email with caching
  */
-export function useUserProfile(email: string, options?: {
-  enabled?: boolean
-  staleTime?: number
-}) {
+export function useUserProfile(
+  email: string,
+  options?: {
+    enabled?: boolean
+    staleTime?: number
+  },
+) {
   const authStore = useAuthStore()
 
   return useQuery({
     queryKey: authQueryKeys.profile(email),
     queryFn: async (): Promise<UserDTO> => {
-      // If requesting current user's profile and it's already in store, return it
       if (authStore.user?.email === email && authStore.user) {
         return authStore.user
       }
@@ -158,7 +162,7 @@ export function useRefreshToken() {
       // User data remains the same
     },
     onError: (error: AppError) => {
-      console.error('Token refresh failed:', error)
+      logger.error('Token refresh failed:', error)
 
       // Clear auth data on refresh failure
       queryClient.removeQueries({ queryKey: authQueryKeys.all })
@@ -186,7 +190,7 @@ export function useForgottenPassword() {
       return result.value
     },
     onError: (error: AppError) => {
-      console.error('Forgotten password request failed:', error)
+      logger.error('Forgotten password request failed:', error)
     },
   })
 }
@@ -207,7 +211,7 @@ export function useSetPassword() {
       return result.value
     },
     onError: (error: AppError) => {
-      console.error('Set password failed:', error)
+      logger.error('Set password failed:', error)
     },
   })
 }

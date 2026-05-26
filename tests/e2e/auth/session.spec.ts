@@ -61,7 +61,9 @@ test.describe('Protected Routes', () => {
     await expect(authenticatedPage).toHaveURL('/chats')
   })
 
-  test('should allow access to protected routes when authenticated', async ({ authenticatedPage }) => {
+  test('should allow access to protected routes when authenticated', async ({
+    authenticatedPage,
+  }) => {
     // Access /chats
     await navigateToChats(authenticatedPage)
     await expect(authenticatedPage).toHaveURL('/chats')

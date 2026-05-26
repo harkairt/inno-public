@@ -12,7 +12,12 @@ import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import { setActivePinia, createPinia } from 'pinia'
 import { ok, err } from 'neverthrow'
 import { chatQueryKeys } from '~/composables/useChatQueries'
-import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
+import type {
+  AISessionHeaderDTO,
+  AISessionDTO,
+  AISessionMessageDTO,
+  GetUnreadMessagesDTO,
+} from '@/types/api/schemas'
 import { AIAnswerType } from '@/types/enums'
 import { UnknownError } from '@/lib/errors/types'
 
@@ -32,7 +37,7 @@ vi.mock('@/lib/api/services/ChatService', () => ({
     addUserToSession: vi.fn(),
     removeUserFromSession: vi.fn(),
     markMessagesRead: vi.fn(),
-  }
+  },
 }))
 
 vi.mock('@/app/composables/useSignalR', () => ({
@@ -42,15 +47,15 @@ vi.mock('@/app/composables/useSignalR', () => ({
       notifyMessageSent: vi.fn(),
       notifyTypingStarted: vi.fn(),
       notifyTypingStopped: vi.fn(),
-    }
-  })
+    },
+  }),
 }))
 
 vi.mock('@/app/stores/auth', () => ({
   useAuthStore: () => ({
     user: { id: 1, email: 'user@test.com', name: 'Test User' },
     isAuthenticated: true,
-  })
+  }),
 }))
 
 vi.mock('@/app/stores/chat', () => ({
@@ -63,19 +68,19 @@ vi.mock('@/app/stores/chat', () => ({
     onNewSessionConfirmed: vi.fn(),
     executeNewSessionCallback: vi.fn(),
     removeNewSessionCallback: vi.fn(),
-  })
+  }),
 }))
 
 vi.mock('@/app/composables/useUsers', () => ({
   userQueryKeys: {
     selectable: () => ['users', 'selectable'],
-  }
+  },
 }))
 
 vi.mock('@/app/composables/usePublicChatAgent', () => ({
   publicChatAgentQueryKeys: {
     agent: (id: number) => ['publicChatAgent', id],
-  }
+  },
 }))
 
 // ---------------------------------------------------------------------------
@@ -151,7 +156,7 @@ function createWrapper<T>(queryClient: QueryClient, setup: () => T) {
   mount(TestComponent, {
     global: {
       plugins: [[VueQueryPlugin, { queryClient }], pinia],
-    }
+    },
   })
 }
 
@@ -230,9 +235,7 @@ describe('useDeleteSession — cache management', () => {
     const { useDeleteSession } = await import('~/composables/useChatMutations')
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-    vi.mocked(chatService.deleteSession).mockResolvedValue(
-      makeErrResult('Network error: Failed')
-    )
+    vi.mocked(chatService.deleteSession).mockResolvedValue(makeErrResult('Network error: Failed'))
 
     let mutation: ReturnType<typeof useDeleteSession> | undefined
     createWrapper(queryClient, () => {
@@ -240,7 +243,7 @@ describe('useDeleteSession — cache management', () => {
     })
 
     await expect(
-      mutation!.mutateAsync({ sessionId: 'session-1', agentId: 1 })
+      mutation!.mutateAsync({ sessionId: 'session-1', agentId: 1 }),
     ).rejects.toBeDefined()
   })
 })
@@ -283,7 +286,10 @@ describe('useUpdateSessionName — cache management', () => {
 
     vi.mocked(chatService.updateSessionName).mockResolvedValue(makeOkResult(true))
 
-    queryClient.setQueryData(chatQueryKeys.session('session-1'), makeSessionDTO({ sessionName: 'Old Name' }))
+    queryClient.setQueryData(
+      chatQueryKeys.session('session-1'),
+      makeSessionDTO({ sessionName: 'Old Name' }),
+    )
 
     let mutation: ReturnType<typeof useUpdateSessionName> | undefined
     createWrapper(queryClient, () => {
@@ -316,7 +322,7 @@ describe('useUpdateSessionName — cache management', () => {
     await mutation!.mutateAsync({ sessionId: 'session-1', sessionName: 'Renamed', agentId: 1 })
 
     const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
-    expect(sessions?.find(s => s.sessionId === 'session-2')?.sessionName).toBe('Keep This')
+    expect(sessions?.find((s) => s.sessionId === 'session-2')?.sessionName).toBe('Keep This')
   })
 })
 
@@ -339,12 +345,15 @@ describe('useRateMessage — optimistic updates', () => {
     vi.mocked(chatService.rateMessage).mockReturnValue(
       new Promise((res) => {
         resolveService = () => res(makeOkResult(undefined))
-      })
+      }),
     )
 
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session('session-1'), makeSessionDTO({
-      messages: [makeMessage({ messageID: 'msg-1', isRated: false, rating: null })],
-    }))
+    queryClient.setQueryData<AISessionDTO>(
+      chatQueryKeys.session('session-1'),
+      makeSessionDTO({
+        messages: [makeMessage({ messageID: 'msg-1', isRated: false, rating: null })],
+      }),
+    )
 
     let mutation: ReturnType<typeof useRateMessage> | undefined
     createWrapper(queryClient, () => {
@@ -360,10 +369,10 @@ describe('useRateMessage — optimistic updates', () => {
     })
 
     // Give onMutate a chance to run
-    await new Promise(r => setTimeout(r, 0))
+    await new Promise((r) => setTimeout(r, 0))
 
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
-    const ratedMessage = session?.messages?.find(m => m.messageID === 'msg-1')
+    const ratedMessage = session?.messages?.find((m) => m.messageID === 'msg-1')
     expect(ratedMessage?.isRated).toBe(true)
     expect(ratedMessage?.rating).toBe(1)
 
@@ -377,29 +386,34 @@ describe('useRateMessage — optimistic updates', () => {
     const { useRateMessage } = await import('~/composables/useChatMutations')
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-    vi.mocked(chatService.rateMessage).mockResolvedValue(
-      makeErrResult('Server error: Failed')
-    )
+    vi.mocked(chatService.rateMessage).mockResolvedValue(makeErrResult('Server error: Failed'))
 
     const originalMessage = makeMessage({ messageID: 'msg-1', isRated: false, rating: null })
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session('session-1'), makeSessionDTO({
-      messages: [originalMessage],
-    }))
+    queryClient.setQueryData<AISessionDTO>(
+      chatQueryKeys.session('session-1'),
+      makeSessionDTO({
+        messages: [originalMessage],
+      }),
+    )
 
     let mutation: ReturnType<typeof useRateMessage> | undefined
     createWrapper(queryClient, () => {
       mutation = useRateMessage()
     })
 
-    await mutation!.mutateAsync({
-      sessionId: 'session-1',
-      messageId: 'msg-1',
-      agentId: 1,
-      rating: 1,
-    }).catch(() => { /* expected to throw */ })
+    await mutation!
+      .mutateAsync({
+        sessionId: 'session-1',
+        messageId: 'msg-1',
+        agentId: 1,
+        rating: 1,
+      })
+      .catch(() => {
+        /* expected to throw */
+      })
 
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
-    const msg = session?.messages?.find(m => m.messageID === 'msg-1')
+    const msg = session?.messages?.find((m) => m.messageID === 'msg-1')
     expect(msg?.isRated).toBe(false)
     expect(msg?.rating).toBeNull()
   })
@@ -423,7 +437,7 @@ describe('useMarkMessagesRead — optimistic updates', () => {
     vi.mocked(chatService.markMessagesRead).mockReturnValue(
       new Promise((res) => {
         resolveService = () => res(makeOkResult(undefined))
-      })
+      }),
     )
 
     queryClient.setQueryData<GetUnreadMessagesDTO[]>(chatQueryKeys.unread(), [
@@ -436,13 +450,17 @@ describe('useMarkMessagesRead — optimistic updates', () => {
       mutation = useMarkMessagesRead()
     })
 
-    const mutatePromise = mutation!.mutateAsync({ sessionId: 'session-1', agentId: 1, userCode: 'user@test.com' })
-    await new Promise(r => setTimeout(r, 0))
+    const mutatePromise = mutation!.mutateAsync({
+      sessionId: 'session-1',
+      agentId: 1,
+      userCode: 'user@test.com',
+    })
+    await new Promise((r) => setTimeout(r, 0))
 
     const unread = queryClient.getQueryData<GetUnreadMessagesDTO[]>(chatQueryKeys.unread())
-    expect(unread?.find(u => u.sessionId === 'session-1')?.unreadMessageCount).toBe(0)
+    expect(unread?.find((u) => u.sessionId === 'session-1')?.unreadMessageCount).toBe(0)
     // Other sessions unaffected
-    expect(unread?.find(u => u.sessionId === 'session-2')?.unreadMessageCount).toBe(3)
+    expect(unread?.find((u) => u.sessionId === 'session-2')?.unreadMessageCount).toBe(3)
 
     resolveService()
     await mutatePromise
@@ -453,9 +471,7 @@ describe('useMarkMessagesRead — optimistic updates', () => {
     const { useMarkMessagesRead } = await import('~/composables/useChatMutations')
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-    vi.mocked(chatService.markMessagesRead).mockResolvedValue(
-      makeErrResult('Server error: Failed')
-    )
+    vi.mocked(chatService.markMessagesRead).mockResolvedValue(makeErrResult('Server error: Failed'))
 
     queryClient.setQueryData<GetUnreadMessagesDTO[]>(chatQueryKeys.unread(), [
       { sessionId: 'session-1', unreadMessageCount: 7 },
@@ -466,11 +482,14 @@ describe('useMarkMessagesRead — optimistic updates', () => {
       mutation = useMarkMessagesRead()
     })
 
-    await mutation!.mutateAsync({ sessionId: 'session-1', agentId: 1, userCode: 'user@test.com' })
-      .catch(() => { /* expected */ })
+    await mutation!
+      .mutateAsync({ sessionId: 'session-1', agentId: 1, userCode: 'user@test.com' })
+      .catch(() => {
+        /* expected */
+      })
 
     const unread = queryClient.getQueryData<GetUnreadMessagesDTO[]>(chatQueryKeys.unread())
-    expect(unread?.find(u => u.sessionId === 'session-1')?.unreadMessageCount).toBe(7)
+    expect(unread?.find((u) => u.sessionId === 'session-1')?.unreadMessageCount).toBe(7)
   })
 
   it('adds userCode to readByUsers for all messages on success', async () => {
@@ -480,12 +499,15 @@ describe('useMarkMessagesRead — optimistic updates', () => {
 
     vi.mocked(chatService.markMessagesRead).mockResolvedValue(makeOkResult(undefined))
 
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session('session-1'), makeSessionDTO({
-      messages: [
-        makeMessage({ messageID: 'msg-1', readByUsers: [] }),
-        makeMessage({ messageID: 'msg-2', readByUsers: ['other@test.com'] }),
-      ],
-    }))
+    queryClient.setQueryData<AISessionDTO>(
+      chatQueryKeys.session('session-1'),
+      makeSessionDTO({
+        messages: [
+          makeMessage({ messageID: 'msg-1', readByUsers: [] }),
+          makeMessage({ messageID: 'msg-2', readByUsers: ['other@test.com'] }),
+        ],
+      }),
+    )
 
     let mutation: ReturnType<typeof useMarkMessagesRead> | undefined
     createWrapper(queryClient, () => {
@@ -507,9 +529,12 @@ describe('useMarkMessagesRead — optimistic updates', () => {
 
     vi.mocked(chatService.markMessagesRead).mockResolvedValue(makeOkResult(undefined))
 
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session('session-1'), makeSessionDTO({
-      messages: [makeMessage({ messageID: 'msg-1', readByUsers: ['user@test.com'] })],
-    }))
+    queryClient.setQueryData<AISessionDTO>(
+      chatQueryKeys.session('session-1'),
+      makeSessionDTO({
+        messages: [makeMessage({ messageID: 'msg-1', readByUsers: ['user@test.com'] })],
+      }),
+    )
 
     let mutation: ReturnType<typeof useMarkMessagesRead> | undefined
     createWrapper(queryClient, () => {
@@ -520,6 +545,6 @@ describe('useMarkMessagesRead — optimistic updates', () => {
 
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
     const readBy = session?.messages?.[0]?.readByUsers
-    expect(readBy?.filter(u => u === 'user@test.com')).toHaveLength(1)
+    expect(readBy?.filter((u) => u === 'user@test.com')).toHaveLength(1)
   })
 })

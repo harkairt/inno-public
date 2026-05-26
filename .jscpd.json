@@ -1,0 +1,8 @@
+{
+  "threshold": 3,
+  "reporters": ["console"],
+  "ignore": ["node_modules", ".nuxt", "dist", "coverage", "tests"],
+  "absolute": true,
+  "minLines": 10,
+  "minTokens": 50
+}

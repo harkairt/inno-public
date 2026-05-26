@@ -9,6 +9,9 @@ import { normalizeApiError } from '@/lib/errors/normalize'
 import { reportToSentry } from '@/lib/errors/sentry'
 import { globalErrorTracker } from '@/lib/errors/utils'
 import { extractTokensFromResponse } from '@/lib/api/utils/tokens'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('ResponseInterceptor')
 
 // Auth store interface for dependency injection
 interface AuthStore {
@@ -53,18 +56,19 @@ let authStoreInstance: AuthStore | null = null
 
 // Set auth store instance (called from plugin)
 export function setAuthStore(authStore: AuthStore): void {
-  if (import.meta.dev) console.log('Setting auth store instance:', {
-    hasAccessToken: !!authStore.accessToken,
-    hasRefreshToken: !!authStore.refreshToken,
-    hasSetTokens: typeof authStore.setTokens === 'function',
-    hasClearAuth: typeof authStore.clearAuth === 'function'
-  })
+  if (import.meta.dev)
+    logger.debug('Setting auth store instance:', {
+      hasAccessToken: !!authStore.accessToken,
+      hasRefreshToken: !!authStore.refreshToken,
+      hasSetTokens: typeof authStore.setTokens === 'function',
+      hasClearAuth: typeof authStore.clearAuth === 'function',
+    })
   authStoreInstance = authStore
 }
 
 function processQueue(error: unknown): void {
   const queueLength = failedQueue.length
-  if (import.meta.dev) console.log(`Token refresh: Processing ${queueLength} queued requests...`)
+  if (import.meta.dev) logger.debug(`Token refresh: Processing ${queueLength} queued requests...`)
 
   failedQueue.forEach((promise) => {
     if (error) {
@@ -76,7 +80,7 @@ function processQueue(error: unknown): void {
   })
 
   failedQueue = []
-  if (import.meta.dev) console.log('Token refresh: Queue processing completed')
+  if (import.meta.dev) logger.debug('Token refresh: Queue processing completed')
 }
 
 // ============================================================================
@@ -93,14 +97,16 @@ export function responseInterceptor(response: AxiosResponse): AxiosResponse {
 
   // Transform snake_case to camelCase for specific endpoints
   if (url.includes('/login') || url.includes('/user')) {
-    response.data = transformToCamelCase(response.data)
+    response.data = transformToCamelCase(response.data as Record<string, unknown>)
   }
 
   // Add metadata to response for tracking
+  const timestampHeader = response.config.headers['X-Client-Timestamp'] as string | undefined
+  const timestamp = typeof timestampHeader === 'string' ? timestampHeader : '0'
   response.metadata = {
-    requestId: response.config.headers['X-Request-ID'],
-    duration: Date.now() - parseInt(response.config.headers['X-Client-Timestamp'] as string || '0'),
-    cached: response.config.headers['X-Cache'] === 'HIT'
+    requestId: response.config.headers['X-Request-ID'] as string | undefined,
+    duration: Date.now() - parseInt(timestamp),
+    cached: response.config.headers['X-Cache'] === 'HIT',
   }
 
   return response
@@ -124,10 +130,10 @@ export async function responseErrorInterceptor(error: AxiosError): Promise<Axios
 
   // Log error in development
   if (import.meta.dev && !!originalRequest) {
-    console.error(`API Error: ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`, {
+    logger.error(`API Error: ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`, {
       status: error.response?.status,
-      requestId: originalRequest.headers['X-Request-ID'],
-      error: normalizedError
+      requestId: originalRequest.headers['X-Request-ID'] as string | undefined,
+      error: normalizedError,
     })
   }
 
@@ -139,7 +145,8 @@ export async function responseErrorInterceptor(error: AxiosError): Promise<Axios
 
   // Handle 401 Unauthorized - attempt token refresh
   if (error.response?.status === 401 && !originalRequest._retry) {
-    if (import.meta.dev) console.log('Token refresh: 401 error detected, initiating token refresh...')
+    if (import.meta.dev)
+      logger.debug('Token refresh: 401 error detected, initiating token refresh...')
     return handleTokenRefresh(originalRequest)
   }
 
@@ -162,7 +169,7 @@ export async function responseErrorInterceptor(error: AxiosError): Promise<Axios
  * Handle token refresh for 401 errors
  */
 async function handleTokenRefresh(
-  originalRequest: InternalAxiosRequestConfig & { _retry?: boolean }
+  originalRequest: InternalAxiosRequestConfig & { _retry?: boolean },
 ): Promise<AxiosResponse> {
   // If already refreshing, queue this request
   if (isRefreshing) {
@@ -170,7 +177,7 @@ async function handleTokenRefresh(
       failedQueue.push({
         resolve,
         reject,
-        config: originalRequest
+        config: originalRequest,
       })
     })
   }
@@ -188,51 +195,67 @@ async function handleTokenRefresh(
     const currentRefreshToken = authStoreInstance.refreshToken
 
     // Attempt to refresh the token
-    const refreshResponse = await apiClient.post('/api/authentication/refresh-token', {
-      accessToken: currentAccessToken,
-      refreshToken: currentRefreshToken,
-    }, {
-      skipAuthRefresh: true // Flag to prevent infinite refresh loops
-    } as InternalAxiosRequestConfig)
+    const refreshResponse = await apiClient.post(
+      '/api/authentication/refresh-token',
+      {
+        accessToken: currentAccessToken,
+        refreshToken: currentRefreshToken,
+      },
+      {
+        skipAuthRefresh: true, // Flag to prevent infinite refresh loops
+      } as InternalAxiosRequestConfig,
+    )
 
     // Extract and store new tokens
-    const tokens = extractTokensFromResponse(refreshResponse.data.data)
+    const responseData = refreshResponse.data as { data: unknown }
+    const tokens = extractTokensFromResponse(responseData.data)
     if (authStoreInstance) {
-      if (import.meta.dev) console.log('Token refresh: Storing new tokens...')
+      if (import.meta.dev) logger.debug('Token refresh: Storing new tokens...')
       await authStoreInstance.setTokens(tokens.accessToken, tokens.refreshToken)
-      if (import.meta.dev) console.log('Token refresh: Tokens stored successfully')
+      if (import.meta.dev) logger.debug('Token refresh: Tokens stored successfully')
     }
 
     // If refresh successful, process queued requests
-    if (import.meta.dev) console.log('Token refresh: Processing queued requests...')
+    if (import.meta.dev) logger.debug('Token refresh: Processing queued requests...')
     processQueue(null)
 
     // Retry the original request
     return apiClient.request(originalRequest)
   } catch (refreshError) {
-    // Refresh failed - clear auth state and redirect to login
-    processQueue(refreshError)
-
-    // Normalize the refresh error
-    const normalizedRefreshError = normalizeApiError(refreshError)
-    reportToSentry(normalizedRefreshError, { phase: 'tokenRefreshFailed' })
-
-    // Clear auth state
-    if (authStoreInstance) {
-      authStoreInstance.clearAuth()
-    }
-
-    if (import.meta.dev) console.error('Token refresh failed, redirecting to login')
-
-    // Immediate redirect to login
-    if (typeof window !== 'undefined') {
-      const baseUrl = (window as unknown as { __NUXT__?: { config?: { app?: { baseURL?: string } } } }).__NUXT__?.config?.app?.baseURL ?? '/'
-      window.location.href = `${baseUrl}login`
-    }
-
-    return Promise.reject(normalizedRefreshError)
+    return handleTokenRefreshFailure(refreshError)
   } finally {
     isRefreshing = false
+  }
+}
+
+/**
+ * Handle token refresh failure - clear auth state and redirect to login
+ */
+function handleTokenRefreshFailure(refreshError: unknown): Promise<never> {
+  processQueue(refreshError)
+
+  const normalizedRefreshError = normalizeApiError(refreshError)
+  reportToSentry(normalizedRefreshError, { phase: 'tokenRefreshFailed' })
+
+  if (authStoreInstance) {
+    authStoreInstance.clearAuth()
+  }
+
+  if (import.meta.dev) logger.error('Token refresh failed, redirecting to login')
+
+  redirectToLogin()
+
+  return Promise.reject(normalizedRefreshError)
+}
+
+/**
+ * Redirect the user to the login page
+ */
+function redirectToLogin(): void {
+  if (typeof window !== 'undefined') {
+    type NuxtWindow = { __NUXT__?: { config?: { app?: { baseURL?: string } } } }
+    const baseUrl = (window as unknown as NuxtWindow).__NUXT__?.config?.app?.baseURL ?? '/'
+    window.location.href = `${baseUrl}login`
   }
 }
 
@@ -241,7 +264,7 @@ async function handleTokenRefresh(
  */
 async function handleRateLimitRetry(
   originalRequest: InternalAxiosRequestConfig & { _retry?: boolean; _retryCount?: number },
-  error: AxiosError
+  error: AxiosError,
 ): Promise<AxiosResponse> {
   const maxRetries = 3
   const baseDelay = 1000 // 1 second
@@ -250,7 +273,10 @@ async function handleRateLimitRetry(
 
   if (originalRequest._retryCount > maxRetries) {
     const normalizedError = normalizeApiError(error)
-    reportToSentry(normalizedError, { endpoint: originalRequest.url, phase: 'rateLimitRetriesExhausted' })
+    reportToSentry(normalizedError, {
+      endpoint: originalRequest.url,
+      phase: 'rateLimitRetriesExhausted',
+    })
     return Promise.reject(normalizedError)
   }
 
@@ -261,10 +287,13 @@ async function handleRateLimitRetry(
   const jitter = Math.random() * 0.1 * delay
   const finalDelay = delay + jitter
 
-  if (import.meta.dev) console.log(`Rate limited. Retrying in ${finalDelay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`)
+  if (import.meta.dev)
+    logger.debug(
+      `Rate limited. Retrying in ${finalDelay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`,
+    )
 
   // Wait and retry
-  await new Promise(resolve => setTimeout(resolve, finalDelay))
+  await new Promise((resolve) => setTimeout(resolve, finalDelay))
   return apiClient.request(originalRequest)
 }
 
@@ -273,7 +302,7 @@ async function handleRateLimitRetry(
  */
 async function handleServiceUnavailableRetry(
   originalRequest: InternalAxiosRequestConfig & { _retry?: boolean; _retryCount?: number },
-  error: AxiosError
+  error: AxiosError,
 ): Promise<AxiosResponse> {
   const maxRetries = 2
   const delay = 2000 // 2 seconds
@@ -284,10 +313,13 @@ async function handleServiceUnavailableRetry(
     return Promise.reject(normalizeApiError(error))
   }
 
-  if (import.meta.dev) console.log(`Service unavailable. Retrying in ${delay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`)
+  if (import.meta.dev)
+    logger.debug(
+      `Service unavailable. Retrying in ${delay}ms (attempt ${originalRequest._retryCount}/${maxRetries})`,
+    )
 
   // Wait and retry
-  await new Promise(resolve => setTimeout(resolve, delay))
+  await new Promise((resolve) => setTimeout(resolve, delay))
   return apiClient.request(originalRequest)
 }
 
@@ -309,21 +341,22 @@ export function cacheResponseInterceptor(response: AxiosResponse): AxiosResponse
   if (method !== 'get') return response
 
   // Check for cache-control headers
-  const cacheControl = response.headers['cache-control'] ?? ''
-  const noCache = cacheControl.includes('no-cache') ?? cacheControl.includes('no-store')
+  const cacheControlHeader: unknown = response.headers['cache-control']
+  const cacheControl = typeof cacheControlHeader === 'string' ? cacheControlHeader : ''
+  const noCache = cacheControl.includes('no-cache') || cacheControl.includes('no-store')
 
   if (noCache) return response
 
   // Extract max-age if present
   const maxAgeMatch = cacheControl.match(/max-age=(\d+)/)
-  const maxAge = maxAgeMatch ? parseInt(maxAgeMatch[1]) * 1000 : 300000 // Default 5 minutes
+  const maxAge = maxAgeMatch?.[1] ? parseInt(maxAgeMatch[1]) * 1000 : 300000 // Default 5 minutes
 
   // Cache the response
   const cacheKey = `${method}:${url}:${JSON.stringify(response.config.params)}`
   responseCache.set(cacheKey, {
     data: response.data,
     timestamp: Date.now(),
-    ttl: maxAge
+    ttl: maxAge,
   })
 
   return response
@@ -356,7 +389,7 @@ export function getCachedResponse(config: InternalAxiosRequestConfig): AxiosResp
     return
   }
 
-  if (import.meta.dev) console.log(`Serving cached response for ${cacheKey}`)
+  if (import.meta.dev) logger.debug(`Serving cached response for ${cacheKey}`)
 
   // Return cached response
   return {
@@ -367,9 +400,9 @@ export function getCachedResponse(config: InternalAxiosRequestConfig): AxiosResp
     config,
     request: {},
     metadata: {
-      requestId: config.headers['X-Request-ID'],
-      cached: true
-    }
+      requestId: config.headers['X-Request-ID'] as string | undefined,
+      cached: true,
+    },
   } as AxiosResponse
 }
 
@@ -388,7 +421,7 @@ function transformToCamelCase(obj: unknown): unknown {
 
   const result: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(obj)) {
-    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+    const camelKey = key.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase())
     result[camelKey] = transformToCamelCase(value)
   }
   return result

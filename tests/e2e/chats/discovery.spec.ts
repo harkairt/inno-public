@@ -83,14 +83,16 @@ test.describe('Chat Discovery Page', () => {
         // If badge exists, check it's visible
         if (await badge.isVisible()) {
           const badgeText = await badge.textContent()
-          expect(parseInt(badgeText || '0')).toBeGreaterThan(0)
+          expect(parseInt(badgeText ?? '0')).toBeGreaterThan(0)
         }
       }
     })
   })
 
   test.describe('Empty State', () => {
-    test('should show appropriate content when no agents or chats', async ({ authenticatedPage }) => {
+    test('should show appropriate content when no agents or chats', async ({
+      authenticatedPage,
+    }) => {
       await navigateToChats(authenticatedPage)
 
       // Page should always have some content - either agents, chats, or empty state
@@ -113,15 +115,19 @@ test.describe('Chat Discovery Page', () => {
 
       // Test at mobile viewport
       await authenticatedPage.setViewportSize({ width: 375, height: 667 })
-      await expect(authenticatedPage.locator(selectors.chats.agentTiles).first()).toBeVisible({ timeout: 1000 }).catch(() => {
-        // No agents is also valid
-      })
+      await expect(authenticatedPage.locator(selectors.chats.agentTiles).first())
+        .toBeVisible({ timeout: 1000 })
+        .catch(() => {
+          // No agents is also valid
+        })
 
       // Test at desktop viewport
       await authenticatedPage.setViewportSize({ width: 1920, height: 1080 })
-      await expect(authenticatedPage.locator(selectors.chats.agentTiles).first()).toBeVisible({ timeout: 1000 }).catch(() => {
-        // No agents is also valid
-      })
+      await expect(authenticatedPage.locator(selectors.chats.agentTiles).first())
+        .toBeVisible({ timeout: 1000 })
+        .catch(() => {
+          // No agents is also valid
+        })
     })
   })
 })

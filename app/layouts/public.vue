@@ -1,13 +1,19 @@
 <template>
   <!-- Loading state: show spinner while config is loading -->
-  <div v-if="!configStore.isLoaded" class="h-dvh flex items-center justify-center bg-[hsl(var(--background))]">
+  <div
+    v-if="!configStore.isLoaded"
+    class="h-dvh flex items-center justify-center bg-[hsl(var(--background))]"
+  >
     <div class="flex flex-col items-center gap-3">
       <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   </div>
 
   <!-- Error state: show error message if public auth failed -->
-  <div v-else-if="hasPublicAuthError" class="h-dvh flex items-center justify-center bg-[hsl(var(--background))] px-4">
+  <div
+    v-else-if="hasPublicAuthError"
+    class="h-dvh flex items-center justify-center bg-[hsl(var(--background))] px-4"
+  >
     <div class="text-center max-w-md">
       <div class="text-4xl mb-4">😔</div>
       <h1 class="text-xl font-semibold text-foreground mb-2">
@@ -20,7 +26,10 @@
   </div>
 
   <!-- Main content: minimal full-height container -->
-  <div v-else class="h-dvh flex flex-col bg-[hsl(var(--background))]">
+  <div
+    v-else
+    class="h-dvh flex flex-col bg-[hsl(var(--background))]"
+  >
     <PublicChatHeader
       v-if="publicChatData?.agent"
       :agent-name="publicChatData.agent.name"
@@ -47,11 +56,11 @@ const { hasPublicAuthError, publicAgentId } = usePublicMode()
 
 // Fetch agent info for the header
 const { data: publicChatData } = usePublicChatAgent(publicAgentId, {
-  enabled: computed(() => !!publicAgentId.value && authStore.isAuthenticated)
+  enabled: computed(() => !!publicAgentId.value && authStore.isAuthenticated),
 })
 
 // Set locale to Hungarian for public mode
 onMounted(() => {
-  setLocale('hu')
+  void setLocale('hu')
 })
 </script>

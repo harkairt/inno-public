@@ -14,19 +14,19 @@ export enum AIAnswerType {
   Question = 6,
   ErrorText = 7,
   ServerTask = 8,
-  Empty = 9
+  Empty = 9,
 }
 
 // AI Question types (from lines 67-71 in dto.md)
 export enum AIQuestionType {
   Text = 0,
-  Options = 1
+  Options = 1,
 }
 
 // Authentication modes (referenced in LoginRequestDTO)
 export enum AuthenticationMode {
   Basic = 0,
-  IBSystem = 1
+  IBSystem = 1,
 }
 
 // Log levels (referenced in LogInfoDTO) - simplified to match API docs
@@ -34,7 +34,7 @@ export enum LogLevel {
   Debug = 'debug',
   Info = 'info',
   Warning = 'warning',
-  Error = 'error'
+  Error = 'error',
 }
 
 // User status (referenced in UserDTOAgent)
@@ -47,7 +47,7 @@ export enum ConnectionState {
   Connecting = 'connecting',
   Connected = 'connected',
   Reconnecting = 'reconnecting',
-  Failed = 'failed'
+  Failed = 'failed',
 }
 
 // HTTP request methods for API calls
@@ -56,7 +56,7 @@ export enum HttpMethod {
   POST = 'POST',
   PUT = 'PUT',
   DELETE = 'DELETE',
-  PATCH = 'PATCH'
+  PATCH = 'PATCH',
 }
 
 // Error codes for normalized error handling
@@ -86,7 +86,7 @@ export enum CacheStrategy {
   // Conservative caching for dynamic data
   CONSERVATIVE = 'conservative',
   // No caching for real-time data
-  NONE = 'none'
+  NONE = 'none',
 }
 
 // Message status for chat messages
@@ -95,18 +95,18 @@ export enum MessageStatus {
   SENT = 'sent',
   DELIVERED = 'delivered',
   READ = 'read',
-  FAILED = 'failed'
+  FAILED = 'failed',
 }
 
 // UI control types for options messages
 export enum OptionsUIControlType {
   RadioButton = 0,
-  Combobox = 1
+  Combobox = 1,
 }
 
 // Theme modes for UI preferences
 export enum ThemeMode {
   LIGHT = 'light',
   DARK = 'dark',
-  AUTO = 'auto'
+  AUTO = 'auto',
 }

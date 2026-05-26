@@ -22,14 +22,14 @@ function testPiniaPersist() {
   console.log('\n=== Testing Pinia Persistence ===')
 
   // Check if there are any existing persisted stores
-  const keys = Object.keys(localStorage).filter(key => key.startsWith('innochat-'))
+  const keys = Object.keys(localStorage).filter((key) => key.startsWith('innochat-'))
 
   if (keys.length === 0) {
     console.log('ℹ️ No existing innochat stores found in localStorage')
     console.log('📝 This is expected on first run. Visit /test-persist to create test data.')
   } else {
     console.log('✅ Found persisted stores:', keys)
-    keys.forEach(key => {
+    keys.forEach((key) => {
       try {
         const value = JSON.parse(localStorage.getItem(key))
         console.log(`  - ${key}:`, value)

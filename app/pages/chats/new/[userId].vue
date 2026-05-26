@@ -1,75 +1,95 @@
 <template>
   <NuxtErrorBoundary @error="handleError">
     <div class="flex flex-col h-full w-full">
-    <!-- Header Section -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-border">
-      <!-- Mobile: back button to session list -->
-      <UButton
-        v-if="isMobile"
-        icon="i-heroicons-arrow-left"
-        variant="ghost"
-        color="neutral"
-        square
-        size="sm"
-        :aria-label="t('errors.backToChats')"
-        data-testid="back-to-chats"
-        @click="navigateTo('/chats')"
-      />
+      <!-- Header Section -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-border">
+        <!-- Mobile: back button to session list -->
+        <UButton
+          v-if="isMobile"
+          icon="i-heroicons-arrow-left"
+          variant="ghost"
+          color="neutral"
+          square
+          size="sm"
+          :aria-label="t('errors.backToChats')"
+          data-testid="back-to-chats"
+          @click="navigateTo('/chats')"
+        />
 
-      <div v-if="selectedUser" class="min-w-0 flex-1">
-        <h1 class="text-xl font-semibold text-foreground truncate">
-          {{ selectedUser.name || selectedUser.email }}
-        </h1>
-        <p v-if="selectedUser?.email" class="text-sm text-muted-foreground truncate">
-          {{ selectedUser.email }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="isLoadingUsers" class="flex items-center justify-center h-full p-4">
-      <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
-        <div class="flex justify-end">
-          <USkeleton class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
-        </div>
-        <div class="flex justify-start">
-          <USkeleton class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
+        <div
+          v-if="selectedUser"
+          class="min-w-0 flex-1"
+        >
+          <h1 class="text-xl font-semibold text-foreground truncate">
+            {{ selectedUser.name || selectedUser.email }}
+          </h1>
+          <p
+            v-if="selectedUser?.email"
+            class="text-sm text-muted-foreground truncate"
+          >
+            {{ selectedUser.email }}
+          </p>
         </div>
       </div>
-    </div>
 
-    <!-- Chat Content -->
-    <div v-else-if="selectedUser" class="flex flex-col h-full min-h-0 overflow-hidden">
-      <div ref="messagesContainer" class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col">
-        <div class="flex-1" />
-        <ChatMessages
-          :messages="messages"
-          :welcome-message="trimmedWelcomeMessage"
+      <!-- Loading State -->
+      <div
+        v-if="isLoadingUsers"
+        class="flex items-center justify-center h-full p-4"
+      >
+        <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
+          <div class="flex justify-end">
+            <USkeleton
+              class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+              style="border-radius: var(--config-message-border-radius)"
+            />
+          </div>
+          <div class="flex justify-start">
+            <USkeleton
+              class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+              style="border-radius: var(--config-message-border-radius)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Content -->
+      <div
+        v-else-if="selectedUser"
+        class="flex flex-col h-full min-h-0 overflow-hidden"
+      >
+        <div
+          ref="messagesContainer"
+          class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col"
+        >
+          <div class="flex-1" />
+          <ChatMessages
+            :messages="messages"
+            :welcome-message="trimmedWelcomeMessage"
+            :agent-id="agentId"
+            :agent-name="selectedUser.name || selectedUser.email"
+            :active-options-message-id="lastUnansweredOptionsMessageId"
+            @option-submitted="handleOptionSubmitted"
+          />
+        </div>
+
+        <!-- Typing Indicator -->
+        <TypingIndicator :typing-users="typingUsers" />
+
+        <MessageInput
+          v-if="!isOptionsMode"
+          :session-id="sessionId"
+          :draft-key="`new-${userId}`"
           :agent-id="agentId"
-          :agent-name="selectedUser.name || selectedUser.email"
-          :active-options-message-id="lastUnansweredOptionsMessageId"
-          @option-submitted="handleOptionSubmitted"
+          :selected-agent-id="selectedTargetAgentId ?? agentId"
+          :selectable-agents="isSingleVirtualAgentSession ? [] : [selectedUser]"
+          :selected-agent-name="selectedAgentName"
+          :members="members"
+          :is-new-conversation="messages.length === 0"
+          @scroll-to-bottom="scrollToBottom"
+          @target-agent-changed="handleTargetAgentChanged"
         />
       </div>
-
-      <!-- Typing Indicator -->
-      <TypingIndicator :typing-users="typingUsers" />
-
-      <MessageInput
-        v-if="!isOptionsMode"
-        :session-id="sessionId"
-        :draft-key="`new-${userId}`"
-        :agent-id="agentId"
-        :selected-agent-id="selectedTargetAgentId ?? agentId"
-        :selectable-agents="isSingleVirtualAgentSession ? [] : [selectedUser]"
-        :selected-agent-name="selectedAgentName"
-        :members="members"
-        :is-new-conversation="messages.length === 0"
-        @scroll-to-bottom="scrollToBottom"
-        @target-agent-changed="handleTargetAgentChanged"
-      />
-    </div>
-
     </div>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
@@ -119,6 +139,9 @@ import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('NewChat')
 
 const { t } = useI18n()
 const { isMobile } = useNavigationVisibility()
@@ -134,7 +157,7 @@ const sessionId = ref(generateUUID())
 chatStore.onNewSessionConfirmed(sessionId.value, () => {
   chatStore.clearDraft(`new-${userId.value}`)
   chatStore.skipNextEntranceAnimation = true
-  navigateTo(`/chats/${sessionId.value}`, { replace: true })
+  void navigateTo(`/chats/${sessionId.value}`, { replace: true })
 })
 
 onUnmounted(() => {
@@ -145,12 +168,12 @@ const { data: users, isLoading: isLoadingUsers } = useSelectableUsers()
 
 const selectedUser = computed(() => {
   if (!users.value || !userId.value) return null
-  return users.value.find(u => String(u.id) === String(userId.value))
+  return users.value.find((u) => String(u.id) === String(userId.value))
 })
 
 watchEffect(() => {
   if (users.value && !selectedUser.value) {
-    navigateTo('/chats', { replace: true })
+    void navigateTo('/chats', { replace: true })
   }
 })
 
@@ -158,7 +181,7 @@ const agentId = computed(() => selectedUser.value?.id ?? 1)
 
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!selectedUser.value && selectedUser.value.isVirtual === true),
-  sessionId: ''
+  sessionId: '',
 })
 
 const trimmedWelcomeMessage = computed(() => {
@@ -178,7 +201,7 @@ const members = computed(() => {
 // Get messages from cache (mutation adds optimistic messages here)
 // Session doesn't exist on server until first message is sent, so disable the query
 const { data: sessionData } = useChatSession(sessionId.value, {
-  enabled: false
+  enabled: false,
 })
 
 const messages = computed(() => {
@@ -196,7 +219,7 @@ const lastUnansweredOptionsMessageId = computed(() => {
   for (let i = msgs.length - 1; i >= 0; i--) {
     const msg = msgs[i]
     if (msg?.messageType === AIAnswerType.Options) {
-      const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
+      const hasUserAfter = msgs.slice(i + 1).some((m) => m.senderUserCode === userEmail)
       return hasUserAfter ? undefined : msg.messageID
     }
   }
@@ -220,7 +243,7 @@ async function handleOptionSubmitted(answer: string) {
     await optionMutation.mutateAsync(request)
     scrollToBottom()
   } catch (error) {
-    console.error('Failed to send option answer:', error)
+    logger.error('Failed to send option answer:', error)
   }
 }
 
@@ -236,11 +259,15 @@ const isSingleVirtualAgentSession = computed(() => {
 const selectedTargetAgentId = ref<number | undefined>(undefined)
 
 // Auto-select when single agent
-watch([isSingleVirtualAgentSession, selectedUser], () => {
-  if (isSingleVirtualAgentSession.value && selectedUser.value) {
-    selectedTargetAgentId.value = selectedUser.value.id
-  }
-}, { immediate: true })
+watch(
+  [isSingleVirtualAgentSession, selectedUser],
+  () => {
+    if (isSingleVirtualAgentSession.value && selectedUser.value) {
+      selectedTargetAgentId.value = selectedUser.value.id
+    }
+  },
+  { immediate: true },
+)
 
 // Handler for agent changes
 function handleTargetAgentChanged(agentId: number | undefined) {
@@ -258,7 +285,7 @@ const selectedAgentName = computed(() => {
 const messagesContainer = ref<HTMLElement | null>(null)
 
 function scrollToBottom() {
-  nextTick(() => {
+  void nextTick(() => {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
@@ -266,7 +293,7 @@ function scrollToBottom() {
 }
 
 function handleError(error: unknown) {
-  console.error('New chat error:', error)
+  logger.error('New chat error:', error)
 }
 
 function getUserFriendlyMessage(error: unknown): string {
@@ -278,7 +305,7 @@ function getUserFriendlyMessage(error: unknown): string {
 
 definePageMeta({
   description: 'Start a new conversation',
-  key: route => route.fullPath,
+  key: (route) => route.fullPath,
 })
 
 useSeoMeta({

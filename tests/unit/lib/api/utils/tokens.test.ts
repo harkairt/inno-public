@@ -6,12 +6,12 @@ describe('extractTokensFromResponse', () => {
     it('should extract tokens with camelCase keys', () => {
       const data = {
         accessToken: 'access-789',
-        refreshToken: 'refresh-012'
+        refreshToken: 'refresh-012',
       }
       const result = extractTokensFromResponse(data)
       expect(result).toEqual({
         accessToken: 'access-789',
-        refreshToken: 'refresh-012'
+        refreshToken: 'refresh-012',
       })
     })
   })
@@ -35,7 +35,7 @@ describe('extractTokensFromResponse', () => {
       const result = extractTokensFromResponse({})
       expect(result).toEqual({
         accessToken: null,
-        refreshToken: null
+        refreshToken: null,
       })
     })
 
@@ -43,7 +43,7 @@ describe('extractTokensFromResponse', () => {
       const result = extractTokensFromResponse(null)
       expect(result).toEqual({
         accessToken: null,
-        refreshToken: null
+        refreshToken: null,
       })
     })
 
@@ -51,7 +51,7 @@ describe('extractTokensFromResponse', () => {
       const result = extractTokensFromResponse(undefined)
       expect(result).toEqual({
         accessToken: null,
-        refreshToken: null
+        refreshToken: null,
       })
     })
   })
@@ -60,7 +60,7 @@ describe('extractTokensFromResponse', () => {
     it('should return null for empty string accessToken', () => {
       const data = {
         accessToken: '',
-        refreshToken: 'valid-refresh'
+        refreshToken: 'valid-refresh',
       }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBeNull()
@@ -70,7 +70,7 @@ describe('extractTokensFromResponse', () => {
     it('should return null for whitespace-only accessToken', () => {
       const data = {
         accessToken: '   ',
-        refreshToken: 'valid-refresh'
+        refreshToken: 'valid-refresh',
       }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBeNull()
@@ -79,7 +79,7 @@ describe('extractTokensFromResponse', () => {
     it('should return null for empty string refreshToken', () => {
       const data = {
         accessToken: 'valid-access',
-        refreshToken: ''
+        refreshToken: '',
       }
       const result = extractTokensFromResponse(data)
       expect(result.accessToken).toBe('valid-access')

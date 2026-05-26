@@ -184,6 +184,7 @@ npx playwright show-trace test-results/.../trace.zip
 ### Screenshots and Videos
 
 Failed tests automatically capture:
+
 - Screenshots (in `test-results/`)
 - Videos (in `test-results/`)
 - Traces (in `test-results/`)
@@ -195,6 +196,7 @@ Failed tests automatically capture:
 **Issue:** Login tests fail with "Invalid credentials" or timeout
 
 **Solutions:**
+
 1. Verify `.env.test` credentials match your test backend
 2. Ensure test backend is running at `TEST_BASE_URL`
 3. Check that test user accounts exist in the test database
@@ -205,6 +207,7 @@ Failed tests automatically capture:
 **Issue:** Tests timeout waiting for elements or navigation
 
 **Solutions:**
+
 1. Increase timeout in `playwright.config.ts`:
    ```typescript
    use: {
@@ -220,6 +223,7 @@ Failed tests automatically capture:
 **Issue:** `ECONNREFUSED` errors when running tests
 
 **Solutions:**
+
 1. Ensure test backend is running at the URL specified in `TEST_BASE_URL`
 2. Check that the backend is accessible from your machine
 3. Verify no firewall blocking the connection
@@ -229,6 +233,7 @@ Failed tests automatically capture:
 **Issue:** Tests fail because elements are not found
 
 **Solutions:**
+
 1. Run in UI mode to inspect the page: `npm run test:e2e:ui`
 2. Use Playwright Inspector: `npm run test:e2e:debug`
 3. Check if selectors match the actual DOM structure
@@ -237,6 +242,7 @@ Failed tests automatically capture:
 ### Tests Pass Locally but Fail in CI
 
 **Solutions:**
+
 1. Ensure all required environment variables are set in CI
 2. Check that test backend is accessible from CI environment
 3. Verify browser installation in CI (handled by workflow)
@@ -264,6 +270,7 @@ Failed tests automatically capture:
 ## CI/CD Integration
 
 Tests run automatically on:
+
 - Push to `main` or `develop` branches
 - Pull requests targeting `main` or `develop`
 
@@ -272,6 +279,7 @@ GitHub Actions workflow location: `.github/workflows/e2e.yml`
 ### Required GitHub Secrets
 
 Configure these secrets in your repository settings:
+
 - `TEST_BASE_URL` - URL of test backend
 - `TEST_USER_EMAIL` - Test user email
 - `TEST_USER_PASSWORD` - Test user password
@@ -283,6 +291,7 @@ Configure these secrets in your repository settings:
 ### Adding New Test Files
 
 1. Create new spec file in `tests/e2e/`:
+
    ```typescript
    import { test, expect } from './fixtures'
 
@@ -326,6 +335,7 @@ export const test = base.extend({
 ## Support
 
 For questions or issues:
+
 1. Check this README
 2. Review Playwright documentation
 3. Check existing test examples in this directory

@@ -6,8 +6,14 @@
     data-testid="app-rail"
   >
     <div class="flex flex-col items-center gap-1 pt-4 flex-1">
-      <template v-for="item in navItems" :key="item.to">
-        <UTooltip :text="item.label" :content="{ side: 'right' }">
+      <template
+        v-for="item in navItems"
+        :key="item.to"
+      >
+        <UTooltip
+          :text="item.label"
+          :content="{ side: 'right' }"
+        >
           <UChip
             v-if="item.key === 'chats'"
             :text="badgeText"

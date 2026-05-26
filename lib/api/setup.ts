@@ -12,14 +12,14 @@ import {
   rateLimitInterceptor,
   cacheInterceptor,
   transformRequestInterceptor,
-  debugInterceptor
+  debugInterceptor,
 } from './interceptors/request'
 import {
   responseInterceptor,
   responseErrorInterceptor,
   cacheResponseInterceptor,
   clearExpiredCache,
-  setAuthStore
+  setAuthStore,
 } from './interceptors/response'
 
 let isSetup = false
@@ -77,7 +77,7 @@ export function setupApiClient(authStore: AuthStore): void {
   // 3. Error response interceptor (handles errors and token refresh)
   apiClient.interceptors.response.use(
     (response) => response, // Pass through successful responses
-    responseErrorInterceptor // Handle errors
+    responseErrorInterceptor, // Handle errors
   )
 
   // Cleanup expired cache periodically
@@ -136,9 +136,11 @@ export function setupApiClientWithConfig(
     enableRateLimiting?: boolean
     enableCaching?: boolean
     enableTransform?: boolean
-    customRequestInterceptors?: Array<(config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig>
+    customRequestInterceptors?: Array<
+      (config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig
+    >
     customResponseInterceptors?: Array<(response: AxiosResponse) => AxiosResponse>
-  }
+  },
 ): void {
   if (isSetup) {
     resetApiClient()
@@ -178,13 +180,13 @@ export function setupApiClientWithConfig(
 
   // Add custom interceptors
   if (config.customRequestInterceptors) {
-    config.customRequestInterceptors.forEach(interceptor => {
+    config.customRequestInterceptors.forEach((interceptor) => {
       apiClient.interceptors.request.use(interceptor, requestErrorInterceptor)
     })
   }
 
   if (config.customResponseInterceptors) {
-    config.customResponseInterceptors.forEach(interceptor => {
+    config.customResponseInterceptors.forEach((interceptor) => {
       apiClient.interceptors.response.use(interceptor, responseErrorInterceptor)
     })
   }

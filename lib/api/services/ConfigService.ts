@@ -41,20 +41,20 @@ export class ConfigService {
    */
   private async loadConfig(): Promise<Result<InnoChatConfig, AppError>> {
     try {
-      const response = await apiClient.get<InnoChatConfig>(
-        '/api/settings/config.json',
-      )
+      const response = await apiClient.get<InnoChatConfig>('/api/settings/config.json')
 
       // Validate config
       const parseResult = InnoChatConfigSchema.safeParse(response.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid configuration',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid configuration',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       this.config = parseResult.data

@@ -118,7 +118,7 @@ export async function isTypingIndicatorVisible(page: Page): Promise<boolean> {
  */
 export async function scrollToBottom(page: Page) {
   const container = page.locator(selectors.chat.messagesContainer)
-  await container.evaluate(el => {
+  await container.evaluate((el) => {
     el.scrollTop = el.scrollHeight
   })
 }

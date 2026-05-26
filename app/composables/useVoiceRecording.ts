@@ -9,231 +9,188 @@ export interface UseVoiceRecordingOptions {
   onError?: (error: Error) => void
 }
 
-export function useVoiceRecording(options: UseVoiceRecordingOptions = {}) {
-  const { onError } = options
+// --- Voice recording helpers ---
 
-  // State
-  const state = ref<VoiceRecordingState>('idle')
-  const audioBlob = ref<Blob | null>(null)
-  const error = ref<string | null>(null)
-  const isSupported = ref(true)
+function checkMediaRecorderSupport(): boolean {
+  if (import.meta.server) return false
+  if (typeof navigator === 'undefined') return false
+  if (!navigator.mediaDevices?.getUserMedia) return false
+  if (typeof MediaRecorder === 'undefined') return false
+  return true
+}
 
-  // Internal
-  let mediaRecorder: MediaRecorder | null = null
-  let audioChunks: Blob[] = []
-  let stream: MediaStream | null = null
+function getSupportedAudioMimeType(): string {
+  if (import.meta.server) return ''
 
-  // Computed
-  const isIdle = computed(() => state.value === 'idle')
-  const isRecording = computed(() => state.value === 'recording')
-  const isTranscribing = computed(() => state.value === 'transcribing')
-  const canRecord = computed(() => isSupported.value && state.value === 'idle')
+  const types = [
+    'audio/webm;codecs=opus', // Chrome, Firefox, Edge
+    'audio/webm', // Fallback WebM
+    'audio/mp4', // Safari, iOS Safari
+    'audio/ogg;codecs=opus', // Firefox fallback
+    'audio/wav', // Universal fallback
+  ]
 
-  /**
-   * Check browser support for MediaRecorder
-   */
-  function checkSupport(): boolean {
-    if (import.meta.server) return false
-    if (typeof navigator === 'undefined') return false
-    if (!navigator.mediaDevices?.getUserMedia) return false
-    if (typeof MediaRecorder === 'undefined') return false
-    return true
-  }
-
-  /**
-   * Get supported MIME type for audio recording
-   * Priority: WebM for Chrome/Firefox, MP4 for Safari/iOS
-   */
-  function getSupportedMimeType(): string {
-    if (import.meta.server) return ''
-
-    const types = [
-      'audio/webm;codecs=opus', // Chrome, Firefox, Edge
-      'audio/webm', // Fallback WebM
-      'audio/mp4', // Safari, iOS Safari
-      'audio/ogg;codecs=opus', // Firefox fallback
-      'audio/wav', // Universal fallback
-    ]
-
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type
-      }
-    }
-
-    return '' // No supported type
-  }
-
-  /**
-   * Request microphone permission and start recording
-   */
-  async function startRecording(): Promise<void> {
-    if (!checkSupport()) {
-      isSupported.value = false
-      error.value = 'Voice recording is not supported in this browser'
-      onError?.(new Error(error.value))
-      return
-    }
-
-    const mimeType = getSupportedMimeType()
-    if (!mimeType) {
-      error.value = 'No supported audio format found'
-      onError?.(new Error(error.value))
-      return
-    }
-
-    try {
-      error.value = null
-      audioChunks = []
-
-      // Request microphone access with audio optimization
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
-
-      mediaRecorder = new MediaRecorder(stream, { mimeType })
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunks.push(event.data)
-        }
-      }
-
-      mediaRecorder.onerror = () => {
-        const err = new Error('Recording failed')
-        error.value = err.message
-        onError?.(err)
-        cleanup()
-        state.value = 'idle'
-      }
-
-      // Start recording - collect data every 100ms
-      mediaRecorder.start(100)
-      state.value = 'recording'
-    } catch (err) {
-      handlePermissionError(err)
-      state.value = 'idle'
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      return type
     }
   }
 
-  /**
-   * Handle permission and access errors with specific messages
-   */
-  function handlePermissionError(err: unknown): void {
-    if (err instanceof DOMException) {
-      switch (err.name) {
-        case 'NotAllowedError':
-          error.value = 'Microphone permission denied'
-          break
-        case 'NotFoundError':
-          error.value = 'No microphone found'
-          break
-        case 'NotSupportedError':
-          error.value = 'Voice recording not supported'
-          break
-        case 'NotReadableError':
-          error.value = 'Microphone is in use by another application'
-          break
-        default:
-          error.value = 'Failed to access microphone'
-      }
-    } else {
-      error.value = 'Failed to access microphone'
+  return '' // No supported type
+}
+
+function resolvePermissionError(err: unknown): string {
+  if (err instanceof DOMException) {
+    switch (err.name) {
+      case 'NotAllowedError':
+        return 'Microphone permission denied'
+      case 'NotFoundError':
+        return 'No microphone found'
+      case 'NotSupportedError':
+        return 'Voice recording not supported'
+      case 'NotReadableError':
+        return 'Microphone is in use by another application'
+      default:
+        return 'Failed to access microphone'
     }
-    onError?.(err instanceof Error ? err : new Error(error.value))
+  }
+  return 'Failed to access microphone'
+}
+
+function cleanupMediaStream(stream: MediaStream | null): void {
+  if (stream) {
+    stream.getTracks().forEach((track) => track.stop())
+  }
+}
+
+interface RecordingContext {
+  state: Ref<VoiceRecordingState>
+  audioBlob: Ref<Blob | null>
+  error: Ref<string | null>
+  isSupported: Ref<boolean>
+  onError?: (error: Error) => void
+  mediaRecorder: MediaRecorder | null
+  audioChunks: Blob[]
+  stream: MediaStream | null
+}
+
+function cleanupCtx(ctx: RecordingContext): void {
+  cleanupMediaStream(ctx.stream)
+  ctx.stream = null
+  ctx.mediaRecorder = null
+  ctx.audioChunks = []
+}
+
+async function performStartRecording(ctx: RecordingContext): Promise<void> {
+  if (!checkMediaRecorderSupport()) {
+    ctx.isSupported.value = false
+    ctx.error.value = 'Voice recording is not supported in this browser'
+    ctx.onError?.(new Error(ctx.error.value))
+    return
   }
 
-  /**
-   * Stop recording and return audio blob
-   */
-  async function stopRecording(): Promise<Blob | null> {
-    return new Promise((resolve) => {
-      if (!mediaRecorder || state.value !== 'recording') {
-        resolve(null)
-        return
-      }
+  const mimeType = getSupportedAudioMimeType()
+  if (!mimeType) {
+    ctx.error.value = 'No supported audio format found'
+    ctx.onError?.(new Error(ctx.error.value))
+    return
+  }
 
-      mediaRecorder.onstop = () => {
-        const mimeType = mediaRecorder?.mimeType ?? 'audio/webm'
-        const blob = new Blob(audioChunks, { type: mimeType })
-        audioBlob.value = blob
-        cleanup()
-        state.value = 'idle'
-        resolve(blob)
-      }
-
-      mediaRecorder.stop()
+  try {
+    ctx.error.value = null
+    ctx.audioChunks = []
+    ctx.stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     })
-  }
-
-  /**
-   * Cancel recording without returning blob (for long-press cancel)
-   */
-  function cancelRecording(): void {
-    if (mediaRecorder && state.value === 'recording') {
-      // Override onstop to prevent returning blob
-      mediaRecorder.onstop = () => {
-        cleanup()
-        state.value = 'idle'
-      }
-      mediaRecorder.stop()
-    } else {
-      cleanup()
-      state.value = 'idle'
+    ctx.mediaRecorder = new MediaRecorder(ctx.stream, { mimeType })
+    ctx.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) ctx.audioChunks.push(event.data)
     }
-    audioBlob.value = null
-  }
-
-  /**
-   * Set transcribing state (for external control)
-   */
-  function setTranscribing(value: boolean): void {
-    state.value = value ? 'transcribing' : 'idle'
-  }
-
-  /**
-   * Cleanup resources
-   */
-  function cleanup(): void {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
-      stream = null
+    ctx.mediaRecorder.onerror = () => {
+      const err = new Error('Recording failed')
+      ctx.error.value = err.message
+      ctx.onError?.(err)
+      cleanupCtx(ctx)
+      ctx.state.value = 'idle'
     }
-    mediaRecorder = null
-    audioChunks = []
+    ctx.mediaRecorder.start(100)
+    ctx.state.value = 'recording'
+  } catch (err) {
+    ctx.error.value = resolvePermissionError(err)
+    ctx.onError?.(err instanceof Error ? err : new Error(ctx.error.value))
+    ctx.state.value = 'idle'
   }
+}
 
-  // Check support on init (client-side only)
-  if (import.meta.client) {
-    isSupported.value = checkSupport()
-  }
-
-  // Cleanup on unmount
-  onUnmounted(() => {
-    cancelRecording()
+function performStopRecording(ctx: RecordingContext): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    if (!ctx.mediaRecorder || ctx.state.value !== 'recording') {
+      resolve(null)
+      return
+    }
+    ctx.mediaRecorder.onstop = () => {
+      const mt = ctx.mediaRecorder?.mimeType ?? 'audio/webm'
+      const blob = new Blob(ctx.audioChunks, { type: mt })
+      ctx.audioBlob.value = blob
+      cleanupCtx(ctx)
+      ctx.state.value = 'idle'
+      resolve(blob)
+    }
+    ctx.mediaRecorder.stop()
   })
+}
+
+function performCancelRecording(ctx: RecordingContext): void {
+  if (ctx.mediaRecorder && ctx.state.value === 'recording') {
+    ctx.mediaRecorder.onstop = () => {
+      cleanupCtx(ctx)
+      ctx.state.value = 'idle'
+    }
+    ctx.mediaRecorder.stop()
+  } else {
+    cleanupCtx(ctx)
+    ctx.state.value = 'idle'
+  }
+  ctx.audioBlob.value = null
+}
+
+export function useVoiceRecording(options: UseVoiceRecordingOptions = {}) {
+  const ctx: RecordingContext = {
+    state: ref<VoiceRecordingState>('idle'),
+    audioBlob: ref<Blob | null>(null),
+    error: ref<string | null>(null),
+    isSupported: ref(true),
+    onError: options.onError,
+    mediaRecorder: null,
+    audioChunks: [],
+    stream: null,
+  }
+
+  const isIdle = computed(() => ctx.state.value === 'idle')
+  const isRecording = computed(() => ctx.state.value === 'recording')
+  const isTranscribing = computed(() => ctx.state.value === 'transcribing')
+  const canRecord = computed(() => ctx.isSupported.value && ctx.state.value === 'idle')
+
+  if (import.meta.client) {
+    ctx.isSupported.value = checkMediaRecorderSupport()
+  }
+
+  onUnmounted(() => performCancelRecording(ctx))
 
   return {
-    // State
-    state,
-    audioBlob,
-    error,
-    isSupported,
-
-    // Computed
+    state: ctx.state,
+    audioBlob: ctx.audioBlob,
+    error: ctx.error,
+    isSupported: ctx.isSupported,
     isIdle,
     isRecording,
     isTranscribing,
     canRecord,
-
-    // Methods
-    startRecording,
-    stopRecording,
-    cancelRecording,
-    setTranscribing,
+    startRecording: () => performStartRecording(ctx),
+    stopRecording: () => performStopRecording(ctx),
+    cancelRecording: () => performCancelRecording(ctx),
+    setTranscribing: (value: boolean) => {
+      ctx.state.value = value ? 'transcribing' : 'idle'
+    },
   }
 }

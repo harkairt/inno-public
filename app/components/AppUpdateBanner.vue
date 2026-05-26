@@ -21,7 +21,7 @@
           :ui="{
             root: 'rounded-none',
             title: 'font-medium',
-            description: 'text-sm opacity-90'
+            description: 'text-sm opacity-90',
           }"
           @close="dismiss"
         >

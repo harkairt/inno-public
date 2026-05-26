@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { defineNuxtConfig } from 'nuxt/config'
 import { fileURLToPath } from 'node:url'
-import tailwindcss from "@tailwindcss/vite";
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
   ssr: false,
@@ -17,18 +18,19 @@ export default defineNuxtConfig({
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap'
-        }
+          href: 'https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap',
+        },
       ],
       meta: [
         // Critical for Android keyboard: tells browser to resize content when keyboard appears
         {
           name: 'viewport',
-          content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content'
+          content:
+            'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content',
         },
-        { name: 'color-scheme', content: 'light dark' }
-      ]
-    }
+        { name: 'color-scheme', content: 'light dark' },
+      ],
+    },
   },
 
   css: ['./app/assets/css/main.css'],
@@ -48,7 +50,7 @@ export default defineNuxtConfig({
   i18n: {
     locales: [
       { code: 'en', name: 'English', file: 'en.json' },
-      { code: 'hu', name: 'Hungarian', file: 'hu.json' }
+      { code: 'hu', name: 'Hungarian', file: 'hu.json' },
     ],
     defaultLocale: 'hu',
     strategy: 'no_prefix',
@@ -58,8 +60,8 @@ export default defineNuxtConfig({
       cookieKey: 'i18n_redirected',
       redirectOn: 'root',
       alwaysRedirect: false,
-      fallbackLocale: 'hu'
-    }
+      fallbackLocale: 'hu',
+    },
   },
 
   colorMode: {
@@ -68,7 +70,6 @@ export default defineNuxtConfig({
     classSuffix: '',
     storageKey: 'nuxt-color-mode',
   },
-
 
   sourcemap: {
     server: true,
@@ -89,8 +90,8 @@ export default defineNuxtConfig({
       {
         path: '~/components',
         extensions: ['.vue'],
-      }
-    ]
+      },
+    ],
   },
 
   typescript: {
@@ -98,9 +99,9 @@ export default defineNuxtConfig({
     typeCheck: true,
     tsConfig: {
       compilerOptions: {
-        strictNullChecks: true
-      }
-    }
+        strictNullChecks: true,
+      },
+    },
   },
 
   runtimeConfig: {
@@ -136,27 +137,27 @@ export default defineNuxtConfig({
             cacheName: 'api-cache',
             expiration: {
               maxEntries: 100,
-              maxAgeSeconds: 60 * 60 * 24 // 24 hours
-            }
-          }
+              maxAgeSeconds: 60 * 60 * 24, // 24 hours
+            },
+          },
         },
         {
-          urlPattern: /.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
           handler: 'CacheFirst',
           options: {
             cacheName: 'images',
             expiration: {
               maxEntries: 100,
-              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
-            }
-          }
-        }
-      ]
+              maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+            },
+          },
+        },
+      ],
     },
 
     client: {
       installPrompt: true,
-      periodicSyncForUpdates: 10 * 60 // 10 minutes
+      periodicSyncForUpdates: 10 * 60, // 10 minutes
     },
 
     manifest: {
@@ -173,43 +174,43 @@ export default defineNuxtConfig({
         {
           src: 'icons/icon-72x72.png',
           sizes: '72x72',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-96x96.png',
           sizes: '96x96',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-128x128.png',
           sizes: '128x128',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-144x144.png',
           sizes: '144x144',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-152x152.png',
           sizes: '152x152',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-192x192.png',
           sizes: '192x192',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-384x384.png',
           sizes: '384x384',
-          type: 'image/png'
+          type: 'image/png',
         },
         {
           src: 'icons/icon-512x512.png',
           sizes: '512x512',
-          type: 'image/png'
-        }
+          type: 'image/png',
+        },
       ],
       categories: ['productivity', 'business', 'utilities'],
       shortcuts: [
@@ -218,17 +219,17 @@ export default defineNuxtConfig({
           short_name: 'Chats',
           description: 'View your conversations',
           url: '/chats',
-          icons: [{ src: 'icons/chat-96x96.png', sizes: '96x96', type: 'image/png' }]
+          icons: [{ src: 'icons/chat-96x96.png', sizes: '96x96', type: 'image/png' }],
         },
         {
           name: 'Users',
           short_name: 'Users',
           description: 'Browse users',
           url: '/users',
-          icons: [{ src: 'icons/history-96x96.png', sizes: '96x96', type: 'image/png' }]
-        }
-      ]
-    }
+          icons: [{ src: 'icons/history-96x96.png', sizes: '96x96', type: 'image/png' }],
+        },
+      ],
+    },
   },
 
   vite: {
@@ -236,7 +237,7 @@ export default defineNuxtConfig({
 
     // Polyfill Buffer for @gradio/client (uses Node.js APIs)
     define: {
-      'global': 'globalThis',
+      global: 'globalThis',
     },
     resolve: {
       alias: {
@@ -256,13 +257,14 @@ export default defineNuxtConfig({
             vendor: ['vue', 'vue-router', 'pinia'],
             query: ['@tanstack/vue-query'],
             signalr: ['@microsoft/signalr'],
-            utils: ['axios', 'neverthrow', 'zod']
-          }
-        }
-      }
+            utils: ['axios', 'neverthrow', 'zod'],
+          },
+        },
+      },
     },
     plugins: [
-      tailwindcss() as any,
+      // @ts-expect-error @tailwindcss/vite types diverge from Nuxt's bundled vite version
+      tailwindcss(),
     ],
   },
 
@@ -270,8 +272,8 @@ export default defineNuxtConfig({
   nitro: {
     esbuild: {
       options: {
-        target: 'esnext'
-      }
+        target: 'esnext',
+      },
     },
     logLevel: 1, // 0: silent, 1: error, 2: warn, 3: info, 4: verbose
   },
@@ -285,17 +287,18 @@ export default defineNuxtConfig({
         'Referrer-Policy': 'strict-origin-when-cross-origin',
         'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://api.iconify.design; worker-src 'self' blob:;",
+        'Content-Security-Policy':
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://api.iconify.design; worker-src 'self' blob:;",
       },
     },
     '/api/**': {
-      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/api/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/api/**`,
     },
     '/chatHub/**': {
-      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/chatHub/**`
+      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/chatHub/**`,
     },
     '/assets/**': {
-      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/assets/**`
-    }
-  }
+      proxy: `${process.env.NUXT_PROXY_TARGET ?? 'http://localhost:8082'}/assets/**`,
+    },
+  },
 })

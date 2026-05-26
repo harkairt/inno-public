@@ -1,8 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @plugin "tailwindcss-animate";
-@import "@nuxt/ui";
-@import "./markdown.css";
+@import '@nuxt/ui';
+@import './markdown.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -43,7 +43,7 @@
   --config-background-color: hsl(40 20% 99%);
 
   /* Force Nuxt UI primary to deep teal (#005f73) */
-  --ui-primary: oklch(0.40 0.09 210);
+  --ui-primary: oklch(0.4 0.09 210);
 
   /* Warmer backgrounds with subtle cream undertone */
   --background: 40 20% 99%;
@@ -82,7 +82,6 @@
 
   /* Refined radius - soft but professional */
   --radius: 0.625rem;
-
 }
 
 /* ============================================
@@ -126,9 +125,7 @@
   --border: 220 10% 20%;
   --input: 220 10% 18%;
   --ring: 189 50% 65%;
-
 }
-
 
 @layer base {
   html {
@@ -160,7 +157,12 @@
   }
 
   /* Display font for headings */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     font-weight: 200;
     letter-spacing: -0.02em;
@@ -168,7 +170,8 @@
   }
 
   /* Mobile keyboard handling - ensure content is visible when keyboard appears */
-  html, body {
+  html,
+  body {
     height: 100%;
     overflow: hidden;
   }
@@ -199,8 +202,14 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ============================================

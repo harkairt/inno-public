@@ -79,7 +79,7 @@ describe('validateMessage', () => {
     expect(result.isErr()).toBe(true)
     if (result.isErr()) {
       expect(result.error.validationErrors.length).toBeGreaterThan(0)
-      const fieldNames = result.error.validationErrors.map(e => e.field)
+      const fieldNames = result.error.validationErrors.map((e) => e.field)
       expect(fieldNames).toContain('userId')
       expect(fieldNames).toContain('content')
     }

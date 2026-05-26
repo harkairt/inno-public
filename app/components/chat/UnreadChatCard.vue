@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AISessionHeaderDTO, UserDTO } from '@/types/api/schemas'
 import SessionMembers from '~/components/chat/SessionMembers.vue'
-import { useRelativeDate } from '~/composables/useRelativeDate';
+import { useRelativeDate } from '~/composables/useRelativeDate'
 
 interface UnreadChatSession extends AISessionHeaderDTO {
   unreadCount: number
@@ -50,6 +50,6 @@ const relativeTime = computed(() => formatRelativeDate(props.session.insertDate)
       <p class="text-sm text-muted-foreground">
         {{ relativeTime }}
       </p>
-          </div>
+    </div>
   </UCard>
 </template>

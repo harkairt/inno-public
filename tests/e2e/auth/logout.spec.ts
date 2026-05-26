@@ -20,7 +20,9 @@ test.describe('Logout Flow', () => {
     await expect(authenticatedPage.locator(selectors.auth.passwordInput)).toBeVisible()
   })
 
-  test('should not be able to access protected routes after logout', async ({ authenticatedPage }) => {
+  test('should not be able to access protected routes after logout', async ({
+    authenticatedPage,
+  }) => {
     // Logout
     await logout(authenticatedPage)
     await expect(authenticatedPage).toHaveURL('/login')

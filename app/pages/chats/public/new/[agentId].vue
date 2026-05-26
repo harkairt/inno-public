@@ -1,7 +1,10 @@
 <template>
   <div class="flex flex-col h-full min-h-0 overflow-hidden">
     <!-- Chat Content Area -->
-    <div ref="messagesContainer" class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col">
+    <div
+      ref="messagesContainer"
+      class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col"
+    >
       <div class="flex-1" />
       <ChatMessages
         :messages="messages"
@@ -85,7 +88,7 @@ const chatStartTime = new Date().toISOString()
 
 // Fetch agent info using startPublicChat endpoint
 const { data: publicChatData } = usePublicChatAgent(agentId, {
-  enabled: computed(() => !!agentId.value && authStore.isAuthenticated)
+  enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
 })
 
 // Get agent name from public chat data
@@ -94,7 +97,7 @@ const agentName = computed(() => publicChatData.value?.agent?.name)
 // Fetch welcome message for the agent
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
-  sessionId: ''
+  sessionId: '',
 })
 
 // Trim quotes from welcome message
@@ -118,7 +121,7 @@ const members = computed(() => {
 // Get messages from cache (mutation adds optimistic messages here)
 // Session doesn't exist on server until first message is sent, so disable the query
 const { data: sessionData } = useChatSession(sessionId.value, {
-  enabled: false
+  enabled: false,
 })
 
 const messages = computed(() => {
@@ -150,7 +153,7 @@ function scrollToBottom() {
 // Page meta
 definePageMeta({
   layout: 'public',
-  key: route => route.fullPath,
+  key: (route) => route.fullPath,
 })
 
 useSeoMeta({

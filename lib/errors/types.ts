@@ -37,7 +37,7 @@ export class AppError extends Error {
       code: this.code,
       message: this.message,
       statusCode: this.statusCode,
-      details: this.details
+      details: this.details,
     }
   }
 }
@@ -58,18 +58,18 @@ export class ValidationError extends AppError {
   // Helper to get errors for a specific field
   getFieldErrors(field: string): string[] {
     return this.validationErrors
-      .filter(error => error.field === field)
-      .map(error => error.message)
+      .filter((error) => error.field === field)
+      .map((error) => error.message)
   }
 
   // Helper to check if a specific field has validation errors
   hasFieldError(field: string): boolean {
-    return this.validationErrors.some(error => error.field === field)
+    return this.validationErrors.some((error) => error.field === field)
   }
 
   // Helper to get all field names that have errors
   getErrorFields(): string[] {
-    return [...new Set(this.validationErrors.map(error => error.field))]
+    return [...new Set(this.validationErrors.map((error) => error.field))]
   }
 }
 
@@ -175,63 +175,72 @@ export class SignalRConnectionError extends ConnectionError {
   }
 }
 
-export class ApiError extends AppError {
-  constructor(
-    message: string,
-    statusCode: number,
-    public readonly endpoint?: string,
-    public readonly requestId?: string,
-    additionalDetails?: unknown
-  ) {
-    // Map HTTP status codes to error codes
-    let code: ErrorCode
-    switch (statusCode) {
-      case 400:
-        code = ErrorCode.VALIDATION_ERROR
-        break
-      case 401:
-        code = ErrorCode.UNAUTHORIZED
-        break
-      case 403:
-        code = ErrorCode.FORBIDDEN
-        break
-      case 404:
-        code = ErrorCode.NOT_FOUND
-        break
-      case 408:
-        code = ErrorCode.TIMEOUT
-        break
-      case 409:
-        code = ErrorCode.CONFLICT
-        break
-      case 500:
-      case 502:
-      case 503:
-      case 504:
-        code = ErrorCode.SERVER_ERROR
-        break
-      default:
-        code = ErrorCode.UNKNOWN_ERROR
-    }
+export interface ApiErrorOptions {
+  message: string
+  statusCode: number
+  endpoint?: string
+  requestId?: string
+  additionalDetails?: unknown
+}
 
-    const details = { endpoint, requestId }
+export class ApiError extends AppError {
+  public readonly endpoint?: string
+  public readonly requestId?: string
+
+  constructor(options: ApiErrorOptions) {
+    const { message, statusCode, endpoint, requestId, additionalDetails } = options
+    const code = mapStatusToErrorCode(statusCode)
+
+    const details: Record<string, unknown> = { endpoint, requestId }
     if (additionalDetails && typeof additionalDetails === 'object') {
       Object.assign(details, additionalDetails)
     }
     super(code, message, statusCode, details)
     this.name = 'ApiError'
+    this.endpoint = endpoint
+    this.requestId = requestId
+  }
+}
+
+function mapStatusToErrorCode(statusCode: number): ErrorCode {
+  switch (statusCode) {
+    case 400:
+      return ErrorCode.VALIDATION_ERROR
+    case 401:
+      return ErrorCode.UNAUTHORIZED
+    case 403:
+      return ErrorCode.FORBIDDEN
+    case 404:
+      return ErrorCode.NOT_FOUND
+    case 408:
+      return ErrorCode.TIMEOUT
+    case 409:
+      return ErrorCode.CONFLICT
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return ErrorCode.SERVER_ERROR
+    default:
+      return ErrorCode.UNKNOWN_ERROR
   }
 }
 
 export class CacheError extends AppError {
-  constructor(message = 'Cache operation failed', public readonly cacheKey?: string) {
+  constructor(
+    message = 'Cache operation failed',
+    public readonly cacheKey?: string,
+  ) {
     super(ErrorCode.UNKNOWN_ERROR, message, undefined, { cacheKey })
     this.name = 'CacheError'
   }
 }
 
 export class ConfigurationError extends AppError {
-  constructor(message = 'Configuration error', public readonly configKey?: string) {
+  constructor(
+    message = 'Configuration error',
+    public readonly configKey?: string,
+  ) {
     super(ErrorCode.UNKNOWN_ERROR, message, undefined, { configKey })
     this.name = 'ConfigurationError'
   }
@@ -272,11 +281,12 @@ export function isInvalidCredentialsError(error: unknown): error is InvalidCrede
 // ============================================================================
 
 export function createValidationError(
-  errors: Array<{ field: string; message: string }>
+  errors: Array<{ field: string; message: string }>,
 ): ValidationError {
-  const message = errors.length > 0
-    ? `Validation failed: ${errors.map(e => e.message).join(', ')}`
-    : 'Validation failed'
+  const message =
+    errors.length > 0
+      ? `Validation failed: ${errors.map((e) => e.message).join(', ')}`
+      : 'Validation failed'
 
   return new ValidationError(message, errors)
 }
@@ -286,9 +296,8 @@ export function createApiError(
   message: string,
   endpoint?: string,
   requestId?: string,
-  details?: unknown
 ): ApiError {
-  return new ApiError(message, statusCode, endpoint, requestId, details)
+  return new ApiError({ message, statusCode, endpoint, requestId })
 }
 
 export function createNetworkError(originalError: unknown): NetworkError {
@@ -322,11 +331,11 @@ export class ErrorBag {
   }
 
   hasErrorCode(code: ErrorCode): boolean {
-    return this.errors.some(error => error.code === code)
+    return this.errors.some((error) => error.code === code)
   }
 
   getErrorsByCode(code: ErrorCode): AppError[] {
-    return this.errors.filter(error => error.code === code)
+    return this.errors.filter((error) => error.code === code)
   }
 
   getValidationErrors(): ValidationError[] {
@@ -350,19 +359,21 @@ export class ErrorBag {
   }
 
   clearByCode(code: ErrorCode): void {
-    this.errors = this.errors.filter(error => error.code !== code)
+    this.errors = this.errors.filter((error) => error.code !== code)
   }
 
   // Get user-friendly summary of all errors
   getSummary(): string {
     if (this.errors.length === 0) return ''
 
-    const messages = this.errors.map(error => {
-      if (error instanceof ValidationError) {
-        return error.validationErrors.map(ve => ve.message).join(', ')
-      }
-      return error.message
-    }).filter(Boolean)
+    const messages = this.errors
+      .map((error) => {
+        if (error instanceof ValidationError) {
+          return error.validationErrors.map((ve) => ve.message).join(', ')
+        }
+        return error.message
+      })
+      .filter(Boolean)
 
     return [...new Set(messages)].join('; ')
   }

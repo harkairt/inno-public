@@ -13,30 +13,41 @@ vi.mock('@/lib/api/services/AuthService', () => ({
     login: vi.fn(),
     getProfile: vi.fn(),
     refreshToken: vi.fn(),
-  }
+  },
 }))
 
 vi.mock('@/app/composables/useSignalR', () => ({
   useSignalR: () => ({
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn().mockResolvedValue(undefined),
-  })
+  }),
 }))
 
 vi.mock('@/app/stores/chat', () => ({
   useChatStore: () => ({
     resetUserData: vi.fn(),
-  })
+  }),
 }))
 
-vi.mock('@tanstack/vue-query', () => ({
-  useQueryClient: () => ({
+vi.mock('@tanstack/vue-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/vue-query')>()
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      clear: vi.fn(),
+    }),
+  }
+})
+
+vi.mock('@/lib/queryClientSingleton', () => ({
+  getQueryClient: () => ({
     clear: vi.fn(),
-  })
+  }),
+  createQueryClient: vi.fn(),
 }))
 
 vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((e) => e)
+  normalizeApiError: vi.fn((e: unknown) => e),
 }))
 
 // localStorage mock
@@ -44,12 +55,15 @@ const mockStorage = (() => {
   let store: Record<string, string> = {}
   return {
     getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
-    removeItem: vi.fn((key: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value
+    }),
+    removeItem: vi.fn((key: string): void => {
       delete store[key]
     }),
-    clear: vi.fn(() => { store = {} }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
   }
 })()
 
@@ -78,8 +92,8 @@ describe('Auth Store — login', () => {
           user: mockUser,
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
-        }
-      }
+        },
+      },
     } as Awaited<ReturnType<typeof authService.login>>)
 
     const store = useAuthStore()
@@ -101,7 +115,7 @@ describe('Auth Store — login', () => {
     vi.mocked(authService.login).mockResolvedValue({
       isOk: () => false,
       isErr: () => true,
-      error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' }
+      error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' },
     } as Awaited<ReturnType<typeof authService.login>>)
 
     const store = useAuthStore()
@@ -123,7 +137,7 @@ describe('Auth Store — login', () => {
     vi.mocked(authService.login).mockResolvedValue({
       isOk: () => true,
       isErr: () => false,
-      value: { data: { user: mockUser, accessToken: 'tok', refreshToken: 'ref' } }
+      value: { data: { user: mockUser, accessToken: 'tok', refreshToken: 'ref' } },
     } as Awaited<ReturnType<typeof authService.login>>)
 
     const store = useAuthStore()
@@ -138,7 +152,7 @@ describe('Auth Store — login', () => {
     vi.mocked(authService.login).mockResolvedValue({
       isOk: () => false,
       isErr: () => true,
-      error: { code: 'UNAUTHORIZED', message: 'Bad creds' }
+      error: { code: 'UNAUTHORIZED', message: 'Bad creds' },
     } as Awaited<ReturnType<typeof authService.login>>)
 
     const store = useAuthStore()

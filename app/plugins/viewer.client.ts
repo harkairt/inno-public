@@ -43,7 +43,7 @@ function injectDownloadButton() {
   li.addEventListener('click', () => {
     // The currently viewed image is always .viewer-canvas > img
     const img = document.querySelector('.viewer-canvas img') as HTMLImageElement | null
-    if (img?.src) downloadImage(img.src)
+    if (img?.src) void downloadImage(img.src)
   })
 
   toolbar.appendChild(li)

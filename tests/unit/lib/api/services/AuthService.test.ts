@@ -7,15 +7,15 @@ vi.mock('@/lib/api/client', () => ({
   apiClient: {
     post: vi.fn(),
     get: vi.fn(),
-    put: vi.fn()
-  }
+    put: vi.fn(),
+  },
 }))
 
 vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((error) => ({
+  normalizeApiError: vi.fn((error: Error) => ({
     code: ErrorCode.NETWORK_ERROR,
-    message: error.message || 'Network error'
-  }))
+    message: error.message ?? 'Network error',
+  })),
 }))
 
 describe('AuthService', () => {
@@ -29,9 +29,9 @@ describe('AuthService', () => {
         data: {
           data: {
             AccessToken: 'new-access-token',
-            RefreshToken: 'new-refresh-token'
-          }
-        }
+            RefreshToken: 'new-refresh-token',
+          },
+        },
       }
 
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
@@ -42,24 +42,21 @@ describe('AuthService', () => {
       if (result.isOk()) {
         expect(result.value).toEqual({
           AccessToken: 'new-access-token',
-          RefreshToken: 'new-refresh-token'
+          RefreshToken: 'new-refresh-token',
         })
       }
 
-      expect(apiClient.post).toHaveBeenCalledWith(
-        '/api/authentication/refresh-token',
-        {
-          accessToken: 'old-access',
-          refreshToken: 'old-refresh'
-        }
-      )
+      expect(apiClient.post).toHaveBeenCalledWith('/api/authentication/refresh-token', {
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      })
     })
 
     it('should return error when response has no data', async () => {
       const mockResponse = {
         data: {
-          data: null
-        }
+          data: null,
+        },
       }
 
       vi.mocked(apiClient.post).mockResolvedValue(mockResponse)
@@ -82,8 +79,9 @@ describe('AuthService', () => {
     })
 
     it('should return error when API returns 401', async () => {
-      const error = new Error('Unauthorized')
-      ;(error as any).response = { status: 401 }
+      const error = Object.assign(new Error('Unauthorized'), {
+        response: { status: 401 },
+      })
 
       vi.mocked(apiClient.post).mockRejectedValue(error)
 

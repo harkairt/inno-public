@@ -16,15 +16,15 @@ import { mockConversation } from '../mocks/data/messages'
  * Simulate a network error for a given URL pattern
  */
 export async function mockNetworkError(page: Page, urlPattern: string | RegExp) {
-  await page.route(urlPattern, route => route.abort('failed'))
+  await page.route(urlPattern, (route) => route.abort('failed'))
 }
 
 /**
  * Simulate a timeout for a given URL pattern
  */
 export async function mockTimeout(page: Page, urlPattern: string | RegExp, delayMs = 30000) {
-  await page.route(urlPattern, async route => {
-    await new Promise(resolve => setTimeout(resolve, delayMs))
+  await page.route(urlPattern, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
     await route.abort('timedout')
   })
 }
@@ -32,9 +32,13 @@ export async function mockTimeout(page: Page, urlPattern: string | RegExp, delay
 /**
  * Simulate an auth error (401 or 403)
  */
-export async function mockAuthError(page: Page, urlPattern: string | RegExp, statusCode: 401 | 403 = 401) {
-  await page.route(urlPattern, route => {
-    route.fulfill({
+export async function mockAuthError(
+  page: Page,
+  urlPattern: string | RegExp,
+  statusCode: 401 | 403 = 401,
+) {
+  await page.route(urlPattern, async (route) => {
+    await route.fulfill({
       status: statusCode,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -58,10 +62,10 @@ export async function mockValidationError(
   page: Page,
   urlPattern: string | RegExp,
   message = 'Validation failed',
-  validationErrors: Array<{ field: string; message: string }> = []
+  validationErrors: Array<{ field: string; message: string }> = [],
 ) {
-  await page.route(urlPattern, route => {
-    route.fulfill({
+  await page.route(urlPattern, async (route) => {
+    await route.fulfill({
       status: 400,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -82,9 +86,13 @@ export async function mockValidationError(
 /**
  * Simulate a not found error (404)
  */
-export async function mockNotFoundError(page: Page, urlPattern: string | RegExp, message = 'Resource not found') {
-  await page.route(urlPattern, route => {
-    route.fulfill({
+export async function mockNotFoundError(
+  page: Page,
+  urlPattern: string | RegExp,
+  message = 'Resource not found',
+) {
+  await page.route(urlPattern, async (route) => {
+    await route.fulfill({
       status: 404,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -122,8 +130,8 @@ export async function setupAuthMocks(page: Page, scenario: AuthScenario = 'succe
   }
 
   if (scenario === 'locked-account') {
-    await page.route('**/api/auth/login', route => {
-      route.fulfill({
+    await page.route('**/api/auth/login', async (route) => {
+      await route.fulfill({
         status: 403,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -142,8 +150,8 @@ export async function setupAuthMocks(page: Page, scenario: AuthScenario = 'succe
   }
 
   // Success case
-  await page.route('**/api/auth/login', route => {
-    route.fulfill({
+  await page.route('**/api/auth/login', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -160,8 +168,8 @@ export async function setupAuthMocks(page: Page, scenario: AuthScenario = 'succe
   })
 
   // Mock token refresh
-  await page.route('**/api/auth/refresh', route => {
-    route.fulfill({
+  await page.route('**/api/auth/refresh', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -177,8 +185,8 @@ export async function setupAuthMocks(page: Page, scenario: AuthScenario = 'succe
   })
 
   // Mock logout
-  await page.route('**/api/auth/logout', route => {
-    route.fulfill({
+  await page.route('**/api/auth/logout', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -207,8 +215,8 @@ export async function setupUserMocks(page: Page, scenario: UserScenario = 'succe
   }
 
   if (scenario === 'empty') {
-    await page.route('**/api/users', route => {
-      route.fulfill({
+    await page.route('**/api/users', async (route) => {
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -223,8 +231,8 @@ export async function setupUserMocks(page: Page, scenario: UserScenario = 'succe
   }
 
   // Success - list all users
-  await page.route('**/api/users', route => {
-    route.fulfill({
+  await page.route('**/api/users', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -237,13 +245,13 @@ export async function setupUserMocks(page: Page, scenario: UserScenario = 'succe
   })
 
   // Success - get single user
-  await page.route('**/api/users/*', route => {
+  await page.route('**/api/users/*', async (route) => {
     const url = new URL(route.request().url())
-    const userId = parseInt(url.pathname.split('/').pop() || '0')
-    const user = mockAllUsers.find(u => u.id === userId)
+    const userId = parseInt(url.pathname.split('/').pop() ?? '0')
+    const user = mockAllUsers.find((u) => u.id === userId)
 
     if (user) {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -254,7 +262,7 @@ export async function setupUserMocks(page: Page, scenario: UserScenario = 'succe
         }),
       })
     } else {
-      route.fulfill({
+      await route.fulfill({
         status: 404,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -305,8 +313,8 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   }
 
   if (scenario === 'empty') {
-    await page.route('**/api/chat/sessions', route => {
-      route.fulfill({
+    await page.route('**/api/chat/sessions', async (route) => {
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -321,8 +329,8 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   }
 
   // Mock session list
-  await page.route('**/api/chat/sessions', route => {
-    route.fulfill({
+  await page.route('**/api/chat/sessions', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -335,13 +343,13 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   })
 
   // Mock single session with messages
-  await page.route('**/api/chat/session/*', route => {
+  await page.route('**/api/chat/session/*', async (route) => {
     const url = new URL(route.request().url())
     const sessionId = url.pathname.split('/').pop()
-    const session = sessions.find(s => s.sessionId === sessionId)
+    const session = sessions.find((s) => s.sessionId === sessionId)
 
     if (session) {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -355,7 +363,7 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
         }),
       })
     } else {
-      route.fulfill({
+      await route.fulfill({
         status: 404,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -373,8 +381,8 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   })
 
   // Mock unread counts
-  await page.route('**/api/chat/unread', route => {
-    route.fulfill({
+  await page.route('**/api/chat/unread', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -387,9 +395,9 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   })
 
   // Mock send message
-  await page.route('**/api/chat/message', route => {
+  await page.route('**/api/chat/message', async (route) => {
     if (route.request().method() === 'POST') {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -403,14 +411,14 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
         }),
       })
     } else {
-      route.continue()
+      await route.continue()
     }
   })
 
   // Mock mark as read
-  await page.route('**/api/chat/read', route => {
+  await page.route('**/api/chat/read', async (route) => {
     if (route.request().method() === 'POST') {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -421,13 +429,13 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
         }),
       })
     } else {
-      route.continue()
+      await route.continue()
     }
   })
 
   // Mock welcome message
-  await page.route('**/api/chat/welcome/*', route => {
-    route.fulfill({
+  await page.route('**/api/chat/welcome/*', async (route) => {
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -442,9 +450,9 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   })
 
   // Mock update session name
-  await page.route('**/api/chat/session/name', route => {
+  await page.route('**/api/chat/session/name', async (route) => {
     if (route.request().method() === 'PUT' || route.request().method() === 'POST') {
-      route.fulfill({
+      await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -455,7 +463,7 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
         }),
       })
     } else {
-      route.continue()
+      await route.continue()
     }
   })
 }

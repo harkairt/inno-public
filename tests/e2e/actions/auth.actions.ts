@@ -13,7 +13,7 @@ export async function login(
   page: Page,
   email: string,
   password: string,
-  options: { rememberMe?: boolean } = {}
+  options: { rememberMe?: boolean } = {},
 ) {
   await page.goto('/login')
 
@@ -27,9 +27,11 @@ export async function login(
   }
 
   // Submit form
-  await page.getByRole(selectors.auth.submitButton.role, {
-    name: selectors.auth.submitButton.name,
-  }).click()
+  await page
+    .getByRole(selectors.auth.submitButton.role, {
+      name: selectors.auth.submitButton.name,
+    })
+    .click()
 
   // Wait for redirect to chats page
   await page.waitForURL('/chats')
@@ -39,31 +41,25 @@ export async function login(
  * User workflow: Login with environment credentials
  */
 export async function loginWithEnvCredentials(page: Page) {
-  await login(
-    page,
-    process.env.TEST_USER_EMAIL!,
-    process.env.TEST_USER_PASSWORD!
-  )
+  await login(page, process.env.TEST_USER_EMAIL!, process.env.TEST_USER_PASSWORD!)
 }
 
 /**
  * User workflow: Login as admin
  */
 export async function loginAsAdmin(page: Page) {
-  await login(
-    page,
-    process.env.TEST_ADMIN_EMAIL!,
-    process.env.TEST_ADMIN_PASSWORD!
-  )
+  await login(page, process.env.TEST_ADMIN_EMAIL!, process.env.TEST_ADMIN_PASSWORD!)
 }
 
 /**
  * User workflow: Logout
  */
 export async function logout(page: Page) {
-  await page.getByRole(selectors.auth.logoutButton.role, {
-    name: selectors.auth.logoutButton.name,
-  }).click()
+  await page
+    .getByRole(selectors.auth.logoutButton.role, {
+      name: selectors.auth.logoutButton.name,
+    })
+    .click()
 
   // Wait for redirect to login page
   await page.waitForURL('/login')
@@ -73,17 +69,15 @@ export async function logout(page: Page) {
  * User workflow: Attempt login (without waiting for success)
  * Useful for testing error cases
  */
-export async function attemptLogin(
-  page: Page,
-  email: string,
-  password: string
-) {
+export async function attemptLogin(page: Page, email: string, password: string) {
   await page.goto('/login')
   await page.locator(selectors.auth.emailInput).fill(email)
   await page.locator(selectors.auth.passwordInput).fill(password)
-  await page.getByRole(selectors.auth.submitButton.role, {
-    name: selectors.auth.submitButton.name,
-  }).click()
+  await page
+    .getByRole(selectors.auth.submitButton.role, {
+      name: selectors.auth.submitButton.name,
+    })
+    .click()
 }
 
 /**
@@ -91,9 +85,11 @@ export async function attemptLogin(
  */
 export async function isLoggedIn(page: Page): Promise<boolean> {
   try {
-    await page.getByRole(selectors.auth.logoutButton.role, {
-      name: selectors.auth.logoutButton.name,
-    }).waitFor({ timeout: 3000 })
+    await page
+      .getByRole(selectors.auth.logoutButton.role, {
+        name: selectors.auth.logoutButton.name,
+      })
+      .waitFor({ timeout: 3000 })
     return true
   } catch {
     return false

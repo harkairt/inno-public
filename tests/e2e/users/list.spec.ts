@@ -31,9 +31,11 @@ test.describe('User List', () => {
         // Users content should be expanded
         // Look for user search input as indicator
         const userSearch = authenticatedPage.locator('input[placeholder*="earch"]').first()
-        await expect(userSearch).toBeVisible({ timeout: 3000 }).catch(() => {
-          // May already be expanded
-        })
+        await expect(userSearch)
+          .toBeVisible({ timeout: 3000 })
+          .catch(() => {
+            // May already be expanded
+          })
       }
     })
 

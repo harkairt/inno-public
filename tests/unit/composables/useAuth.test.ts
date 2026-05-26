@@ -19,9 +19,7 @@ describe('authQueryKeys — cache key structure', () => {
   })
 
   it('profile key includes email', () => {
-    expect(authQueryKeys.profile('test@example.com')).toEqual([
-      'auth', 'user', 'test@example.com'
-    ])
+    expect(authQueryKeys.profile('test@example.com')).toEqual(['auth', 'user', 'test@example.com'])
   })
 
   it('different emails produce different profile keys', () => {

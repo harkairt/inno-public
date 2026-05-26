@@ -122,7 +122,8 @@
       "submit": "Submit",
       "customOption": "Other",
       "plainTextPlaceholder": "Type your answer..."
-    }
+    },
+    "createNewSession": "Create new session"
   },
   "errors": {
     "sessionNotFound": "Chat session not found",

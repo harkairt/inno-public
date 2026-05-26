@@ -56,12 +56,14 @@ export class ChatService {
       const parseResult = AISessionMessageDTOSchema.safeParse(response.data.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid AI response format',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid AI response format',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       return ok(parseResult.data)
@@ -90,12 +92,14 @@ export class ChatService {
       const parseResult = AIWelcomeMessageDTOSchema.safeParse(response.data.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid welcome message format',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid welcome message format',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       return ok(parseResult.data)
@@ -123,12 +127,14 @@ export class ChatService {
       for (const session of sessions) {
         const parseResult = AISessionHeaderDTOSchema.safeParse(session)
         if (!parseResult.success) {
-          return err(new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid session header data format',
-            undefined,
-            parseResult.error,
-          ))
+          return err(
+            new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              'Invalid session header data format',
+              undefined,
+              parseResult.error,
+            ),
+          )
         }
         validatedSessions.push(parseResult.data)
       }
@@ -142,9 +148,7 @@ export class ChatService {
   /**
    * Get session by ID with all messages
    */
-  async getSessionById(
-    sessionId: string,
-  ): Promise<Result<AISessionDTO, AppError>> {
+  async getSessionById(sessionId: string): Promise<Result<AISessionDTO, AppError>> {
     try {
       const request: GetSessionByIdRequestDTO = {
         sessionId,
@@ -164,12 +168,14 @@ export class ChatService {
       const parseResult = AISessionDTOSchema.safeParse(response.data.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid session data format',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid session data format',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       return ok(parseResult.data)
@@ -219,9 +225,7 @@ export class ChatService {
   /**
    * Rate message (thumbs up/down)
    */
-  async rateMessage(
-    request: SetSessionMessageRatingRequestDTO,
-  ): Promise<Result<void, AppError>> {
+  async rateMessage(request: SetSessionMessageRatingRequestDTO): Promise<Result<void, AppError>> {
     try {
       await apiClient.post('/api/AIWebAPI/SetSessionMessageRating', request)
       return ok(undefined)
@@ -269,12 +273,14 @@ export class ChatService {
       for (const unreadMsg of unreadMessages) {
         const parseResult = GetUnreadMessagesDTOSchema.safeParse(unreadMsg)
         if (!parseResult.success) {
-          return err(new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid unread message data format',
-            undefined,
-            parseResult.error,
-          ))
+          return err(
+            new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              'Invalid unread message data format',
+              undefined,
+              parseResult.error,
+            ),
+          )
         }
         validatedUnreadMessages.push(parseResult.data)
       }
@@ -308,9 +314,7 @@ export class ChatService {
   /**
    * Add user to session
    */
-  async addUserToSession(
-    request: AddUserToSessionRequestDTO,
-  ): Promise<Result<void, AppError>> {
+  async addUserToSession(request: AddUserToSessionRequestDTO): Promise<Result<void, AppError>> {
     try {
       await apiClient.post('/api/AIWebAPI/addUserToSession', request)
       return ok(undefined)
@@ -336,9 +340,7 @@ export class ChatService {
   /**
    * Get a specific message by ID
    */
-  async getMessage(
-    request: GetMessageRequestDTO,
-  ): Promise<Result<AISessionMessageDTO, AppError>> {
+  async getMessage(request: GetMessageRequestDTO): Promise<Result<AISessionMessageDTO, AppError>> {
     try {
       const response = await apiClient.post<ApiResponse<AISessionMessageDTO>>(
         '/api/AIWebAPI/getMessage',
@@ -352,12 +354,14 @@ export class ChatService {
       const parseResult = AISessionMessageDTOSchema.safeParse(response.data.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid message data format',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid message data format',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       return ok(parseResult.data)
@@ -407,12 +411,14 @@ export class ChatService {
       const parseResult = AIPublicChatStartDTOSchema.safeParse(response.data.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid public chat data format',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid public chat data format',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       return ok(parseResult.data)

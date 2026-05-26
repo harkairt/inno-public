@@ -1,5 +1,8 @@
 <template>
-  <div class="flex flex-col h-full overflow-hidden" data-testid="users-page">
+  <div
+    class="flex flex-col h-full overflow-hidden"
+    data-testid="users-page"
+  >
     <div class="border-b border-[hsl(var(--border)/0.5)] px-4 py-3">
       <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
         {{ t('navigation.users') }}
@@ -15,11 +18,23 @@
       />
     </div>
 
-    <div v-if="isLoadingUsers" class="space-y-2 p-4">
-      <USkeleton v-for="i in 5" :key="i" class="h-14" />
+    <div
+      v-if="isLoadingUsers"
+      class="space-y-2 p-4"
+    >
+      <USkeleton
+        v-for="i in 5"
+        :key="i"
+        class="h-14"
+      />
     </div>
 
-    <UAlert v-else-if="usersError" color="error" variant="soft" class="m-4">
+    <UAlert
+      v-else-if="usersError"
+      color="error"
+      variant="soft"
+      class="m-4"
+    >
       {{ usersError.message }}
     </UAlert>
 
@@ -29,7 +44,10 @@
       class="py-12"
     />
 
-    <div v-else class="flex-1 overflow-y-auto">
+    <div
+      v-else
+      class="flex-1 overflow-y-auto"
+    >
       <button
         v-for="user in filteredUsers"
         :key="user.id"
@@ -50,7 +68,6 @@
             {{ user.isVirtual ? t('users.aiAgent') : user.email }}
           </p>
         </div>
-
       </button>
     </div>
   </div>
@@ -63,18 +80,13 @@ import UserAvatar from '~/components/UserAvatar.vue'
 const { t } = useI18n()
 const router = useRouter()
 
-const {
-  filteredUsers,
-  isLoadingUsers,
-  usersError,
-  userSearchQuery,
-  handleUserClick,
-} = useChatListData()
+const { filteredUsers, isLoadingUsers, usersError, userSearchQuery, handleUserClick } =
+  useChatListData()
 
 function onUserClick(userId: number) {
   const target = handleUserClick(userId)
   if (target) {
-    router.push(target)
+    void router.push(target)
   }
 }
 </script>

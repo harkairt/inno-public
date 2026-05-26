@@ -11,6 +11,7 @@ Type-safe service classes for backend API communication with comprehensive error
 Handles authentication and user management operations.
 
 **Key Methods:**
+
 - `login(credentials)` - User login with email/password
 - `logout()` - Clear authentication state
 - `refreshToken()` - Refresh access token using httpOnly cookies
@@ -23,6 +24,7 @@ Handles authentication and user management operations.
 - `checkAuth()` - Validate current authentication session
 
 **Usage:**
+
 ```typescript
 import { authService } from '@/lib/api/services/AuthService'
 
@@ -44,6 +46,7 @@ if (result.isOk()) {
 Manages chat sessions, messages, and AI interactions.
 
 **Key Methods:**
+
 - `sendQuestion(request)` - Send text question to AI
 - `sendOption(request)` - Send option selection to AI
 - `getWelcomeMessage(request)` - Get welcome message for agent
@@ -61,6 +64,7 @@ Manages chat sessions, messages, and AI interactions.
 - `forwardMessage(fromSessionId, fromAgentId, toSessionId, toAgentId, messageId)` - Forward message
 
 **Usage:**
+
 ```typescript
 import { chatService } from '@/lib/api/services/ChatService'
 
@@ -81,6 +85,7 @@ const result = await chatService.sendQuestion({
 Handles user management and profile operations.
 
 **Key Methods:**
+
 - `getSelectableUsers(email)` - Get all selectable users (agents + real users)
 - `getUserById(userId)` - Get user by ID
 - `getUserByEmail(email)` - Get user by email
@@ -96,6 +101,7 @@ Handles user management and profile operations.
 - `reactivateUser(userId)` - Reactivate user account
 
 **Usage:**
+
 ```typescript
 import { userService } from '@/lib/api/services/UserService'
 
@@ -111,6 +117,7 @@ if (result.isOk()) {
 Administrative operations for system management.
 
 **Key Methods:**
+
 - `getAllUsers(page, pageSize, search, role)` - Get all users with pagination
 - `createUser(userData)` - Create new user
 - `deleteUser(userId)` - Delete user
@@ -129,6 +136,7 @@ Administrative operations for system management.
 - `setUserBanStatus(userId, isBanned, reason)` - Ban/unban user
 
 **Usage:**
+
 ```typescript
 import { adminService } from '@/lib/api/services/AdminService'
 
@@ -144,6 +152,7 @@ if (result.isOk()) {
 Client-side logging service with fire-and-forget semantics.
 
 **Key Methods:**
+
 - `log(logInfo)` - Send client log to backend
 - `debug(message, data, context)` - Log debug message
 - `info(message, data, context)` - Log info message
@@ -162,6 +171,7 @@ Client-side logging service with fire-and-forget semantics.
 - `createChild(context)` - Create child logger with additional context
 
 **Usage:**
+
 ```typescript
 import { logService } from '@/lib/api/services/LogService'
 
@@ -180,6 +190,7 @@ await logService.logPerformance('page_load', 1500, 'ms', { page: '/dashboard' })
 Runtime configuration management with caching and validation.
 
 **Key Methods:**
+
 - `getConfig()` - Load runtime configuration from backend
 - `getCachedConfig()` - Get cached configuration
 - `refreshConfig()` - Force refresh configuration
@@ -200,6 +211,7 @@ Runtime configuration management with caching and validation.
 - `restoreConfigVersion(versionId)` - Restore configuration version
 
 **Usage:**
+
 ```typescript
 import { configService } from '@/lib/api/services/ConfigService'
 
@@ -291,6 +303,7 @@ npm test lib/api/services/__tests__/AuthService.test.ts
 ## HTTP Only Cookies
 
 Authentication tokens are handled automatically via httpOnly cookies:
+
 - No manual token management required
 - Automatic token refresh handled by interceptors
 - Secure by default (not accessible via JavaScript)

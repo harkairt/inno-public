@@ -40,8 +40,8 @@ export const usePublicMode = () => {
   /**
    * Whether public mode has valid credentials configured
    */
-  const hasPublicCredentials = computed(() =>
-    !!configStore.config.publicLoginEmail && !!configStore.config.publicLoginPassword
+  const hasPublicCredentials = computed(
+    () => !!configStore.config.publicLoginEmail && !!configStore.config.publicLoginPassword,
   )
 
   /**

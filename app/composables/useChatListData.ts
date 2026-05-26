@@ -10,6 +10,7 @@ import {
   checkIsPrimarySession,
   getPrimarySessionForUser,
 } from '~/composables/usePrimarySession'
+import type { AISessionHeaderDTO, GetUnreadMessagesDTO, UserDTO } from '@/types/api/schemas'
 
 export interface DraftConversationListItem {
   draftId: string
@@ -21,65 +22,69 @@ export interface DraftConversationListItem {
   route: string
 }
 
-export function useChatListData() {
-  const authStore = useAuthStore()
-  const chatStore = useChatStore()
-  const { formatRelativeDate } = useRelativeDate()
+function getUnreadCountFromEntries(
+  entries: GetUnreadMessagesDTO[] | undefined,
+  sessionId: string,
+): number {
+  if (!entries) return 0
+  const entry = entries.find((u) => u.sessionId === sessionId)
+  return entry?.unreadMessageCount ?? 0
+}
 
-  const currentUserEmail = computed(() => authStore.user?.email ?? '')
+function getOtherMembersForEmail(members: string[], email: string | undefined): string[] {
+  if (!email) return members
+  return members.filter((m) => m !== email)
+}
 
-  // TanStack Query data
-  const { data: users, isLoading: isLoadingUsers, error: usersError } = useSelectableUsers()
-  const { data: sessions, isLoading: isLoadingSessions, error: sessionsError } = useChatSessions()
-  const { data: unreadCounts } = useUnreadMessageCounts()
+function getMemberNamesFromList(
+  members: string[],
+  email: string | undefined,
+  allUsers: UserDTO[] | undefined,
+  t: (key: string) => string,
+): string {
+  const otherMembers = getOtherMembersForEmail(members, email)
+  if (otherMembers.length === 0) return t('sidebar.you')
 
-  // Search state
-  const userSearchQuery = ref('')
-  const sessionSearchQuery = ref('')
-
-  // Filtered users
-  const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
-
-  // Filtered + sorted sessions
-  const filteredSessions = computed(() => {
-    if (!sessions.value) return []
-
-    const query = sessionSearchQuery.value.toLowerCase()
-    const filtered = query
-      ? sessions.value.filter(session =>
-          session.sessionName.toLowerCase().includes(query)
-          || session.agentId.toString().includes(query)
-          || session.members.some(email => email.toLowerCase().includes(query)),
-        )
-      : [...sessions.value]
-
-    return filtered.sort((a, b) => {
-      const unreadA = getUnreadCount(a.sessionId)
-      const unreadB = getUnreadCount(b.sessionId)
-
-      if (unreadA > 0 && unreadB === 0) return -1
-      if (unreadB > 0 && unreadA === 0) return 1
-
-      return new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime()
-    })
+  const names = otherMembers.slice(0, 2).map((memberEmail) => {
+    const user = allUsers?.find((u) => u.email === memberEmail)
+    return user?.name?.split(' ')[0] ?? memberEmail.split('@')[0]
   })
 
-  const filteredDraftSessions = computed<DraftConversationListItem[]>(() => {
-    if (!users.value) return []
+  if (otherMembers.length > 2) {
+    return `${names.join(', ')} +${otherMembers.length - 2}`
+  }
+  return names.join(', ')
+}
 
-    const query = sessionSearchQuery.value.toLowerCase().trim()
-    const drafts = Object.entries(chatStore.draftMessages)
-      .filter(([key, text]) => key.startsWith('new-') && text.trim().length > 0)
-      .flatMap(([key, text]) => {
-        const userIdPart = key.replace(/^new-/, '')
-        const userId = Number.parseInt(userIdPart, 10)
-        if (!Number.isFinite(userId)) return []
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
 
-        const user = users.value?.find(u => u.id === userId)
-        if (!user) return []
+function buildDraftItems(
+  draftMessages: Record<string, string>,
+  allUsers: UserDTO[] | undefined,
+  query: string,
+): DraftConversationListItem[] {
+  if (!allUsers) return []
 
-        const preview = text.trim().replace(/\s+/g, ' ')
-        return [{
+  const drafts = Object.entries(draftMessages)
+    .filter(([key, text]) => key.startsWith('new-') && text.trim().length > 0)
+    .flatMap(([key, text]) => {
+      const userIdPart = key.replace(/^new-/, '')
+      const userId = Number.parseInt(userIdPart, 10)
+      if (!Number.isFinite(userId)) return []
+
+      const user = allUsers.find((u) => u.id === userId)
+      if (!user) return []
+
+      const preview = text.trim().replace(/\s+/g, ' ')
+      return [
+        {
           draftId: `draft-${key}`,
           draftKey: key,
           userId,
@@ -87,93 +92,111 @@ export function useChatListData() {
           userEmail: user.email,
           preview,
           route: `/chats/new/${userId}`,
-        }]
-      })
-
-    if (!query) return drafts
-
-    return drafts.filter(draft =>
-      draft.userName.toLowerCase().includes(query)
-      || draft.userEmail.toLowerCase().includes(query)
-      || draft.preview.toLowerCase().includes(query),
-    )
-  })
-
-  // Total unread count across all sessions
-  const totalUnreadCount = computed(() => {
-    if (!unreadCounts.value) return 0
-    return unreadCounts.value.reduce((sum, entry) => sum + entry.unreadMessageCount, 0)
-  })
-
-  function getUnreadCount(sessionId: string): number {
-    if (!unreadCounts.value) return 0
-    const entry = unreadCounts.value.find(u => u.sessionId === sessionId)
-    return entry?.unreadMessageCount ?? 0
-  }
-
-  function getOtherMembers(members: string[]): string[] {
-    const email = authStore.user?.email
-    if (!email) return members
-    return members.filter(m => m !== email)
-  }
-
-  function getMemberNames(members: string[]): string {
-    const { t } = useI18n()
-    const otherMembers = getOtherMembers(members)
-    if (otherMembers.length === 0) return t('sidebar.you')
-
-    const names = otherMembers.slice(0, 2).map((email) => {
-      const user = users.value?.find(u => u.email === email)
-      return user?.name?.split(' ')[0] ?? email.split('@')[0]
+        },
+      ]
     })
 
-    if (otherMembers.length > 2) {
-      return `${names.join(', ')} +${otherMembers.length - 2}`
-    }
-    return names.join(', ')
+  if (!query) return drafts
+
+  return drafts.filter(
+    (draft) =>
+      draft.userName.toLowerCase().includes(query) ||
+      draft.userEmail.toLowerCase().includes(query) ||
+      draft.preview.toLowerCase().includes(query),
+  )
+}
+
+function sortAndFilterSessions(
+  sessions: AISessionHeaderDTO[] | undefined,
+  query: string,
+  unreadCounts: GetUnreadMessagesDTO[] | undefined,
+): AISessionHeaderDTO[] {
+  if (!sessions) return []
+
+  const filtered = query
+    ? sessions.filter(
+        (session) =>
+          session.sessionName.toLowerCase().includes(query) ||
+          session.agentId.toString().includes(query) ||
+          session.members.some((email) => email.toLowerCase().includes(query)),
+      )
+    : [...sessions]
+
+  return filtered.sort((a, b) => {
+    const unreadA = getUnreadCountFromEntries(unreadCounts, a.sessionId)
+    const unreadB = getUnreadCountFromEntries(unreadCounts, b.sessionId)
+
+    if (unreadA > 0 && unreadB === 0) return -1
+    if (unreadB > 0 && unreadA === 0) return 1
+
+    return new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime()
+  })
+}
+
+export function useChatListData() {
+  const authStore = useAuthStore()
+  const chatStore = useChatStore()
+  const { formatRelativeDate } = useRelativeDate()
+
+  const currentUserEmail = computed(() => authStore.user?.email ?? '')
+
+  const { data: users, isLoading: isLoadingUsers, error: usersError } = useSelectableUsers()
+  const { data: sessions, isLoading: isLoadingSessions, error: sessionsError } = useChatSessions()
+  const { data: unreadCounts } = useUnreadMessageCounts()
+
+  const userSearchQuery = ref('')
+  const sessionSearchQuery = ref('')
+
+  const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
+
+  const filteredSessions = computed(() =>
+    sortAndFilterSessions(
+      sessions.value,
+      sessionSearchQuery.value.toLowerCase(),
+      unreadCounts.value,
+    ),
+  )
+
+  const filteredDraftSessions = computed<DraftConversationListItem[]>(() =>
+    buildDraftItems(
+      chatStore.draftMessages,
+      users.value,
+      sessionSearchQuery.value.toLowerCase().trim(),
+    ),
+  )
+
+  const totalUnreadCount = computed(
+    () => unreadCounts.value?.reduce((sum, entry) => sum + entry.unreadMessageCount, 0) ?? 0,
+  )
+
+  const getUnreadCount = (sessionId: string) =>
+    getUnreadCountFromEntries(unreadCounts.value, sessionId)
+  const getOtherMembers = (members: string[]) =>
+    getOtherMembersForEmail(members, authStore.user?.email)
+
+  function getMemberNames(members: string[]): string {
+    return getMemberNamesFromList(members, authStore.user?.email, users.value, useI18n().t)
   }
 
-  function getInitials(name: string): string {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
+  type SessionHeader = Parameters<typeof getSessionDisplayName>[0]
+  type PrimaryCheckSession = Parameters<typeof checkIsPrimarySession>[0]
 
-  function getDisplayName(session: { sessionId: string; sessionName: string; members: string[]; memberDetails?: { email: string; name: string; isVirtual: boolean }[] | null; insertDate: string }): string {
-    if (!sessions.value || !users.value) {
-      return session.sessionName
-    }
-    return getSessionDisplayName(session as Parameters<typeof getSessionDisplayName>[0], currentUserEmail.value, sessions.value, users.value)
-  }
+  const getDisplayName = (session: SessionHeader & { sessionName: string }) =>
+    !sessions.value || !users.value
+      ? session.sessionName
+      : getSessionDisplayName(session, currentUserEmail.value, sessions.value, users.value)
 
-  function isPrimarySessionCheck_(session: { sessionId: string; members: string[]; memberDetails?: { email: string; name: string; isVirtual: boolean }[] | null; insertDate: string }): boolean {
-    if (!sessions.value || !users.value || !currentUserEmail.value) {
-      return false
-    }
-    return checkIsPrimarySession(session as Parameters<typeof checkIsPrimarySession>[0], sessions.value, users.value, currentUserEmail.value)
-  }
+  const isPrimarySessionCheck = (session: PrimaryCheckSession) =>
+    !!(sessions.value && users.value && currentUserEmail.value) &&
+    checkIsPrimarySession(session, sessions.value, users.value, currentUserEmail.value)
 
   function handleUserClick(userId: number): string | null {
-    if (!sessions.value || !users.value) {
-      return `/chats/new/${userId}`
-    }
-
-    const primarySession = getPrimarySessionForUser(userId, currentUserEmail.value, sessions.value, users.value)
-    if (primarySession) {
-      return `/chats/${primarySession.sessionId}`
-    }
-    return `/chats/new/${userId}`
-  }
-
-  function clearDraftConversation(draftKey: string) {
-    chatStore.clearDraft(draftKey)
+    if (!sessions.value || !users.value) return `/chats/new/${userId}`
+    const ps = getPrimarySessionForUser(userId, currentUserEmail.value, sessions.value, users.value)
+    return ps ? `/chats/${ps.sessionId}` : `/chats/new/${userId}`
   }
 
   return {
-    // Query data
     users,
     sessions,
     unreadCounts,
@@ -181,26 +204,20 @@ export function useChatListData() {
     isLoadingSessions,
     usersError,
     sessionsError,
-
-    // Search
     userSearchQuery,
     sessionSearchQuery,
     filteredUsers,
     filteredSessions,
     filteredDraftSessions,
-
-    // Counts
     totalUnreadCount,
-
-    // Helpers
     getUnreadCount,
     getOtherMembers,
     getMemberNames,
     getInitials,
     getDisplayName,
-    isPrimarySessionCheck: isPrimarySessionCheck_,
+    isPrimarySessionCheck,
     handleUserClick,
-    clearDraftConversation,
+    clearDraftConversation: (draftKey: string) => chatStore.clearDraft(draftKey),
     formatRelativeDate,
     currentUserEmail,
   }

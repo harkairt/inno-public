@@ -63,8 +63,8 @@ export const selectors = {
 export const roles = {
   button: (name: RegExp | string) => ({ role: 'button' as const, name }),
   link: (name: RegExp | string) => ({ role: 'link' as const, name }),
-  textbox: (name?: RegExp | string) => name ? { role: 'textbox' as const, name } : { role: 'textbox' as const },
-  heading: (name: RegExp | string, level?: 1 | 2 | 3 | 4 | 5 | 6) => level
-    ? { role: 'heading' as const, name, level }
-    : { role: 'heading' as const, name },
+  textbox: (name?: RegExp | string) =>
+    name ? { role: 'textbox' as const, name } : { role: 'textbox' as const },
+  heading: (name: RegExp | string, level?: 1 | 2 | 3 | 4 | 5 | 6) =>
+    level ? { role: 'heading' as const, name, level } : { role: 'heading' as const, name },
 }

@@ -17,8 +17,11 @@ import {
   UnknownError,
   TokenExpiredError,
   createValidationError,
-  createApiError
+  createApiError,
 } from './types'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('ErrorNormalize')
 
 // ============================================================================
 // ERROR TYPE GUARDS
@@ -56,40 +59,16 @@ function isNetworkLikeError(error: Error): boolean {
  * Normalizes backend API errors (which vary in format) into consistent AppError
  */
 export function normalizeApiError(error: unknown): AppError {
-  if (import.meta.dev) console.warn('Normalizing error:', error)
+  if (import.meta.dev) logger.warn('Normalizing error:', error)
 
   // Axios error (most common for HTTP requests)
   if (isAxiosError(error)) {
     return normalizeAxiosError(error)
   }
 
-  // Network-like errors (fetch failures, etc.)
-  if (error instanceof Error && isNetworkLikeError(error)) {
-    return new NetworkError(`Network error: ${error.message}`)
-  }
-
-  // AbortError (request cancelled)
-  if (error instanceof Error && error.name === 'AbortError') {
-    return new TimeoutError('Request was cancelled or timed out')
-  }
-
-  // Error with status property (like fetch Response errors)
-  if (error instanceof Error && 'status' in error) {
-    const status = (error as { status?: number }).status ?? 500
-    return createApiError(
-      status || 500,
-      error.message ?? 'Request failed',
-      (error as { url?: string }).url,
-      (error as { requestId?: string }).requestId
-    )
-  }
-
-  // JavaScript Error instance
+  // Error instances - delegate to specialized handler
   if (error instanceof Error) {
-    return new UnknownError(error.message, {
-      name: error.name,
-      stack: error.stack
-    })
+    return normalizeErrorInstance(error)
   }
 
   // String error
@@ -107,78 +86,122 @@ export function normalizeApiError(error: unknown): AppError {
   return new UnknownError('An unknown error occurred', error)
 }
 
+/**
+ * Normalize a JavaScript Error instance into an AppError
+ */
+function normalizeErrorInstance(error: Error): AppError {
+  // Network-like errors (fetch failures, etc.)
+  if (isNetworkLikeError(error)) {
+    return new NetworkError(`Network error: ${error.message}`)
+  }
+
+  // AbortError (request cancelled)
+  if (error.name === 'AbortError') {
+    return new TimeoutError('Request was cancelled or timed out')
+  }
+
+  // Error with status property (like fetch Response errors)
+  if ('status' in error) {
+    const status = (error as { status?: number }).status ?? 500
+    return createApiError(
+      status || 500,
+      error.message ?? 'Request failed',
+      (error as { url?: string }).url,
+      (error as { requestId?: string }).requestId,
+    )
+  }
+
+  return new UnknownError(error.message, {
+    name: error.name,
+    stack: error.stack,
+  })
+}
+
 // ============================================================================
 // AXIOS ERROR NORMALIZATION
 // ============================================================================
 
 function normalizeAxiosError(error: AxiosError): AppError {
   const response = error.response
-  const request = error.request
 
   // No response received - network or timeout error
   if (!response) {
-    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-      return new TimeoutError(
-        `Request timeout: ${error.message}`
-      )
-    }
-
-    if (error.code === 'ERR_NETWORK' || !request) {
-      return new NetworkError(
-        `Network error: ${error.message}`
-      )
-    }
-
-    return new NetworkError(`Request failed: ${error.message}`)
+    return normalizeNoResponseError(error)
   }
 
   // Have response - process based on status code and data
   const { status, data } = response
   const url = response.config?.url
-  const requestId = response.headers?.['x-request-id'] as string
+  const requestId = response.headers?.['x-request-id'] as string | undefined
 
-  // TODO: Implement structured ApiError format handling when backend supports it
+  return normalizeResponseData(status, data, url, requestId)
+}
 
-  // Case 2: Backend returns validation errors in .errors format (ASP.NET style)
+/**
+ * Normalize an Axios error where no HTTP response was received
+ */
+function normalizeNoResponseError(error: AxiosError): AppError {
+  if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+    return new TimeoutError(`Request timeout: ${error.message}`)
+  }
+
+  if (error.code === 'ERR_NETWORK' || !error.request) {
+    return new NetworkError(`Network error: ${error.message}`)
+  }
+
+  return new NetworkError(`Request failed: ${error.message}`)
+}
+
+/**
+ * Normalize based on response status and data
+ */
+function normalizeResponseData(
+  status: number,
+  data: unknown,
+  url?: string,
+  requestId?: string,
+): AppError {
+  // Backend returns validation errors in .errors format (ASP.NET style)
   if (status === 400 && data && typeof data === 'object' && 'errors' in data) {
-    const errors = (data as { errors: unknown }).errors
-    if (errors && typeof errors === 'object') {
-      const validationErrors = Object.entries(errors).flatMap(([field, messages]) => {
-        const messageArray = Array.isArray(messages) ? messages : [messages]
-        return messageArray.map(message => ({
-          field,
-          message: String(message)
-        }))
-      })
-
-      if (validationErrors.length > 0) {
-        return createValidationError(validationErrors)
-      }
-    }
+    const validationError = extractValidationErrors(data as { errors: unknown })
+    if (validationError) return validationError
   }
 
-  // Case 3: Backend returns simple message in data.message
-  if (data && typeof data === 'object' && 'message' in data && typeof data.message === 'string') {
-    return createApiError(
-      status,
-      data.message,
-      url,
-      requestId
-    )
+  // Backend returns simple message in data.message
+  if (
+    data &&
+    typeof data === 'object' &&
+    'message' in data &&
+    typeof (data as { message: unknown }).message === 'string'
+  ) {
+    return createApiError(status, (data as { message: string }).message, url, requestId)
   }
 
-  // Case 4: Backend returns string data directly
+  // Backend returns string data directly
   if (typeof data === 'string') {
-    return createApiError(
-      status,
-      data,
-      url,
-      requestId
-    )
+    return createApiError(status, data, url, requestId)
   }
 
-  // Case 5: Handle specific HTTP status codes with default messages
+  // Handle specific HTTP status codes with default messages
   return handleStatusCode(status, url, requestId)
+}
+
+/**
+ * Extract validation errors from ASP.NET-style error response
+ */
+function extractValidationErrors(data: { errors: unknown }): AppError | null {
+  const errors = data.errors
+  if (!errors || typeof errors !== 'object') return null
+
+  const validationErrors = Object.entries(errors).flatMap(([field, messages]) => {
+    const messageArray = Array.isArray(messages) ? messages : [messages]
+    return messageArray.map((message) => ({
+      field,
+      message: String(message),
+    }))
+  })
+
+  return validationErrors.length > 0 ? createValidationError(validationErrors) : null
 }
 
 // ============================================================================
@@ -212,12 +235,7 @@ function handleStatusCode(status: number, url?: string, requestId?: string): App
     case 504:
       return new TimeoutError('Gateway timeout')
     default:
-      return createApiError(
-        status,
-        `HTTP error ${status}`,
-        url,
-        requestId
-      )
+      return createApiError(status, `HTTP error ${status}`, url, requestId)
   }
 }
 
@@ -229,7 +247,7 @@ function handleStatusCode(status: number, url?: string, requestId?: string): App
  * Normalizes an array of mixed error types
  */
 export function normalizeBatchErrors(errors: unknown[]): AppError[] {
-  return errors.map(error => normalizeApiError(error))
+  return errors.map((error) => normalizeApiError(error))
 }
 
 // ============================================================================
@@ -246,9 +264,7 @@ export function createErrorResult<T>(error: unknown): Result<T, AppError> {
 /**
  * Wraps a promise with error normalization
  */
-export async function normalizeAsyncError<T>(
-  promise: Promise<T>
-): Promise<Result<T, AppError>> {
+export async function normalizeAsyncError<T>(promise: Promise<T>): Promise<Result<T, AppError>> {
   try {
     const result = await promise
     return ok(result)
@@ -260,9 +276,7 @@ export async function normalizeAsyncError<T>(
 /**
  * Wraps a synchronous function with error normalization
  */
-export function normalizeSyncError<T>(
-  fn: () => T
-): Result<T, AppError> {
+export function normalizeSyncError<T>(fn: () => T): Result<T, AppError> {
   try {
     const result = fn()
     return ok(result)
@@ -304,7 +318,7 @@ export function shouldReauthenticate(error: AppError): boolean {
 export function getUserFriendlyMessage(error: AppError): string {
   // For validation errors, show the field-specific messages
   if (error instanceof ValidationError) {
-    return error.validationErrors.map(ve => ve.message).join(', ')
+    return error.validationErrors.map((ve) => ve.message).join(', ')
   }
 
   // For authentication errors, provide helpful guidance

@@ -11,7 +11,7 @@
 
 <script setup lang="ts">
 defineOptions({
-  inheritAttrs: false
+  inheritAttrs: false,
 })
 
 const props = defineProps<{
