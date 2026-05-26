@@ -4,16 +4,28 @@
     v-if="renderedHTML"
     v-viewer.rebuild="hasImages ? {} : false"
     class="markdown-content"
-    v-html="renderedHTML"
-  />
+  >
+    <div v-html="renderedHTML" />
+    <Teleport
+      v-for="chart in chartEntries"
+      :key="chart.id"
+      :to="`[data-chart-id='${chart.id}']`"
+      :defer="true"
+    >
+      <ChatChart :config="chart.config" />
+    </Teleport>
+  </div>
   <!-- eslint-enable vue/no-v-html -->
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, useId } from 'vue'
 import { useMarkdown } from '@/app/composables/useMarkdown'
 import { useShiki } from '@/app/composables/useShiki'
+import { useChartJs } from '~/composables/useChartJs'
 import { sanitizeHTML } from '@/app/utils/sanitize'
+import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
+import ChatChart from '~/components/chat/ChatChart.vue'
 
 interface Props {
   content?: string | null
@@ -24,53 +36,70 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const { isLoaded: shikiLoaded, loadHighlighter, highlightCode } = useShiki()
+const { isLoaded: chartJsLoaded, loadChartJs } = useChartJs()
 
-// Rendered HTML (reactive to trigger re-render when highlighter loads)
+const instancePrefix = useId()
+
+interface ChartEntry {
+  id: string
+  config: ChartConfig
+}
+
 const renderedHTML = ref('')
+const chartEntries = ref<ChartEntry[]>([])
 
-// Only activate v-viewer when rendered HTML contains images (avoids rebuild overhead during streaming)
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
 
-// Check if content contains code blocks (markdown fenced code)
 const hasCodeBlocks = (content: string | null | undefined): boolean => {
   return content?.includes('```') ?? false
 }
 
-// Max content size for regex processing (100KB) - prevents ReDoS
+const hasChartBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```chart.js')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 11) !== -1
+}
+
 const MAX_CONTENT_SIZE = 100000
 
-/**
- * Highlight code blocks in HTML string.
- * Uses a safer regex pattern to avoid ReDoS attacks.
- */
-const highlightCodeBlocks = (html: string): string => {
-  // Skip processing for very large content to prevent ReDoS
-  if (html.length > MAX_CONTENT_SIZE) {
-    return html
-  }
+const decodeHtmlEntities = (encoded: string): string =>
+  encoded
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
 
-  // Safer regex pattern: match non-greedy with explicit boundaries
-  // Uses possessive-like matching by being more specific about content
+const extractChartBlocks = (html: string): { html: string; entries: ChartEntry[] } => {
+  const entries: ChartEntry[] = []
+  let index = 0
+  const chartBlockRegex = /<pre><code\s+class="language-chart\.js">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(chartBlockRegex, (match, encoded: string) => {
+    const config = parseChartConfig(decodeHtmlEntities(encoded))
+    if (!config) return match
+
+    const id = `${instancePrefix}-chart-${index++}`
+    entries.push({ id, config })
+    return `<div class="chart-placeholder" data-chart-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const highlightCodeBlocks = (html: string): string => {
+  if (html.length > MAX_CONTENT_SIZE) return html
+
   const codeBlockRegex = /<pre><code(?:\s+class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g
 
   return html.replace(codeBlockRegex, (match: string, lang: string | undefined, code: string) => {
     try {
-      // Decode HTML entities that markdown-it produces
-      const decodedCode = code
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-
+      const decodedCode = decodeHtmlEntities(code)
       const language = lang ?? 'text'
       const highlighted = highlightCode(decodedCode, language)
 
-      // If highlighting returned the original code, return the match unchanged
-      if (highlighted === decodedCode) {
-        return match
-      }
-
+      if (highlighted === decodedCode) return match
       return highlighted
     } catch {
       return match
@@ -78,12 +107,10 @@ const highlightCodeBlocks = (html: string): string => {
   })
 }
 
-/**
- * Render markdown content to sanitized HTML.
- */
 const renderContent = () => {
   if (!props.content) {
     renderedHTML.value = ''
+    chartEntries.value = []
     return
   }
 
@@ -91,20 +118,26 @@ const renderContent = () => {
     const { parse } = useMarkdown()
     let html = parse(props.content)
 
-    // Apply syntax highlighting if highlighter is loaded and content has code blocks
+    // Extract chart blocks BEFORE Shiki — Shiki's \w+ regex won't match "chart.js"
+    if (hasChartBlocks(props.content)) {
+      const result = extractChartBlocks(html)
+      html = result.html
+      chartEntries.value = result.entries
+    } else {
+      chartEntries.value = []
+    }
+
     if (shikiLoaded.value && hasCodeBlocks(props.content)) {
       html = highlightCodeBlocks(html)
     }
 
-    // Always sanitize as final step
     renderedHTML.value = sanitizeHTML(html)
   } catch {
-    // Fallback to plain text with escaping
     renderedHTML.value = props.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    chartEntries.value = []
   }
 }
 
-// Watch for content changes
 watch(
   () => props.content,
   () => {
@@ -113,17 +146,24 @@ watch(
   { immediate: true },
 )
 
-// Re-render when shiki loads (to apply syntax highlighting)
 watch(shikiLoaded, (loaded) => {
   if (loaded && hasCodeBlocks(props.content)) {
     renderContent()
   }
 })
 
-// Load highlighter on mount if content has code blocks
+watch(chartJsLoaded, (loaded) => {
+  if (loaded && chartEntries.value.length > 0) {
+    renderContent()
+  }
+})
+
 onMounted(() => {
   if (hasCodeBlocks(props.content)) {
     void loadHighlighter()
+  }
+  if (hasChartBlocks(props.content)) {
+    void loadChartJs()
   }
 })
 </script>
