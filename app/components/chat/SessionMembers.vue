@@ -27,13 +27,16 @@
 import type { UserDTO } from '@/types/api/schemas'
 import { getInitials } from '@/app/utils/user'
 
-const props = withDefaults(defineProps<{
-  members: string[]
-  selectableUsers: UserDTO[]
-  size?: '3xs' | '2xs' | 'xs' | 'sm' | 'md'
-}>(), {
-  size: 'sm'
-})
+const props = withDefaults(
+  defineProps<{
+    members: string[]
+    selectableUsers: UserDTO[]
+    size?: '3xs' | '2xs' | 'xs' | 'sm' | 'md'
+  }>(),
+  {
+    size: 'sm',
+  },
+)
 
 // Compute overlap class based on size
 const overlapClass = computed(() => {
@@ -57,7 +60,7 @@ const remainingCount = computed(() => Math.max(0, props.members.length - 3))
 // Map email addresses to full UserDTO objects for avatar/name display
 const memberDetails = computed(() =>
   visibleMembers.value
-    .map(email => props.selectableUsers.find(u => u.email === email))
-    .filter((user): user is UserDTO => user !== undefined)
+    .map((email) => props.selectableUsers.find((u) => u.email === email))
+    .filter((user): user is UserDTO => user !== undefined),
 )
 </script>

@@ -1,7 +1,10 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/vue-query'
 import { configService } from '@/lib/api/services/ConfigService'
+import { createLogger } from '@/lib/utils/logger'
 import type { InnoChatConfig } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
+
+const logger = createLogger('useConfig')
 
 // Query keys
 export const configQueryKeys = {
@@ -59,12 +62,12 @@ export function useRefreshConfig() {
 
     onSuccess: (config) => {
       // Update all config-related queries
-      queryClient.invalidateQueries({ queryKey: configQueryKeys.all })
+      void queryClient.invalidateQueries({ queryKey: configQueryKeys.all })
       queryClient.setQueryData(configQueryKeys.main(), config)
     },
 
     onError: (error: AppError) => {
-      console.error('Refresh config failed:', error)
+      logger.error('Refresh config failed:', error)
     },
   })
 }

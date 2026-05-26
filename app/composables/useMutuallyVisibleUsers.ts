@@ -8,13 +8,12 @@ import { useAuthStore } from '@/app/stores/auth'
  * 1. Their ID is in the current user's userIds list
  * 2. The current user's ID is in their userIds list
  */
-export function useMutuallyVisibleUsers(
-  users: Ref<UserDTO[] | undefined>
-): { mutuallyVisibleUsers: ComputedRef<UserDTO[]> } {
+export function useMutuallyVisibleUsers(users: Ref<UserDTO[] | undefined>): {
+  mutuallyVisibleUsers: ComputedRef<UserDTO[]>
+} {
   const authStore = useAuthStore()
 
   const mutuallyVisibleUsers = computed(() => {
-    
     if (!users.value || !authStore.user) {
       return []
     }

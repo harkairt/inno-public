@@ -296,9 +296,9 @@ Always use `makeApiResponse()` when mocking `apiClient` responses — tests fail
 
 Coverage is measured on:
 - `lib/**/*.{js,ts}`
-- `stores/**/*.{js,ts}`
-- `composables/**/*.{js,ts}`
-- `utils/**/*.{js,ts}`
+- `app/stores/**/*.{js,ts}`
+- `app/composables/**/*.{js,ts}`
+- `app/utils/**/*.{js,ts}`
 - `types/**/*.ts`
 
 **`app/components/**` and `app/pages/**` are NOT in the coverage include list.** Component and page tests still run, but they don't count toward coverage thresholds.

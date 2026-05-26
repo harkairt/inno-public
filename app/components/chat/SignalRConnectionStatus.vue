@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import { useSignalRConnectionMonitor } from '@/app/composables/useSignalR'
 
-const {
-  statusMessage,
-  isConnected,
-  isConnecting,
-  isReconnecting,
-  reconnectAttempts
-} = useSignalRConnectionMonitor()
+const { statusMessage, isConnected, isConnecting, isReconnecting, reconnectAttempts } =
+  useSignalRConnectionMonitor()
 
 // Props for controlling display based on sidebar state
 interface Props {
@@ -47,10 +42,7 @@ const displayMessage = computed(() => {
     >
       <UIcon
         :name="statusIcon"
-        :class="[
-          statusColorClass,
-          (isConnecting || isReconnecting) ? 'animate-spin' : ''
-        ]"
+        :class="[statusColorClass, isConnecting || isReconnecting ? 'animate-spin' : '']"
         dynamic
         size="16"
         :aria-label="displayMessage"

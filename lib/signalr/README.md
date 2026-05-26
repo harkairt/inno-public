@@ -5,6 +5,7 @@ This module provides a robust SignalR implementation with automatic reconnection
 ## Overview
 
 The SignalR layer consists of:
+
 - **SignalRService**: Core service class with singleton pattern
 - **Vue Composables**: Reactive wrappers for Vue components
 - **Type Safety**: Full TypeScript support for all SignalR operations
@@ -115,9 +116,10 @@ const service = SignalRService.getInstance(config)
 ```
 
 **Config:**
+
 ```typescript
 interface SignalRConfig {
-  hubUrl: string           // WebSocket hub URL
+  hubUrl: string // WebSocket hub URL
   automaticReconnect: boolean
   reconnectDelays: number[] // Milliseconds between reconnection attempts
 }
@@ -126,28 +128,35 @@ interface SignalRConfig {
 #### Methods
 
 ##### `connect(accessToken: string): Promise<void>`
+
 Connect to the SignalR hub with authentication token.
 
 ##### `disconnect(): Promise<void>`
+
 Disconnect from the SignalR hub and cleanup resources.
 
 ##### `getState(): ConnectionState`
+
 Get current connection state.
 
 **Returns:** `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed'`
 
 ##### `on(eventName: string, handler: Function): Function`
+
 Subscribe to SignalR events.
 
 **Returns:** Unsubscribe function
 
 ##### `invoke(methodName: string, ...args: any[]): Promise<any>`
+
 Call server method and wait for response.
 
 ##### `send(methodName: string, ...args: any[]): void`
+
 Send message to server without waiting for response.
 
 ##### `getConnectionInfo(): SignalRConnectionInfo`
+
 Get detailed connection information.
 
 ### useSignalR Composable
@@ -221,13 +230,13 @@ NUXT_PUBLIC_API_BASE_URL=http://localhost:5000
 
 ## Connection States
 
-| State | Description | UI Behavior |
-|-------|-------------|-------------|
-| `disconnected` | Not connected to server | Show connection button |
-| `connecting` | Attempting to connect | Show loading indicator |
-| `connected` | Successfully connected | Show full interface |
-| `reconnecting` | Lost connection, retrying | Show warning + retry count |
-| `failed` | Connection failed permanently | Show error message |
+| State          | Description                   | UI Behavior                |
+| -------------- | ----------------------------- | -------------------------- |
+| `disconnected` | Not connected to server       | Show connection button     |
+| `connecting`   | Attempting to connect         | Show loading indicator     |
+| `connected`    | Successfully connected        | Show full interface        |
+| `reconnecting` | Lost connection, retrying     | Show warning + retry count |
+| `failed`       | Connection failed permanently | Show error message         |
 
 ## Error Handling
 
@@ -401,6 +410,7 @@ this.connection = new signalR.HubConnectionBuilder()
 If you're migrating from an older SignalR implementation:
 
 1. **Replace Direct HubConnection Usage**
+
    ```typescript
    // Old
    const connection = new signalR.HubConnectionBuilder().build()
@@ -410,6 +420,7 @@ If you're migrating from an older SignalR implementation:
    ```
 
 2. **Update Event Subscriptions**
+
    ```typescript
    // Old
    connection.on('event', handler)

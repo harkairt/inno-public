@@ -1,9 +1,15 @@
 <template>
   <div class="border-t border-[hsl(var(--border)/0.5)] bg-[hsl(var(--background))] flex-shrink-0">
     <div class="px-3 py-2">
-      <form class="flex flex-col gap-1" @submit.prevent="handleSubmit">
+      <form
+        class="flex flex-col gap-1"
+        @submit.prevent="handleSubmit"
+      >
         <!-- Agent Selection - only show if virtual agents exist -->
-        <div v-if="virtualAgents.length > 0" class="flex items-center gap-2 flex-wrap max-h-[4.5rem] overflow-hidden">
+        <div
+          v-if="virtualAgents.length > 0"
+          class="flex items-center gap-2 flex-wrap max-h-[4.5rem] overflow-hidden"
+        >
           <UButton
             v-for="agent in virtualAgents"
             :key="agent.id"
@@ -61,14 +67,15 @@
             :icon="voiceButtonIcon"
             :color="isRecording ? 'error' : 'neutral'"
             :variant="isRecording ? 'solid' : 'ghost'"
-            :class="[
-              'shrink-0 transition-all',
-              isRecording && 'animate-pulse'
-            ]"
+            :class="['shrink-0 transition-all', isRecording && 'animate-pulse']"
             :loading="isTranscribing"
             :disabled="isTranscribing"
             size="lg"
-            :aria-label="isRecording ? t('chat.messageInput.stopRecording') : t('chat.messageInput.startRecording')"
+            :aria-label="
+              isRecording
+                ? t('chat.messageInput.stopRecording')
+                : t('chat.messageInput.startRecording')
+            "
             data-testid="voice-record-button"
             @click="toggleRecording"
             @pointerdown="onMicPointerDown"
@@ -90,7 +97,10 @@
         </div>
 
         <!-- Helper Text (desktop only) -->
-        <div v-if="width >= 1024" class="text-xs text-[hsl(var(--muted-foreground))]">
+        <div
+          v-if="width >= 1024"
+          class="text-xs text-[hsl(var(--muted-foreground))]"
+        >
           {{ t('chat.messageInput.pressEnterToSend') }}
         </div>
       </form>
@@ -115,15 +125,15 @@ const toast = useToast()
 // Props
 interface Props {
   sessionId: string
-  agentId: number                      // Fallback when no agent selected (current user's ID)
-  draftKey?: string                    // Optional override for new sessions (userId-based key)
+  agentId: number // Fallback when no agent selected (current user's ID)
+  draftKey?: string // Optional override for new sessions (userId-based key)
   members?: string[]
   selectableAgents?: UserDTO[]
   selectedAgentId?: number | undefined // undefined = no selection
-  selectedAgentName?: string           // Name of selected agent for placeholder
+  selectedAgentName?: string // Name of selected agent for placeholder
   isNewConversation?: boolean | undefined // true = "How can I help?", false = "Reply...", undefined = messages not loaded yet
-  disableSignalR?: boolean             // Disable SignalR typing indicators (for public mode)
-  disableVoice?: boolean               // Disable voice recording button (for public mode)
+  disableSignalR?: boolean // Disable SignalR typing indicators (for public mode)
+  disableVoice?: boolean // Disable voice recording button (for public mode)
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -138,8 +148,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // Filter to only virtual agents
-const virtualAgents = computed(() =>
-  props.selectableAgents?.filter(agent => agent.isVirtual) ?? []
+const virtualAgents = computed(
+  () => props.selectableAgents?.filter((agent) => agent.isVirtual) ?? [],
 )
 
 // Emits
@@ -249,9 +259,7 @@ async function transcribeAudio(blob: Blob) {
       // Append to existing text with space
       const transcribedText = result.value.text.trim()
       const currentText = messageText.value.trim()
-      messageText.value = currentText
-        ? `${currentText} ${transcribedText}`
-        : transcribedText
+      messageText.value = currentText ? `${currentText} ${transcribedText}` : transcribedText
     } else if (result.isErr()) {
       // Show toast error
       toast.add({
@@ -288,7 +296,7 @@ watch(voiceError, (errorMsg) => {
 
 // Responsive rows: 1 on mobile, 2 on desktop (lg breakpoint = 1024px)
 const { width } = useWindowSize()
-const textareaRows = computed(() => width.value >= 1024 ? 3 : 1)
+const textareaRows = computed(() => (width.value >= 1024 ? 3 : 1))
 
 // Function: Toggle agent selection
 function toggleAgent(agentId: number) {
@@ -379,7 +387,7 @@ async function handleSubmit() {
 function retryFailedMessage() {
   if (lastFailedMessage.value) {
     messageText.value = lastFailedMessage.value
-    handleSubmit()
+    void handleSubmit()
   }
 }
 
@@ -392,7 +400,7 @@ function handleKeyDown(event: KeyboardEvent) {
     }
     // Plain Enter to send
     event.preventDefault()
-    handleSubmit()
+    void handleSubmit()
   }
 }
 
@@ -430,7 +438,7 @@ watchDebounced(
   (value) => {
     chatStore.saveDraft(effectiveDraftKey.value, value)
   },
-  { debounce: 500 }
+  { debounce: 500 },
 )
 
 // Cleanup on unmount (only if SignalR enabled)

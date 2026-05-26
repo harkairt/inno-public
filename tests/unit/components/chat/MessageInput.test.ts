@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import { ref } from 'vue'
+import { ref, type Component } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 
@@ -20,7 +20,7 @@ vi.mock('~/composables/useChatMutations', () => ({
     isPending: ref(false),
     isError: ref(false),
     error: ref(null),
-  })
+  }),
 }))
 
 vi.mock('~/composables/useTextFormatting', () => ({
@@ -32,14 +32,14 @@ vi.mock('~/composables/useTextFormatting', () => ({
     insertLink: vi.fn(),
     toggleBulletList: vi.fn(),
     toggleNumberedList: vi.fn(),
-  })
+  }),
 }))
 
 vi.mock('@/app/stores/auth', () => ({
   useAuthStore: () => ({
     user: { email: 'test@example.com', name: 'Test User' },
     isAuthenticated: true,
-  })
+  }),
 }))
 
 vi.mock('@/app/stores/chat', () => ({
@@ -47,14 +47,14 @@ vi.mock('@/app/stores/chat', () => ({
     getDraft: vi.fn().mockReturnValue(''),
     saveDraft: vi.fn(),
     clearDraft: vi.fn(),
-  })
+  }),
 }))
 
 vi.mock('@/app/composables/useSignalRChat', () => ({
   useSignalRChat: () => ({
     sendTypingIndicator: vi.fn(),
     sendStoppedTypingIndicator: vi.fn(),
-  })
+  }),
 }))
 
 vi.mock('@/app/composables/useVoiceRecording', () => ({
@@ -66,14 +66,14 @@ vi.mock('@/app/composables/useVoiceRecording', () => ({
     cancelRecording: vi.fn(),
     setTranscribing: vi.fn(),
     error: ref(null),
-  })
+  }),
 }))
 
 vi.mock('@/lib/api/services/TranscriptionService', () => ({
   useTranscriptionService: () => ({
     isConfigured: () => false,
     transcribe: vi.fn(),
-  })
+  }),
 }))
 
 // ---------------------------------------------------------------------------
@@ -85,7 +85,9 @@ async function renderMessageInput(props = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
-  const { default: MessageInput } = await import('~/components/chat/MessageInput.vue')
+  const { default: MessageInput } = (await import('~/components/chat/MessageInput.vue')) as {
+    default: Component
+  }
 
   return render(MessageInput, {
     props: {
@@ -100,17 +102,19 @@ async function renderMessageInput(props = {}) {
           name: 'UButton',
           inheritAttrs: false,
           props: ['disabled', 'type', 'loading', 'icon', 'color', 'variant', 'size', 'label'],
-          template: '<button :disabled="disabled" :type="type" v-bind="$attrs"><slot>{{ label }}</slot></button>',
+          template:
+            '<button :disabled="disabled" :type="type" v-bind="$attrs"><slot>{{ label }}</slot></button>',
         },
         UTextarea: {
           name: 'UTextarea',
           props: ['modelValue', 'placeholder', 'disabled', 'rows'],
           emits: ['update:modelValue', 'keydown'],
-          template: '<textarea :placeholder="placeholder" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown="$emit(\'keydown\', $event)" data-testid="message-input"></textarea>',
+          template:
+            '<textarea :placeholder="placeholder" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown="$emit(\'keydown\', $event)" data-testid="message-input"></textarea>',
         },
         UAlert: { template: '<div />' },
         ChatFormattingToolbar: { template: '<div />' },
-      }
+      },
     },
   })
 }
@@ -172,7 +176,7 @@ describe('MessageInput — submit behavior', () => {
       expect.objectContaining({
         question: 'Test message',
         sessionId: 'session-1',
-      })
+      }),
     )
   })
 
@@ -208,7 +212,7 @@ describe('MessageInput — voice button', () => {
     await renderMessageInput({ disableVoice: true })
 
     const buttons = screen.queryAllByRole('button')
-    const voiceButton = buttons.find(b => b.getAttribute('aria-label')?.includes('Recording'))
+    const voiceButton = buttons.find((b) => b.getAttribute('aria-label')?.includes('Recording'))
     expect(voiceButton).toBeUndefined()
   })
 
@@ -217,7 +221,7 @@ describe('MessageInput — voice button', () => {
     await renderMessageInput({ disableVoice: false })
 
     const buttons = screen.queryAllByRole('button')
-    const voiceButton = buttons.find(b => b.getAttribute('aria-label')?.includes('Recording'))
+    const voiceButton = buttons.find((b) => b.getAttribute('aria-label')?.includes('Recording'))
     expect(voiceButton).toBeUndefined()
   })
 })

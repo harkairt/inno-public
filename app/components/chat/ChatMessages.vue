@@ -1,5 +1,11 @@
 <template>
-  <div class="space-y-4" data-testid="messages-container" role="log" aria-live="polite" :aria-label="t('chat.messages.ariaLabel')">
+  <div
+    class="space-y-4"
+    data-testid="messages-container"
+    role="log"
+    aria-live="polite"
+    :aria-label="t('chat.messages.ariaLabel')"
+  >
     <!-- Message Groups -->
     <div
       v-for="group in messageGroups"
@@ -8,7 +14,12 @@
     >
       <!-- Date Separator -->
       <div class="flex items-center gap-4 my-6 px-1">
-        <span role="heading" aria-level="2" class="text-[11px] font-medium tracking-wide uppercase text-[hsl(var(--muted-foreground)/0.7)] shrink-0">{{ group.date }}</span>
+        <span
+          role="heading"
+          aria-level="2"
+          class="text-[11px] font-medium tracking-wide uppercase text-[hsl(var(--muted-foreground)/0.7)] shrink-0"
+          >{{ group.date }}</span
+        >
         <div class="flex-1 h-px bg-[hsl(var(--border)/0.4)]" />
       </div>
 
@@ -24,7 +35,11 @@
             'justify-start': !isUserMessage(message),
             'message-enter-stagger': messageEnterDelays.has(message.messageID),
           }"
-          :style="messageEnterDelays.has(message.messageID) ? { animationDelay: messageEnterDelays.get(message.messageID) } : undefined"
+          :style="
+            messageEnterDelays.has(message.messageID)
+              ? { animationDelay: messageEnterDelays.get(message.messageID) }
+              : undefined
+          "
         >
           <div
             class="max-w-[85%] md:max-w-[75%] sm:max-w-[70%] px-3 py-2"
@@ -35,7 +50,10 @@
             :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
           >
             <!-- Sender Name + Rating Controls -->
-            <div v-if="showSenderName(message)" class="flex items-start justify-between gap-2">
+            <div
+              v-if="showSenderName(message)"
+              class="flex items-start justify-between gap-2"
+            >
               <div
                 class="text-xs font-medium mb-1.5"
                 :class="{
@@ -83,9 +101,7 @@
             />
 
             <!-- Message Status and Time -->
-            <div
-              class="flex items-center justify-between mt-2 text-xs opacity-70"
-            >
+            <div class="flex items-center justify-between mt-2 text-xs opacity-70">
               <span>{{ formatTime(message.sendDate) }}</span>
 
               <!-- Message Status for user messages -->
@@ -110,7 +126,6 @@
                 />
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -118,8 +133,14 @@
 
     <!-- Empty State (only show default if no messages AND slot not provided) -->
     <template v-if="!allMessages || allMessages.length === 0">
-      <slot v-if="$slots.empty" name="empty" />
-      <div v-else class="text-center py-8">
+      <slot
+        v-if="$slots.empty"
+        name="empty"
+      />
+      <div
+        v-else
+        class="text-center py-8"
+      >
         <UEmpty
           :title="t('chat.messages.noMessages')"
           :description="t('chat.messages.emptyState')"
@@ -216,9 +237,12 @@ const ANIMATION_DURATION_MS = 300
 const isInitialRender = ref(!props.skipEntranceAnimation)
 
 onMounted(() => {
-  setTimeout(() => {
-    isInitialRender.value = false
-  }, STAGGER_COUNT * STAGGER_STEP_MS + ANIMATION_DURATION_MS + 100)
+  setTimeout(
+    () => {
+      isInitialRender.value = false
+    },
+    STAGGER_COUNT * STAGGER_STEP_MS + ANIMATION_DURATION_MS + 100,
+  )
 })
 
 const messageEnterDelays = computed<Map<string, string>>(() => {
@@ -306,8 +330,8 @@ const messageGroups = computed(() => {
     .sort(([, a], [, b]) => a.timestamp - b.timestamp)
     .map(([date, { messages }]) => ({
       date,
-      messages: messages.sort((a, b) =>
-        new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime()
+      messages: messages.sort(
+        (a, b) => new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime(),
       ),
     }))
 })
@@ -328,13 +352,13 @@ function formatDate(date: Date): string {
     return date.toLocaleDateString(locale.value, {
       month: 'short',
       day: 'numeric',
-      weekday: 'long'
+      weekday: 'long',
     })
   } else {
     return date.toLocaleDateString(locale.value, {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     })
   }
 }
@@ -348,13 +372,12 @@ function formatTime(dateString: string): string {
     return date.toLocaleTimeString(locale.value, {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     })
   } catch {
     return ''
   }
 }
-
 </script>
 
 <style scoped>

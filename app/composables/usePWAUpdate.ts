@@ -24,35 +24,52 @@ export function usePWAUpdate() {
     initialized = true
 
     // Dynamic import to avoid SSR issues with virtual module
-    import('virtual:pwa-register/vue').then(({ useRegisterSW }) => {
-      const { needRefresh: nr, offlineReady: or, updateServiceWorker } = useRegisterSW({
-        immediate: true,
-        onRegisteredSW(_swUrl, registration) {
-          // Check for updates periodically (every 10 minutes)
-          if (registration) {
-            setInterval(() => {
-              registration.update()
-            }, 10 * 60 * 1000)
-          }
-        },
-        onRegisterError(_error) {
-          // Silently ignore SW registration errors
-        }
-      }) as RegisterSWResult
+    import('virtual:pwa-register/vue')
+      .then(({ useRegisterSW }) => {
+        const {
+          needRefresh: nr,
+          offlineReady: or,
+          updateServiceWorker,
+        } = useRegisterSW({
+          immediate: true,
+          onRegisteredSW(_swUrl, registration) {
+            // Check for updates periodically (every 10 minutes)
+            if (registration) {
+              setInterval(
+                () => {
+                  void registration.update()
+                },
+                10 * 60 * 1000,
+              )
+            }
+          },
+          onRegisterError(_error) {
+            // Silently ignore SW registration errors
+          },
+        }) as RegisterSWResult
 
-      // Sync the refs
-      watch(nr, (value) => {
-        needRefresh.value = value
-      }, { immediate: true })
+        // Sync the refs
+        watch(
+          nr,
+          (value) => {
+            needRefresh.value = value
+          },
+          { immediate: true },
+        )
 
-      watch(or, (value) => {
-        offlineReady.value = value
-      }, { immediate: true })
+        watch(
+          or,
+          (value) => {
+            offlineReady.value = value
+          },
+          { immediate: true },
+        )
 
-      updateSW = updateServiceWorker
-    }).catch(() => {
-      // Silently ignore PWA module load errors
-    })
+        updateSW = updateServiceWorker
+      })
+      .catch(() => {
+        // Silently ignore PWA module load errors
+      })
   }
 
   /**
@@ -70,6 +87,6 @@ export function usePWAUpdate() {
     /** True when the app is ready for offline use */
     offlineReady: readonly(offlineReady),
     /** Apply the pending update and reload */
-    applyUpdate
+    applyUpdate,
   }
 }

@@ -19,7 +19,7 @@ export class SignalROperations {
   notifyMessageSent(userIds: string[], sessionId: string, agentId: number): void {
     if (!userIds.length) return
 
-    this.service.send('SendMessageToUser', userIds, sessionId, agentId)
+    void this.service.send('SendMessageToUser', userIds, sessionId, agentId)
   }
 
   /**
@@ -29,10 +29,15 @@ export class SignalROperations {
    * @param email - Email of the user who started typing
    * @param sessionId - The session ID
    */
-  sendStartTypingInfo(memberEmails: string[], name: string, email: string, sessionId: string): void {
+  sendStartTypingInfo(
+    memberEmails: string[],
+    name: string,
+    email: string,
+    sessionId: string,
+  ): void {
     if (!memberEmails.length) return
 
-    this.service.send('SendStartTypingInfo', memberEmails, name, email, sessionId)
+    void this.service.send('SendStartTypingInfo', memberEmails, name, email, sessionId)
   }
 
   /**
@@ -45,6 +50,6 @@ export class SignalROperations {
   sendStopTypingInfo(memberEmails: string[], name: string, email: string, sessionId: string): void {
     if (!memberEmails.length) return
 
-    this.service.send('SendStopTypingInfo', memberEmails, name, email, sessionId)
+    void this.service.send('SendStopTypingInfo', memberEmails, name, email, sessionId)
   }
 }

@@ -4,11 +4,16 @@
     <ChatListPanel v-if="isMobile" />
 
     <!-- Desktop: empty state / welcome content (session list is in parent wrapper) -->
-    <div v-else class="flex-1 overflow-y-auto">
+    <div
+      v-else
+      class="flex-1 overflow-y-auto"
+    >
       <div class="max-w-4xl w-full mx-auto px-4 pt-6 sm:pt-24 pb-8 space-y-8">
-
         <!-- Virtual Agents Section -->
-        <section v-if="virtualAgents.length > 0" class="space-y-4">
+        <section
+          v-if="virtualAgents.length > 0"
+          class="space-y-4"
+        >
           <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {{ t('emptyPage.startConversation') }}
           </h2>
@@ -25,7 +30,10 @@
         </section>
 
         <!-- Unread Chats Section -->
-        <section v-if="unreadChats.length > 0" class="space-y-4">
+        <section
+          v-if="unreadChats.length > 0"
+          class="space-y-4"
+        >
           <h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {{ t('emptyPage.unreadMessages') }}
           </h2>
@@ -59,15 +67,21 @@
         </div>
 
         <!-- Loading State -->
-        <div v-if="isLoading" class="space-y-8">
+        <div
+          v-if="isLoading"
+          class="space-y-8"
+        >
           <div class="space-y-4">
             <USkeleton class="h-4 w-40" />
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <USkeleton v-for="i in 3" :key="i" class="h-24 rounded-lg" />
+              <USkeleton
+                v-for="i in 3"
+                :key="i"
+                class="h-24 rounded-lg"
+              />
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -103,23 +117,21 @@ const { data: unreadCounts, isLoading: unreadLoading } = useUnreadMessageCounts(
 const isLoading = computed(() => usersLoading.value || sessionsLoading.value || unreadLoading.value)
 
 const virtualAgents = computed(() =>
-  (users.value ?? [])
-    .filter(user => user.isVirtual)
-    .slice(0, 3),
+  (users.value ?? []).filter((user) => user.isVirtual).slice(0, 3),
 )
 
 const unreadChats = computed(() => {
   if (!sessions.value || !unreadCounts.value) return []
 
   return sessions.value
-    .map(session => {
-      const unread = unreadCounts.value?.find(u => u.sessionId === session.sessionId)
+    .map((session) => {
+      const unread = unreadCounts.value?.find((u) => u.sessionId === session.sessionId)
       return {
         ...session,
         unreadCount: unread?.unreadMessageCount ?? 0,
       }
     })
-    .filter(session => session.unreadCount > 0)
+    .filter((session) => session.unreadCount > 0)
     .sort((a, b) => new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime())
 })
 </script>

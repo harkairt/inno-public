@@ -122,7 +122,8 @@
       "submit": "Küldés",
       "customOption": "Egyéb",
       "plainTextPlaceholder": "Írja be válaszát..."
-    }
+    },
+    "createNewSession": "Új munkamenet létrehozása"
   },
   "errors": {
     "sessionNotFound": "Chat munkamenet nem található",

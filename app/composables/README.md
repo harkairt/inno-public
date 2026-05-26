@@ -16,6 +16,7 @@ The composables layer sits between the UI components and the API services, provi
 ## Composables Categories
 
 ### 📱 Authentication (`useAuth.ts`)
+
 Handles user authentication and profile management.
 
 - `useLogin()` - Login with credentials
@@ -30,6 +31,7 @@ Handles user authentication and profile management.
 - `useVerifyEmail()` - Verify email address
 
 **Example Usage:**
+
 ```vue
 <script setup>
 import { useLogin, useLogout, useCurrentUser } from '@/composables'
@@ -45,6 +47,7 @@ const handleLogin = async (credentials) => {
 ```
 
 ### 💬 Chat Queries (`useChatQueries.ts`)
+
 Handles fetching chat-related data with caching.
 
 - `useChatSessions()` - Get user's chat sessions
@@ -56,12 +59,13 @@ Handles fetching chat-related data with caching.
 - `useSessionExport()` - Generate session export
 
 **Example Usage:**
+
 ```vue
 <script setup>
 import { useChatSessions, useChatSession } from '@/composables'
 
 const { data: sessions, isLoading } = useChatSessions({
-  refetchInterval: 30000
+  refetchInterval: 30000,
 })
 
 const { data: session } = useChatSession('session-123')
@@ -69,6 +73,7 @@ const { data: session } = useChatSession('session-123')
 ```
 
 ### 🔄 Chat Mutations (`useChatMutations.ts`)
+
 Handles chat-related operations with optimistic updates.
 
 - `useSendMessage()` - Send text messages
@@ -82,6 +87,7 @@ Handles chat-related operations with optimistic updates.
 - `useForwardMessage()` - Forward messages
 
 **Example Usage:**
+
 ```vue
 <script setup>
 import { useSendMessage, useRateMessage } from '@/composables'
@@ -105,6 +111,7 @@ const handleSendMessage = (content) => {
 ```
 
 ### ⚡ SignalR Integration (`useSignalRChat.ts`)
+
 Real-time chat functionality with automatic query invalidation.
 
 - `useSignalRChat()` - Main SignalR chat integration
@@ -112,6 +119,7 @@ Real-time chat functionality with automatic query invalidation.
 - `useSignalRChatMonitor()` - Connection monitoring UI
 
 **Features:**
+
 - Automatic connection management
 - Real-time message handling
 - Typing indicators
@@ -120,21 +128,14 @@ Real-time chat functionality with automatic query invalidation.
 - Connection status monitoring
 
 **Example Usage:**
+
 ```vue
 <script setup>
 import { useSignalRChat, useSignalRChatMonitor } from '@/composables'
 
-const {
-  isConnected,
-  sendTypingIndicator,
-  markMessageAsRead
-} = useSignalRChat()
+const { isConnected, sendTypingIndicator, markMessageAsRead } = useSignalRChat()
 
-const {
-  statusMessage,
-  statusColor,
-  canInteract
-} = useSignalRChatMonitor()
+const { statusMessage, statusColor, canInteract } = useSignalRChatMonitor()
 
 const handleTyping = (sessionId) => {
   if (isConnected.value) {
@@ -145,6 +146,7 @@ const handleTyping = (sessionId) => {
 ```
 
 ### 👥 Users (`useUsers.ts`)
+
 User management and profile operations.
 
 - `useSelectableUsers()` - Get users for session invitations
@@ -157,6 +159,7 @@ User management and profile operations.
 - `useUserActivity()` - Get user activity (paginated)
 
 **Mutations:**
+
 - `useUpdateUser()` - Update user profile
 - `useUpdateUserAvailability()` - Update availability status
 - `useUploadAvatar()` - Upload avatar image
@@ -164,6 +167,7 @@ User management and profile operations.
 - `useReactivateUser()` - Reactivate user account
 
 ### ⚙️ Configuration (`useConfig.ts`)
+
 Application configuration and feature flags.
 
 - `useConfig()` - Get complete configuration
@@ -176,6 +180,7 @@ Application configuration and feature flags.
 - `useConfigHistory()` - Get configuration history
 
 **Admin Mutations:**
+
 - `useUpdateConfig()` - Update configuration
 - `useUpdateAgentConfig()` - Update agent config
 - `useUpdateFeatureFlags()` - Update feature flags
@@ -187,6 +192,7 @@ Application configuration and feature flags.
 ## Key Features
 
 ### 🔄 Automatic Cache Invalidation
+
 Composables automatically invalidate related queries when mutations succeed:
 
 ```typescript
@@ -198,6 +204,7 @@ Composables automatically invalidate related queries when mutations succeed:
 ```
 
 ### ⚡ Optimistic Updates
+
 Mutations provide immediate UI feedback:
 
 ```typescript
@@ -207,6 +214,7 @@ const { mutate: sendMessage } = useSendMessage()
 ```
 
 ### 🔁 Real-time Integration
+
 SignalR events automatically update Vue Query cache:
 
 ```typescript
@@ -216,6 +224,7 @@ SignalR events automatically update Vue Query cache:
 ```
 
 ### 🛡️ Error Handling
+
 Comprehensive error handling with user-friendly messages:
 
 ```typescript
@@ -227,6 +236,7 @@ const { data, error, isLoading, isError } = useChatSessions()
 ```
 
 ### 📱 Smart Caching
+
 Different caching strategies for different data types:
 
 ```typescript
@@ -239,6 +249,7 @@ Different caching strategies for different data types:
 ## Usage Patterns
 
 ### Basic Query Usage
+
 ```vue
 <script setup>
 import { useChatSessions } from '@/composables'
@@ -247,9 +258,9 @@ const {
   data: sessions,
   isLoading,
   error,
-  refetch
+  refetch,
 } = useChatSessions({
-  refetchInterval: 60000 // Refresh every minute
+  refetchInterval: 60000, // Refresh every minute
 })
 </script>
 
@@ -257,7 +268,10 @@ const {
   <div v-if="isLoading">Loading sessions...</div>
   <div v-else-if="error">Error: {{ error.message }}</div>
   <div v-else>
-    <div v-for="session in sessions" :key="session.id">
+    <div
+      v-for="session in sessions"
+      :key="session.id"
+    >
       {{ session.name }}
     </div>
   </div>
@@ -265,16 +279,12 @@ const {
 ```
 
 ### Mutation with Error Handling
+
 ```vue
 <script setup>
 import { useSendMessage } from '@/composables'
 
-const {
-  mutate: sendMessage,
-  isPending,
-  error,
-  reset
-} = useSendMessage()
+const { mutate: sendMessage, isPending, error, reset } = useSendMessage()
 
 const handleSend = async (content) => {
   try {
@@ -291,15 +301,12 @@ const handleSend = async (content) => {
 ```
 
 ### SignalR Integration
+
 ```vue
 <script setup>
 import { useSignalRChat } from '@/composables'
 
-const {
-  isConnected,
-  statusMessage,
-  sendTypingIndicator
-} = useSignalRChat()
+const { isConnected, statusMessage, sendTypingIndicator } = useSignalRChat()
 
 watch(isConnected, (connected) => {
   console.log('SignalR connection:', connected)
@@ -341,12 +348,14 @@ describe('useChatSessions', () => {
 Replace direct service calls with composables:
 
 **Before:**
+
 ```typescript
 const authStore = useAuthStore()
 await authStore.login(credentials)
 ```
 
 **After:**
+
 ```typescript
 const { mutate: login } = useLogin()
 await login(credentials)

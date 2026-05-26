@@ -17,7 +17,7 @@ function makeFailedMessage(id: string, sessionId = 'session-1') {
     sessionId,
     dataTable: null,
     options: null,
-    status: MessageStatus.Failed,
+    status: MessageStatus.FAILED,
   }
 }
 

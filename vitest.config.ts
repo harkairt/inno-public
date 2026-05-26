@@ -23,7 +23,7 @@ export default defineConfig({
       'lib/**/__tests__/**/*.{test,spec}.{js,ts,jsx,tsx}',
       'stores/**/__tests__/**/*.{test,spec}.{js,ts,jsx,tsx}',
       'composables/**/__tests__/**/*.{test,spec}.{js,ts,jsx,tsx}',
-      'types/**/__tests__/**/*.{test,spec}.{js,ts,jsx,tsx}'
+      'types/**/__tests__/**/*.{test,spec}.{js,ts,jsx,tsx}',
     ],
 
     // Exclude patterns
@@ -34,7 +34,7 @@ export default defineConfig({
       '.output',
       'tests/e2e/**',
       // These test files reference components that don't exist yet
-      'tests/unit/components/chats/**'
+      'tests/unit/components/chats/**',
     ],
 
     // Coverage configuration
@@ -43,31 +43,31 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: [
         'lib/**/*.{js,ts}',
-        'stores/**/*.{js,ts}',
-        'composables/**/*.{js,ts}',
-        'utils/**/*.{js,ts}',
-        'types/**/*.{ts}'
+        'app/stores/**/*.{js,ts}',
+        'app/composables/**/*.{js,ts}',
+        'app/utils/**/*.{js,ts}',
+        'types/**/*.{ts}',
       ],
       exclude: [
         'lib/**/__tests__/**',
-        'stores/**/__tests__/**',
-        'composables/**/__tests__/**',
+        'app/stores/**/__tests__/**',
+        'app/composables/**/__tests__/**',
         'types/**/__tests__/**',
         'tests/**',
         '**/*.d.ts',
-        '**/*.config.*'
+        '**/*.config.*',
       ],
       thresholds: {
         global: {
-          // Ratcheted from baseline run (2026-03-28): statements 35%, branches 68%, functions 44%, lines 35%.
+          // Ratcheted (2026-05-12): stmts 43.2%, branches 78%, fns 54.2%, lines 43.2%.
+          // Coverage includes app/stores, app/composables, app/utils, lib/.
           // Set to actual - 2% to allow refactoring headroom.
-          // Update after each batch of new tests.
-          branches: 66,
-          functions: 42,
-          lines: 33,
-          statements: 33
-        }
-      }
+          branches: 76,
+          functions: 52,
+          lines: 41,
+          statements: 41,
+        },
+      },
     },
 
     // Test timeout
@@ -76,19 +76,11 @@ export default defineConfig({
     // Hook timeout
     hookTimeout: 10000,
 
-    // Enable threading
-    threads: true,
-
     // Enable test isolation
     isolate: true,
 
     // Watch mode settings
-    watchExclude: [
-      'node_modules',
-      'dist',
-      '.nuxt',
-      '.output'
-    ]
+    watchExclude: ['node_modules', 'dist', '.nuxt', '.output'],
   },
 
   // Resolve configuration
@@ -97,20 +89,20 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./', import.meta.url)),
       '~': fileURLToPath(new URL('./app', import.meta.url)),
       '~~': fileURLToPath(new URL('./', import.meta.url)),
-      '@@': fileURLToPath(new URL('./', import.meta.url))
-    }
+      '@@': fileURLToPath(new URL('./', import.meta.url)),
+    },
   },
 
   // Define global constants
   define: {
     __VUE_OPTIONS_API__: true,
     __VUE_PROD_DEVTOOLS__: false,
-    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false
+    __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
   },
 
   // Environment-specific configuration
   env: {
     NODE_ENV: 'test',
-    NUXT_PUBLIC_API_BASE_URL: 'http://localhost:3000'
-  }
+    NUXT_PUBLIC_API_BASE_URL: 'http://localhost:3000',
+  },
 })

@@ -51,9 +51,9 @@ const highlightCodeBlocks = (html: string): string => {
 
   // Safer regex pattern: match non-greedy with explicit boundaries
   // Uses possessive-like matching by being more specific about content
-  const codeBlockRegex = /<pre><code(?:\s+class="language-(\w+)")?>([^]*?)<\/code><\/pre>/g
+  const codeBlockRegex = /<pre><code(?:\s+class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g
 
-  return html.replace(codeBlockRegex, (match, lang, code) => {
+  return html.replace(codeBlockRegex, (match: string, lang: string | undefined, code: string) => {
     try {
       // Decode HTML entities that markdown-it produces
       const decodedCode = code
@@ -110,7 +110,7 @@ watch(
   () => {
     renderContent()
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // Re-render when shiki loads (to apply syntax highlighting)
@@ -123,7 +123,7 @@ watch(shikiLoaded, (loaded) => {
 // Load highlighter on mount if content has code blocks
 onMounted(() => {
   if (hasCodeBlocks(props.content)) {
-    loadHighlighter()
+    void loadHighlighter()
   }
 })
 </script>

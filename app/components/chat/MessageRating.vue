@@ -10,13 +10,17 @@
           ? 'text-gray-600 dark:text-gray-300 cursor-default'
           : props.isRated
             ? 'text-gray-300 dark:text-gray-600 cursor-default'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-[hsl(var(--accent))] rounded-md hover:scale-110 cursor-pointer'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-[hsl(var(--accent))] rounded-md hover:scale-110 cursor-pointer',
       ]"
       :aria-label="t('chat.rating.thumbsUp')"
       @click="handleRate(true)"
     >
       <UIcon
-        :name="props.isRated && props.rating === 1 ? 'i-heroicons-hand-thumb-up-20-solid' : 'i-heroicons-hand-thumb-up'"
+        :name="
+          props.isRated && props.rating === 1
+            ? 'i-heroicons-hand-thumb-up-20-solid'
+            : 'i-heroicons-hand-thumb-up'
+        "
         :class="['size-4', { 'animate-rating-pop': justRatedPositive }]"
       />
     </button>
@@ -31,13 +35,17 @@
           ? 'text-gray-600 dark:text-gray-300 cursor-default'
           : props.isRated
             ? 'text-gray-300 dark:text-gray-600 cursor-default'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-[hsl(var(--accent))] rounded-md hover:scale-110 cursor-pointer'
+            : 'text-gray-600 dark:text-gray-300 hover:bg-[hsl(var(--accent))] rounded-md hover:scale-110 cursor-pointer',
       ]"
       :aria-label="t('chat.rating.thumbsDown')"
       @click="handleRate(false)"
     >
       <UIcon
-        :name="props.isRated && props.rating === 0 ? 'i-heroicons-hand-thumb-down-20-solid' : 'i-heroicons-hand-thumb-down'"
+        :name="
+          props.isRated && props.rating === 0
+            ? 'i-heroicons-hand-thumb-down-20-solid'
+            : 'i-heroicons-hand-thumb-down'
+        "
         :class="['size-4', { 'animate-rating-pop': justRatedNegative }]"
       />
     </button>

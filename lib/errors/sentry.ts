@@ -11,8 +11,8 @@ import type { AppError } from './types'
 
 /** Error codes that should NOT be reported to Sentry */
 const IGNORED_ERROR_CODES = new Set([
-  'UNAUTHORIZED',     // Expected auth flow (token refresh handles these)
-  'RATE_LIMITED',     // Transient, handled by retry logic
+  'UNAUTHORIZED', // Expected auth flow (token refresh handles these)
+  'RATE_LIMITED', // Transient, handled by retry logic
 ])
 
 /**
@@ -22,10 +22,7 @@ const IGNORED_ERROR_CODES = new Set([
  * @param error - The normalized AppError to report
  * @param context - Optional extra context (endpoint, operation, etc.)
  */
-export function reportToSentry(
-  error: AppError,
-  context?: Record<string, unknown>,
-): void {
+export function reportToSentry(error: AppError, context?: Record<string, unknown>): void {
   if (IGNORED_ERROR_CODES.has(error.code)) return
 
   Sentry.withScope((scope) => {

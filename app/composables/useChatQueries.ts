@@ -1,8 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { chatService } from '@/lib/api/services/ChatService'
 import { useAuthStore } from '@/app/stores/auth'
-import { toValue, type MaybeRefOrGetter } from 'vue'
-import type { AISessionHeaderDTO, AISessionDTO, AISessionMessageDTO, AIWelcomeMessageDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
+import { computed, toValue, type MaybeRefOrGetter } from 'vue'
+import type {
+  AISessionHeaderDTO,
+  AISessionDTO,
+  AISessionMessageDTO,
+  AIWelcomeMessageDTO,
+  GetUnreadMessagesDTO,
+} from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
 
 // Query keys
@@ -23,14 +29,11 @@ export const chatQueryKeys = {
  * Fetches chat sessions for the current user with filtering support
  * Returns session headers only (without messages)
  */
-export function useChatSessions(options?: {
-  enabled?: boolean
-  staleTime?: number
-}) {
+export function useChatSessions(options?: { enabled?: boolean; staleTime?: number }) {
   const authStore = useAuthStore()
 
   return useQuery({
-    queryKey: [...chatQueryKeys.sessions()],
+    queryKey: chatQueryKeys.sessions(),
     queryFn: async (): Promise<AISessionHeaderDTO[]> => {
       if (!authStore.user) {
         throw new Error('User not authenticated')
@@ -70,11 +73,14 @@ export function useChatSessions(options?: {
  * Single chat session query composable
  * Fetches a specific chat session with all messages
  */
-export function useChatSession(sessionId: string, options?: {
-  enabled?: boolean
-  staleTime?: number
-  includeMessages?: boolean
-}) {
+export function useChatSession(
+  sessionId: string,
+  options?: {
+    enabled?: boolean
+    staleTime?: number
+    includeMessages?: boolean
+  },
+) {
   const authStore = useAuthStore()
   const queryClient = useQueryClient()
 
@@ -102,7 +108,7 @@ export function useChatSession(sessionId: string, options?: {
     gcTime: 2 * 60 * 1000, // 2 minutes
     placeholderData: (previousData) => {
       const headers = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
-      const header = headers?.find(h => h.sessionId === sessionId)
+      const header = headers?.find((h) => h.sessionId === sessionId)
       if (header) {
         return { ...header, messages: [] } as AISessionDTO
       }
@@ -130,10 +136,7 @@ export function useChatSession(sessionId: string, options?: {
  * Unread message counts query composable
  * Fetches unread message counts across all sessions
  */
-export function useUnreadMessageCounts(options?: {
-  enabled?: boolean
-  staleTime?: number
-}) {
+export function useUnreadMessageCounts(options?: { enabled?: boolean; staleTime?: number }) {
   const authStore = useAuthStore()
 
   return useQuery({
@@ -173,13 +176,17 @@ const agentsWithoutWelcomeMessage = new Set<number>()
  * Welcome message query composable
  * Fetches welcome message for a specific agent
  */
-export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
-  enabled?: MaybeRefOrGetter<boolean>
-  sessionId?: string
-  staleTime?: number
-}) {
+export function useWelcomeMessage(
+  agentId: MaybeRefOrGetter<number>,
+  options?: {
+    enabled?: MaybeRefOrGetter<boolean>
+    sessionId?: string
+    staleTime?: number
+  },
+) {
   const authStore = useAuthStore()
 
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps -- sessionId is optional context, not a cache discriminator
   return useQuery({
     queryKey: computed(() => chatQueryKeys.welcome(toValue(agentId))),
     queryFn: async (): Promise<AIWelcomeMessageDTO> => {
@@ -217,7 +224,9 @@ export function useWelcomeMessage(agentId: MaybeRefOrGetter<number>, options?: {
 
       return result.value
     },
-    enabled: computed(() => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(agentId))),
+    enabled: computed(
+      () => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(agentId)),
+    ),
     staleTime: options?.staleTime ?? 10 * 60 * 1000, // 10 minutes - welcome messages don't change often
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
@@ -236,10 +245,11 @@ export function useMessage(
   options?: {
     enabled?: MaybeRefOrGetter<boolean>
     staleTime?: number
-  }
+  },
 ) {
   const authStore = useAuthStore()
 
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps -- agentId is a fetch param, not a cache discriminator
   return useQuery({
     queryKey: computed(() => chatQueryKeys.message(toValue(messageId))),
     queryFn: async (): Promise<AISessionMessageDTO> => {
@@ -263,7 +273,9 @@ export function useMessage(
 
       return result.value
     },
-    enabled: computed(() => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(messageId))),
+    enabled: computed(
+      () => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(messageId)),
+    ),
     staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
@@ -292,10 +304,11 @@ export function useSessionUnreadCount(
     enabled?: MaybeRefOrGetter<boolean>
     staleTime?: number
     refetchInterval?: number
-  }
+  },
 ) {
   const authStore = useAuthStore()
 
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps -- agentId is a fetch param, not a cache discriminator
   return useQuery({
     queryKey: computed(() => chatQueryKeys.sessionUnread(toValue(sessionId))),
     queryFn: async (): Promise<number> => {
@@ -320,7 +333,9 @@ export function useSessionUnreadCount(
 
       return result.value
     },
-    enabled: computed(() => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(sessionId))),
+    enabled: computed(
+      () => toValue(options?.enabled) ?? (authStore.isAuthenticated && !!toValue(sessionId)),
+    ),
     staleTime: options?.staleTime ?? 15 * 1000, // 15 seconds
     gcTime: 3 * 60 * 1000, // 3 minutes
     refetchInterval: options?.refetchInterval ?? 30 * 1000, // Poll every 30 seconds

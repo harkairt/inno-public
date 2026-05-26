@@ -1,121 +1,259 @@
 <template>
   <NuxtErrorBoundary @error="handleError">
-    <main id="main-content" class="flex flex-col h-full w-full">
-    <!-- Header Section -->
-    <div class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)] min-h-[73px]">
-      <!-- Mobile: back button to session list -->
-      <UButton
-        v-if="isMobile"
-        icon="i-heroicons-arrow-left"
-        variant="ghost"
-        color="neutral"
-        square
-        size="sm"
-        :aria-label="t('errors.backToChats')"
-        data-testid="back-to-chats"
-        @click="navigateTo('/chats')"
-      />
+    <main
+      id="main-content"
+      class="flex flex-col h-full w-full"
+    >
+      <!-- Header Section -->
+      <div
+        class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)] min-h-[73px]"
+      >
+        <!-- Mobile: back button to session list -->
+        <UButton
+          v-if="isMobile"
+          icon="i-heroicons-arrow-left"
+          variant="ghost"
+          color="neutral"
+          square
+          size="sm"
+          :aria-label="t('errors.backToChats')"
+          data-testid="back-to-chats"
+          @click="navigateTo('/chats')"
+        />
 
-      <div v-if="session" class="min-w-0 flex-1 group">
-        <!-- View mode: title + pencil icon (pencil hidden for primary sessions) -->
-        <div v-if="!isEditingTitle" class="flex items-center gap-2">
-          <h1 class="text-xl font-semibold text-foreground truncate" data-testid="session-title">
-            {{ isPrimarySession ? otherMemberName : session.sessionName }}
-          </h1>
-          <button
-            v-if="!isPrimarySession"
-            type="button"
-            class="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-[hsl(var(--accent))] rounded-md flex-shrink-0"
-            :aria-label="t('chat.sessionMenu.editName')"
-            data-testid="edit-title-button"
-            @click="startEditingTitle"
+        <div
+          v-if="session"
+          class="min-w-0 flex-1 group"
+        >
+          <!-- View mode: title + pencil icon (pencil hidden for primary sessions) -->
+          <div
+            v-if="!isEditingTitle"
+            class="flex items-center gap-2"
           >
-            <UIcon name="i-lucide-pencil" class="size-4" />
-          </button>
+            <h1
+              class="text-xl font-semibold text-foreground truncate"
+              data-testid="session-title"
+            >
+              {{ isPrimarySession ? otherMemberName : session.sessionName }}
+            </h1>
+            <button
+              v-if="!isPrimarySession"
+              type="button"
+              class="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-[hsl(var(--accent))] rounded-md flex-shrink-0"
+              :aria-label="t('chat.sessionMenu.editName')"
+              data-testid="edit-title-button"
+              @click="startEditingTitle"
+            >
+              <UIcon
+                name="i-lucide-pencil"
+                class="size-4"
+              />
+            </button>
+          </div>
+
+          <!-- Edit mode: input field -->
+          <input
+            v-else
+            ref="titleInputRef"
+            v-model="editedTitle"
+            type="text"
+            class="text-xl font-semibold text-foreground bg-transparent border-none outline-none w-full p-0 m-0 focus:ring-0"
+            data-testid="session-title-input"
+            :disabled="isUpdatingTitle"
+            @keydown="handleTitleKeydown"
+            @blur="saveTitle"
+          />
+
+          <p
+            v-if="otherParticipantNames"
+            class="text-sm text-muted-foreground truncate"
+          >
+            {{ otherParticipantNames }}
+          </p>
         </div>
 
-        <!-- Edit mode: input field -->
-        <input
+        <!-- Shimmer skeleton fallback when session data isn't available yet -->
+        <div
           v-else
-          ref="titleInputRef"
-          v-model="editedTitle"
-          type="text"
-          class="text-xl font-semibold text-foreground bg-transparent border-none outline-none w-full p-0 m-0 focus:ring-0"
-          data-testid="session-title-input"
-          :disabled="isUpdatingTitle"
-          @keydown="handleTitleKeydown"
-          @blur="saveTitle"
+          class="min-w-0 flex-1 space-y-2"
         >
-
-        <p v-if="otherParticipantNames" class="text-sm text-muted-foreground truncate">
-          {{ otherParticipantNames }}
-        </p>
-      </div>
-
-      <!-- Shimmer skeleton fallback when session data isn't available yet -->
-      <div v-else class="min-w-0 flex-1 space-y-2">
-        <USkeleton class="h-6 w-48" />
-        <USkeleton class="h-4 w-32" />
-      </div>
-
-      <!-- Session Members Avatar Stack (hidden for primary sessions) -->
-      <SessionMembers
-        v-if="session && session.members.length > 0 && selectableUsers && !isPrimarySession"
-        :members="session.members"
-        :selectable-users="selectableUsers"
-      />
-
-      <!-- Manage Session Members Button (hidden for primary sessions) -->
-      <ManageSessionUsers
-        v-if="session && !isPrimarySession"
-        :session-id="session.sessionId"
-        :agent-id="session.agentId"
-        :members="session.members"
-      />
-
-      <!-- Create new session button (shown only for primary sessions) -->
-      <UButton
-        v-if="session && isPrimarySession && otherMemberId"
-        icon="i-heroicons-plus"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        :aria-label="t('chat.createNewSession')"
-        data-testid="create-new-session-button"
-        @click="navigateTo(`/chats/new/${otherMemberId}`)"
-      />
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center h-full p-4">
-      <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
-        <div class="flex justify-end">
-          <USkeleton class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
+          <USkeleton class="h-6 w-48" />
+          <USkeleton class="h-4 w-32" />
         </div>
-        <div class="flex justify-start">
-          <USkeleton class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
+
+        <!-- Session Members Avatar Stack (hidden for primary sessions) -->
+        <SessionMembers
+          v-if="session && session.members.length > 0 && selectableUsers && !isPrimarySession"
+          :members="session.members"
+          :selectable-users="selectableUsers"
+        />
+
+        <!-- Manage Session Members Button (hidden for primary sessions) -->
+        <ManageSessionUsers
+          v-if="session && !isPrimarySession"
+          :session-id="session.sessionId"
+          :agent-id="session.agentId"
+          :members="session.members"
+        />
+
+        <!-- Create new session button (shown only for primary sessions) -->
+        <UButton
+          v-if="session && isPrimarySession && otherMemberId"
+          icon="i-heroicons-plus"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          :aria-label="t('chat.createNewSession')"
+          data-testid="create-new-session-button"
+          @click="navigateTo(`/chats/new/${otherMemberId}`)"
+        />
+      </div>
+
+      <!-- Loading State -->
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full p-4"
+      >
+        <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
+          <div class="flex justify-end">
+            <USkeleton
+              class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+              style="border-radius: var(--config-message-border-radius)"
+            />
+          </div>
+          <div class="flex justify-start">
+            <USkeleton
+              class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+              style="border-radius: var(--config-message-border-radius)"
+            />
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Error State -->
-    <div v-else-if="isError" class="flex items-center justify-center p-6 h-full">
-      <div class="text-center max-w-md">
-        <UAlert
-          variant="soft"
-          :title="t('errors.sessionNotFound')"
-          :description="errorMessage"
-          class="mb-4"
-        >
-          <template #actions>
-            <div class="flex space-x-2">
-              <UButton
-                size="xs"
-                variant="outline"
-                @click="refetch()"
+      <!-- Error State -->
+      <div
+        v-else-if="isError"
+        class="flex items-center justify-center p-6 h-full"
+      >
+        <div class="text-center max-w-md">
+          <UAlert
+            variant="soft"
+            :title="t('errors.sessionNotFound')"
+            :description="errorMessage"
+            class="mb-4"
+          >
+            <template #actions>
+              <div class="flex space-x-2">
+                <UButton
+                  size="xs"
+                  variant="outline"
+                  @click="refetch()"
+                >
+                  {{ t('errors.tryAgain') }}
+                </UButton>
+                <UButton
+                  size="xs"
+                  variant="outline"
+                  @click="navigateTo('/chats')"
+                >
+                  {{ t('errors.backToChats') }}
+                </UButton>
+              </div>
+            </template>
+          </UAlert>
+        </div>
+      </div>
+
+      <!-- Chat Content -->
+      <div
+        v-else-if="session"
+        class="flex flex-col h-full min-h-0"
+      >
+        <div class="relative flex-1 overflow-hidden min-h-0">
+          <div
+            ref="messagesContainer"
+            class="h-full overflow-y-auto p-4 flex flex-col"
+          >
+            <div class="flex-1" />
+            <Transition
+              name="shimmer-swap"
+              mode="out-in"
+              @enter="onMessagesEnter"
+              @after-enter="onMessagesEntered"
+            >
+              <!-- Show bubble-shaped skeletons while waiting for real data -->
+              <div
+                v-if="!isMessagesReady"
+                key="shimmer"
+                class="space-y-3 animate-[fade-in_0.4s_ease_both]"
               >
-                {{ t('errors.tryAgain') }}
-              </UButton>
+                <div class="flex justify-end">
+                  <USkeleton
+                    class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+                    style="border-radius: var(--config-message-border-radius)"
+                  />
+                </div>
+                <div class="flex justify-start">
+                  <USkeleton
+                    class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+                    style="border-radius: var(--config-message-border-radius)"
+                  />
+                </div>
+              </div>
+              <ChatMessages
+                v-else
+                key="messages"
+                :messages="messages"
+                :welcome-message="trimmedWelcomeMessage"
+                :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
+                :agent-name="virtualAgentFromSecondMessage?.agentName"
+                :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
+                :member-count="session?.members?.length ?? 2"
+                :active-options-message-id="lastUnansweredOptionsMessageId"
+                :skip-entrance-animation="skipEntranceAnimation"
+                @option-submitted="handleOptionSubmitted"
+              />
+            </Transition>
+          </div>
+          <!-- Bottom fade gradient -->
+          <div
+            class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none"
+          />
+        </div>
+
+        <!-- Typing Indicator - fixed height, doesn't push messages -->
+        <TypingIndicator :typing-users="typingUsers" />
+
+        <MessageInput
+          v-if="!isOptionsMode"
+          ref="messageInputRef"
+          :session-id="sessionId"
+          :agent-id="authStore.user?.id || 1"
+          :selected-agent-id="selectedTargetAgentId"
+          :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
+          :selected-agent-name="selectedAgentName"
+          :members="session.members || []"
+          :is-new-conversation="isPlaceholderData ? undefined : messages.length === 0"
+          class="flex-shrink-0 sticky bottom-0"
+          @message-sent="handleMessageSent"
+          @scroll-to-bottom="scrollToBottom"
+          @target-agent-changed="handleTargetAgentChanged"
+        />
+      </div>
+
+      <!-- Session Not Found -->
+      <div
+        v-else
+        class="flex items-center justify-center p-6 h-full"
+      >
+        <div class="text-center max-w-md">
+          <UAlert
+            variant="soft"
+            :title="t('errors.sessionNotFound')"
+            :description="t('errors.accessDenied')"
+            class="mb-4"
+          >
+            <template #actions>
               <UButton
                 size="xs"
                 variant="outline"
@@ -123,88 +261,10 @@
               >
                 {{ t('errors.backToChats') }}
               </UButton>
-            </div>
-          </template>
-        </UAlert>
-      </div>
-    </div>
-
-    <!-- Chat Content -->
-    <div v-else-if="session" class="flex flex-col h-full min-h-0">
-      <div class="relative flex-1 overflow-hidden min-h-0">
-        <div ref="messagesContainer" class="h-full overflow-y-auto p-4 flex flex-col">
-          <div class="flex-1" />
-          <Transition name="shimmer-swap" mode="out-in" @enter="onMessagesEnter" @after-enter="onMessagesEntered">
-            <!-- Show bubble-shaped skeletons while waiting for real data -->
-            <div v-if="!isMessagesReady" key="shimmer" class="space-y-3 animate-[fade-in_0.4s_ease_both]">
-              <div class="flex justify-end">
-                <USkeleton class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
-              </div>
-              <div class="flex justify-start">
-                <USkeleton class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]" style="border-radius: var(--config-message-border-radius)" />
-              </div>
-            </div>
-            <ChatMessages
-              v-else
-              key="messages"
-              :messages="messages"
-              :welcome-message="trimmedWelcomeMessage"
-              :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
-              :agent-name="virtualAgentFromSecondMessage?.agentName"
-              :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
-              :member-count="session?.members?.length ?? 2"
-              :active-options-message-id="lastUnansweredOptionsMessageId"
-              :skip-entrance-animation="skipEntranceAnimation"
-              @option-submitted="handleOptionSubmitted"
-            />
-          </Transition>
+            </template>
+          </UAlert>
         </div>
-        <!-- Bottom fade gradient -->
-        <div class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none" />
       </div>
-
-      <!-- Typing Indicator - fixed height, doesn't push messages -->
-      <TypingIndicator :typing-users="typingUsers" />
-
-      <MessageInput
-        v-if="!isOptionsMode"
-        ref="messageInputRef"
-        :session-id="sessionId"
-        :agent-id="authStore.user?.id || 1"
-        :selected-agent-id="selectedTargetAgentId"
-        :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
-        :selected-agent-name="selectedAgentName"
-        :members="session.members || []"
-        :is-new-conversation="isPlaceholderData ? undefined : messages.length === 0"
-        class="flex-shrink-0 sticky bottom-0"
-        @message-sent="handleMessageSent"
-        @scroll-to-bottom="scrollToBottom"
-        @target-agent-changed="handleTargetAgentChanged"
-      />
-    </div>
-
-    <!-- Session Not Found -->
-    <div v-else class="flex items-center justify-center p-6 h-full">
-      <div class="text-center max-w-md">
-        <UAlert
-          variant="soft"
-          :title="t('errors.sessionNotFound')"
-          :description="t('errors.accessDenied')"
-          class="mb-4"
-        >
-          <template #actions>
-            <UButton
-              size="xs"
-              variant="outline"
-              @click="navigateTo('/chats')"
-            >
-              {{ t('errors.backToChats') }}
-            </UButton>
-          </template>
-        </UAlert>
-      </div>
-    </div>
-
     </main>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
@@ -242,8 +302,16 @@
 </template>
 
 <script setup lang="ts">
-import { useChatSession, useChatSessions, useWelcomeMessage } from '@/app/composables/useChatQueries'
-import { useMarkMessagesRead, useUpdateSessionName, useSendMessage } from '@/app/composables/useChatMutations'
+import {
+  useChatSession,
+  useChatSessions,
+  useWelcomeMessage,
+} from '@/app/composables/useChatQueries'
+import {
+  useMarkMessagesRead,
+  useUpdateSessionName,
+  useSendMessage,
+} from '@/app/composables/useChatMutations'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
@@ -256,6 +324,9 @@ import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
 import ManageSessionUsers from '@/app/components/chat/ManageSessionUsers.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('ChatSession')
 
 const { t } = useI18n()
 
@@ -279,10 +350,10 @@ const messagesContainer = ref<HTMLElement | null>(null)
 const messageInputRef = ref<{ focus: () => void } | null>(null)
 
 // Chat auto-scroll composable
-const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(
-  messagesContainer,
-  { bottomThreshold: 50, smooth: true }
-)
+const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(messagesContainer, {
+  bottomThreshold: 50,
+  smooth: true,
+})
 
 // Track if user was at bottom when they sent their message
 // Used to decide scroll behavior when AI responds
@@ -333,7 +404,7 @@ watch(
       })
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // Focus chat input on desktop when session loads
@@ -341,12 +412,12 @@ watch(
   () => session.value,
   (newSession) => {
     if (newSession && !isMobile.value) {
-      nextTick(() => {
+      void nextTick(() => {
         messageInputRef.value?.focus()
       })
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // Fetch selectable users to determine target agentId
@@ -358,7 +429,7 @@ const { isPrimarySession, otherMemberName, otherMemberId } = usePrimarySession(
   session,
   allSessions,
   selectableUsers,
-  currentUserEmail
+  currentUserEmail,
 )
 
 // Use messages from session + failed messages from store
@@ -378,9 +449,8 @@ const selectableTargetAgents = computed(() => {
   }
 
   // Filter to only virtual agents who are session members
-  return selectableUsers.value.filter(user =>
-    session.value.members.includes(user.email) &&
-    user.isVirtual
+  return selectableUsers.value.filter(
+    (user) => session.value.members.includes(user.email) && user.isVirtual,
   )
 })
 
@@ -396,7 +466,7 @@ const lastUnansweredOptionsMessageId = computed(() => {
   for (let i = msgs.length - 1; i >= 0; i--) {
     const msg = msgs[i]
     if (msg?.messageType === AIAnswerType.Options) {
-      const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
+      const hasUserAfter = msgs.slice(i + 1).some((m) => m.senderUserCode === userEmail)
       return hasUserAfter ? undefined : msg.messageID
     }
   }
@@ -407,7 +477,7 @@ const isOptionsMode = computed(() => !!lastUnansweredOptionsMessageId.value)
 
 async function handleOptionSubmitted(answer: string) {
   if (!session.value) return
-  const targetAgentId = selectedTargetAgentId.value ?? (authStore.user?.id ?? 1)
+  const targetAgentId = selectedTargetAgentId.value ?? authStore.user?.id ?? 1
   const request: AiQuestionRequestDTO = {
     userCode: authStore.user?.email ?? '',
     sessionId,
@@ -434,8 +504,8 @@ const virtualAgentFromSecondMessage = computed(() => {
   }
 
   // Sort messages by sendDate to find chronologically second message
-  const sortedMsgs = [...msgs].sort((a, b) =>
-    new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime()
+  const sortedMsgs = [...msgs].sort(
+    (a, b) => new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime(),
   )
 
   const firstMsg = sortedMsgs[0]
@@ -445,13 +515,13 @@ const virtualAgentFromSecondMessage = computed(() => {
   const senderCode = secondMsg.senderUserCode
 
   // Find the user in selectableUsers by email (senderUserCode is email)
-  const sender = selectableUsers.value.find(u => u.email === senderCode)
+  const sender = selectableUsers.value.find((u) => u.email === senderCode)
 
   if (sender?.isVirtual) {
     return {
       agentId: sender.id,
       agentName: sender.name,
-      firstMessageDate: firstMsg.sendDate
+      firstMessageDate: firstMsg.sendDate,
     }
   }
 
@@ -463,8 +533,8 @@ const { data: welcomeMessageData, isLoading: isWelcomeMessageLoading } = useWelc
   computed(() => virtualAgentFromSecondMessage.value?.agentId ?? 0),
   {
     enabled: computed(() => !!virtualAgentFromSecondMessage.value),
-    sessionId: sessionId
-  }
+    sessionId: sessionId,
+  },
 )
 
 // Trim quotes from welcome message (same pattern as /chats/new.vue)
@@ -512,18 +582,22 @@ const singleVirtualAgent = computed(() => {
 })
 
 // Auto-select the single virtual agent in 2-member sessions
-watch([isSingleVirtualAgentSession, singleVirtualAgent], () => {
-  if (isSingleVirtualAgentSession.value && singleVirtualAgent.value) {
-    selectedTargetAgentId.value = singleVirtualAgent.value.id
-  }
-}, { immediate: true })
+watch(
+  [isSingleVirtualAgentSession, singleVirtualAgent],
+  () => {
+    if (isSingleVirtualAgentSession.value && singleVirtualAgent.value) {
+      selectedTargetAgentId.value = singleVirtualAgent.value.id
+    }
+  },
+  { immediate: true },
+)
 
 // Get the name of the currently selected agent (for placeholder text)
 const selectedAgentName = computed(() => {
   if (!selectedTargetAgentId.value) {
     return undefined
   }
-  const agent = selectableTargetAgents.value.find(a => a.id === selectedTargetAgentId.value)
+  const agent = selectableTargetAgents.value.find((a) => a.id === selectedTargetAgentId.value)
   return agent?.name
 })
 
@@ -532,9 +606,9 @@ const otherParticipantNames = computed(() => {
   if (!session.value?.members || !selectableUsers.value) return ''
   const currentEmail = authStore.user?.email
   return session.value.members
-    .filter(email => email !== currentEmail)
-    .map(email => {
-      const user = selectableUsers.value!.find(u => u.email === email)
+    .filter((email) => email !== currentEmail)
+    .map((email) => {
+      const user = selectableUsers.value!.find((u) => u.email === email)
       return user?.name ?? email
     })
     .join(', ')
@@ -550,7 +624,7 @@ function startEditingTitle() {
   if (!session.value) return
   editedTitle.value = session.value.sessionName
   isEditingTitle.value = true
-  nextTick(() => {
+  void nextTick(() => {
     const input = titleInputRef.value
     if (input) {
       input.focus()
@@ -579,14 +653,17 @@ function saveTitle() {
     return
   }
 
-  updateSessionName({
-    sessionId: session.value.sessionId,
-    sessionName: trimmedTitle,
-    agentId: session.value.agentId,
-  }, {
-    onSuccess: () => cancelEditingTitle(),
-    onError: () => cancelEditingTitle(),
-  })
+  updateSessionName(
+    {
+      sessionId: session.value.sessionId,
+      sessionName: trimmedTitle,
+      agentId: session.value.agentId,
+    },
+    {
+      onSuccess: () => cancelEditingTitle(),
+      onError: () => cancelEditingTitle(),
+    },
+  )
 }
 
 function handleTitleKeydown(event: KeyboardEvent) {
@@ -612,11 +689,11 @@ watchEffect(() => {
     if (err.code === 'NOT_FOUND' || err.statusCode === 404) {
       // Session not found - redirect to chats list after a short delay
       setTimeout(() => {
-        navigateTo('/chats')
+        void navigateTo('/chats')
       }, 3000)
     } else if (err.code === 'FORBIDDEN' || err.statusCode === 403) {
       // Access denied - redirect to chats list
-      navigateTo('/chats')
+      void navigateTo('/chats')
     }
   }
 })
@@ -645,16 +722,14 @@ function getUserFriendlyMessage(error: unknown): string {
   return t('errors.unexpectedCreateError')
 }
 
-
 // Handle message sent event
 function handleMessageSent() {
   // Only scroll if user is still at the bottom (they may have scrolled up while waiting)
   if (isAtBottom.value) {
     scrollToBottom()
   }
-  if (import.meta.dev) console.log('Message sent successfully, isAtBottom:', isAtBottom.value)
+  if (import.meta.dev) logger.debug('Message sent successfully, isAtBottom:', isAtBottom.value)
 }
-
 
 // Auto-scroll when messages change (new message arrives)
 // NOTE: We check isAtBottom BEFORE DOM updates (default flush),
@@ -680,11 +755,12 @@ watch(
       scrollToBottom()
     } else {
       // AI responded - only scroll if user was at bottom when they sent message AND still at bottom
-      if (import.meta.dev) console.log('[auto-scroll] AI message received:', {
-        wasAtBottomWhenUserSentMessage: wasAtBottomWhenUserSentMessage.value,
-        isAtBottom: isAtBottom.value,
-        willScroll: wasAtBottomWhenUserSentMessage.value && isAtBottom.value
-      })
+      if (import.meta.dev)
+        logger.debug('[auto-scroll] AI message received:', {
+          wasAtBottomWhenUserSentMessage: wasAtBottomWhenUserSentMessage.value,
+          isAtBottom: isAtBottom.value,
+          willScroll: wasAtBottomWhenUserSentMessage.value && isAtBottom.value,
+        })
 
       if (wasAtBottomWhenUserSentMessage.value && isAtBottom.value) {
         const userMessageIndex = newMessages.length - 2
@@ -699,18 +775,22 @@ watch(
     }
     // If user scrolled up before sending, don't auto-scroll on AI response
   },
-  { deep: true }
+  { deep: true },
 )
 
 // Scroll to bottom when messages become ready (handles cached data where Transition @after-enter won't fire).
 // When data is cached, isMessagesReady is true from the first render — the shimmer is never shown,
 // so the Transition never fires @after-enter. This watch catches that case.
-watch(isMessagesReady, (ready) => {
-  if (ready && !hasInitiallyScrolled.value) {
-    hasInitiallyScrolled.value = true
-    nextTick(() => scrollToBottom(true))
-  }
-}, { immediate: true })
+watch(
+  isMessagesReady,
+  (ready) => {
+    if (ready && !hasInitiallyScrolled.value) {
+      hasInitiallyScrolled.value = true
+      void nextTick(() => scrollToBottom(true))
+    }
+  },
+  { immediate: true },
+)
 
 // Scroll to bottom as soon as messages enter the DOM (while still invisible at opacity: 0).
 // The @enter hook fires before the fade-in CSS transition starts, so the user never sees

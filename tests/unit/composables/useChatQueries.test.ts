@@ -20,7 +20,10 @@ describe('chatQueryKeys — cache key structure', () => {
 
   it('messages key is scoped under session', () => {
     expect(chatQueryKeys.messages('session-123')).toEqual([
-      'chat', 'sessions', 'session-123', 'messages'
+      'chat',
+      'sessions',
+      'session-123',
+      'messages',
     ])
   })
 
@@ -34,7 +37,9 @@ describe('chatQueryKeys — cache key structure', () => {
 
   it('sessionUnread key is scoped under all with session id', () => {
     expect(chatQueryKeys.sessionUnread('session-789')).toEqual([
-      'chat', 'sessionUnread', 'session-789'
+      'chat',
+      'sessionUnread',
+      'session-789',
     ])
   })
 

@@ -107,7 +107,7 @@ export const sanitizeHTML = (dirty: string): string => {
     // Filter dangerous CSS values from style attributes
     DOMPurify.addHook('uponSanitizeAttribute', (_node, data) => {
       if (data.attrName === 'style') {
-        const dangerous = /url\s*\(|expression\s*\(|javascript:|position\s*:\s*(fixed|absolute)/i
+        const dangerous = /url\s*\(|expression\s*\(|javascript:|position\s*:\s*(?:fixed|absolute)/i
         if (dangerous.test(data.attrValue)) {
           data.keepAttr = false
         }

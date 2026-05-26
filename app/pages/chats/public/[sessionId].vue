@@ -2,7 +2,10 @@
   <div class="flex flex-col h-full min-h-0 overflow-hidden">
     <!-- Chat Content -->
     <template v-if="session">
-      <div ref="messagesContainer" class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col">
+      <div
+        ref="messagesContainer"
+        class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col"
+      >
         <div class="flex-1" />
         <ChatMessages
           :messages="messages"
@@ -38,8 +41,13 @@
     </template>
 
     <!-- Spinner shown while redirecting (no cached session) -->
-    <div v-else class="flex items-center justify-center h-full">
-      <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+    <div
+      v-else
+      class="flex items-center justify-center h-full"
+    >
+      <div
+        class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"
+      />
     </div>
   </div>
 </template>
@@ -88,7 +96,7 @@ const agentId = computed(() => publicAgentId.value ?? session.value?.agentId ?? 
 
 // Fetch agent info using startPublicChat endpoint (same pattern as new/[agentId].vue)
 const { data: publicChatData } = usePublicChatAgent(agentId, {
-  enabled: computed(() => !!agentId.value && authStore.isAuthenticated)
+  enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
 })
 
 // Get agent name from public chat data
@@ -97,7 +105,7 @@ const agentName = computed(() => publicChatData.value?.agent?.name)
 // Fetch welcome message for the agent
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
-  sessionId
+  sessionId,
 })
 
 // Trim quotes from welcome message
@@ -140,7 +148,7 @@ const lastUnansweredOptionsMessageId = computed(() => {
   for (let i = msgs.length - 1; i >= 0; i--) {
     const msg = msgs[i]
     if (msg && msg.messageType === AIAnswerType.Options) {
-      const hasUserAfter = msgs.slice(i + 1).some(m => m.senderUserCode === userEmail)
+      const hasUserAfter = msgs.slice(i + 1).some((m) => m.senderUserCode === userEmail)
       return hasUserAfter ? undefined : msg.messageID
     }
   }
@@ -196,13 +204,13 @@ watch(
       scrollToBottom()
     }
   },
-  { deep: true }
+  { deep: true },
 )
 
 // Page meta
 definePageMeta({
   layout: 'public',
-  key: route => route.fullPath,
+  key: (route) => route.fullPath,
 })
 
 useSeoMeta({

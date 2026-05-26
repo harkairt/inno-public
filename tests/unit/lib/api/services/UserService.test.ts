@@ -7,11 +7,11 @@ vi.mock('@/lib/api/client', () => ({
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),
-  }
+  },
 }))
 
 vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((e) => e)
+  normalizeApiError: vi.fn((e: unknown) => e),
 }))
 
 function makeRawUser(overrides = {}) {
@@ -51,10 +51,9 @@ describe('UserService.getSelectableUsers', () => {
       expect(result.value[0]?.email).toBe('test@example.com')
     }
 
-    expect(apiClient.get).toHaveBeenCalledWith(
-      '/api/user/get-selectable-users',
-      { params: { email: 'test@example.com' } }
-    )
+    expect(apiClient.get).toHaveBeenCalledWith('/api/user/get-selectable-users', {
+      params: { email: 'test@example.com' },
+    })
   })
 
   it('returns empty array when no users', async () => {
@@ -73,7 +72,7 @@ describe('UserService.getSelectableUsers', () => {
       makeApiResponse([
         makeRawUser({ id: 1, email: 'user1@example.com' }),
         makeRawUser({ id: 2, email: 'user2@example.com' }),
-      ])
+      ]),
     )
 
     const result = await userService.getSelectableUsers('admin@example.com')
@@ -86,7 +85,7 @@ describe('UserService.getSelectableUsers', () => {
 
   it('returns VALIDATION_ERROR for invalid user shape', async () => {
     vi.mocked(apiClient.get).mockResolvedValue(
-      makeApiResponse([{ id: 'not-a-number', name: 'Bad' }])
+      makeApiResponse([{ id: 'not-a-number', name: 'Bad' }]),
     )
 
     const result = await userService.getSelectableUsers('test@example.com')

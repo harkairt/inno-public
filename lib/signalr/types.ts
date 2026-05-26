@@ -8,10 +8,10 @@ export type ConnectionState =
 export interface SignalRConfig {
   hubUrl: string
   automaticReconnect: boolean
-  reconnectDelays: number[]  // ms delays between reconnect attempts
-  connectionTimeoutMs?: number     // Default: 15000
-  serverTimeoutMs?: number         // Default: 30000
-  keepAliveIntervalMs?: number     // Default: 15000
+  reconnectDelays: number[] // ms delays between reconnect attempts
+  connectionTimeoutMs?: number // Default: 15000
+  serverTimeoutMs?: number // Default: 30000
+  keepAliveIntervalMs?: number // Default: 15000
 }
 
 export interface SignalRMessage {
@@ -97,8 +97,9 @@ export interface SignalREventRegistry {
  * Type-safe SignalR event handler
  * @template TArgs - Tuple type of event arguments
  */
-export type SignalREventHandler<TArgs extends readonly unknown[] = readonly unknown[]> =
-  (...args: TArgs) => void | Promise<void>
+export type SignalREventHandler<TArgs extends readonly unknown[] = readonly unknown[]> = (
+  ...args: TArgs
+) => void | Promise<void>
 
 /**
  * Helper type to extract event names from registry
@@ -109,5 +110,6 @@ export type SignalREventName = keyof SignalREventRegistry
  * Helper type to extract handler type for specific event
  * @template TEventName - Name of the event
  */
-export type SignalREventHandlerFor<TEventName extends SignalREventName> =
-  SignalREventHandler<SignalREventRegistry[TEventName]>
+export type SignalREventHandlerFor<TEventName extends SignalREventName> = SignalREventHandler<
+  SignalREventRegistry[TEventName]
+>

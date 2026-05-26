@@ -1,83 +1,91 @@
 function isInternalRedirect(path: string): boolean {
-  // Must start with / and must NOT start with // (protocol-relative URL)
-  // Must not contain :// (absolute URL disguised as path)
   return path.startsWith('/') && !path.startsWith('//') && !path.includes('://')
+}
+
+function normalizePath(path: string): string {
+  return path === '/' ? '/' : path.replace(/\/$/, '')
+}
+
+function redirectToPublicChat(getPublicChatUrl: () => string | null) {
+  const url = getPublicChatUrl()
+  if (url) {
+    return navigateTo(url, { replace: true })
+  }
+}
+
+function handlePublicModeRouting(
+  normalizedPath: string,
+  isPublicChatRoute: boolean,
+  isValidPublicAgent: (id: string) => boolean,
+  getPublicChatUrl: () => string | null,
+) {
+  // Block access to non-public-chat routes (except login for auth errors)
+  if (!isPublicChatRoute && normalizedPath !== '/login') {
+    return redirectToPublicChat(getPublicChatUrl)
+  }
+
+  // Validate agent ID on public chat routes
+  if (isPublicChatRoute) {
+    const agentRedirect = validatePublicAgent(normalizedPath, isValidPublicAgent, getPublicChatUrl)
+    if (agentRedirect) return agentRedirect
+
+    // Skip normal auth checks — the public-auth plugin handles authentication
+    return
+  }
+}
+
+function validatePublicAgent(
+  normalizedPath: string,
+  isValidPublicAgent: (id: string) => boolean,
+  getPublicChatUrl: () => string | null,
+) {
+  const match = normalizedPath.match(/^\/chats\/public\/new\/(\d+)$/)
+  if (!match?.[1]) return undefined
+
+  if (!isValidPublicAgent(match[1])) {
+    return redirectToPublicChat(getPublicChatUrl)
+  }
+}
+
+function handleAuthenticatedLoginRedirect(query: Record<string, unknown>) {
+  const redirect = (query.redirect as string) || '/'
+  if (redirect === '/login' || redirect.startsWith('/login?') || redirect.startsWith('/login/')) {
+    return navigateTo('/')
+  }
+  return navigateTo(isInternalRedirect(redirect) ? redirect : '/')
 }
 
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
-  // Handle publicMode routing and publicAgent validation
   const { isPublicMode, isValidPublicAgent, getPublicChatUrl } = usePublicMode()
 
-  // List of public routes that don't require authentication
   const publicRoutes = ['/login']
-
-  // Normalize path by removing trailing slash (except for root)
-  const normalizedPath = to.path === '/' ? '/' : to.path.replace(/\/$/, '')
-
-  // Check if the destination route is a public chat route
+  const normalizedPath = normalizePath(to.path)
   const isPublicChatRoute = normalizedPath.startsWith('/chats/public/')
-
-  // Check if the destination route is public
   const isPublicRoute = publicRoutes.includes(normalizedPath)
 
   // PUBLIC MODE HANDLING
   if (isPublicMode.value) {
-    // In public mode, block access to non-public-chat routes (except login for auth errors)
-    if (!isPublicChatRoute && normalizedPath !== '/login') {
-      // Redirect to public chat entry point
-      const publicChatUrl = getPublicChatUrl()
-      if (publicChatUrl) {
-        return navigateTo(publicChatUrl, { replace: true })
-      }
-    }
-
-    // If accessing public chat route, validate agent ID
-    if (isPublicChatRoute) {
-      // Extract agentId from /chats/public/new/[agentId] pattern
-      const match = normalizedPath.match(/^\/chats\/public\/new\/(\d+)$/)
-      if (match?.[1]) {
-        const agentIdFromRoute = match[1]
-        // If agent ID doesn't match config, redirect to correct one
-        if (!isValidPublicAgent(agentIdFromRoute)) {
-          const publicChatUrl = getPublicChatUrl()
-          if (publicChatUrl) {
-            return navigateTo(publicChatUrl, { replace: true })
-          }
-        }
-      }
-    }
-
-    // In public mode, skip normal auth checks for public chat routes
-    // (the public-auth plugin handles authentication)
-    if (isPublicChatRoute) {
-      return
-    }
+    return handlePublicModeRouting(
+      normalizedPath,
+      isPublicChatRoute,
+      isValidPublicAgent,
+      getPublicChatUrl,
+    )
   }
 
   // PRIVATE MODE HANDLING - block public routes
-  if (!isPublicMode.value && isPublicChatRoute) {
-    // In private mode, redirect public chat routes to login
+  if (isPublicChatRoute) {
     return navigateTo('/login', { replace: true })
   }
 
-  // If user is not authenticated and trying to access a protected route
+  // Unauthenticated user accessing a protected route
   if (!authStore.isAuthenticated && !isPublicRoute) {
-    // Save the intended destination to redirect after login
-    return navigateTo({
-      path: '/login',
-      query: { redirect: to.fullPath }
-    })
+    return navigateTo({ path: '/login', query: { redirect: to.fullPath } })
   }
 
-  // If user is already authenticated and trying to access login page
+  // Authenticated user accessing login page — redirect away
   if (authStore.isAuthenticated && normalizedPath === '/login') {
-    // Redirect to home or the intended destination
-    const redirect = (to.query.redirect as string) || '/'
-    // Prevent redirect loop to login page itself
-    if (redirect === '/login' || redirect.startsWith('/login?') || redirect.startsWith('/login/')) {
-      return navigateTo('/')
-    }
-    return navigateTo(isInternalRedirect(redirect) ? redirect : '/')
+    return handleAuthenticatedLoginRedirect(to.query as Record<string, unknown>)
   }
 })

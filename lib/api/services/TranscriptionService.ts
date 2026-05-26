@@ -83,7 +83,7 @@ export class TranscriptionService {
       const output = data[0]
 
       // Parse JSON string response from Gradio (the Python function returns json.dumps())
-      const parsed = typeof output === 'string' ? JSON.parse(output) : output
+      const parsed: unknown = typeof output === 'string' ? JSON.parse(output) : output
 
       // Validate response with Zod
       const parseResult = TranscriptionResponseDTOSchema.safeParse(parsed)
@@ -101,14 +101,9 @@ export class TranscriptionService {
       // Check if transcription succeeded
       if (!parseResult.data.success) {
         return err(
-          new AppError(
-            ErrorCode.SERVER_ERROR,
-            parseResult.data.error ?? 'Transcription failed',
-          ),
+          new AppError(ErrorCode.SERVER_ERROR, parseResult.data.error ?? 'Transcription failed'),
         )
       }
-
-
 
       return ok(parseResult.data)
     } catch (error) {
@@ -129,9 +124,14 @@ export class TranscriptionService {
 
       const data = result.data as unknown[]
       const output = data[0]
-      const parsed = typeof output === 'string' ? JSON.parse(output) : output
+      const parsed: unknown = typeof output === 'string' ? JSON.parse(output) : output
 
-      return ok(parsed?.status === 'healthy')
+      const isHealthy =
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'status' in parsed &&
+        (parsed as { status: unknown }).status === 'healthy'
+      return ok(isHealthy)
     } catch (error) {
       // Reset client on error to allow reconnection
       this.client = null
@@ -151,7 +151,7 @@ export class TranscriptionService {
 let _instance: TranscriptionService | null = null
 
 export function useTranscriptionService(): TranscriptionService {
-  _instance ??= new TranscriptionService();
+  _instance ??= new TranscriptionService()
   return _instance
 }
 

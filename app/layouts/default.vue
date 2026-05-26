@@ -1,11 +1,20 @@
 <template>
-  <div v-if="isMobile" class="flex flex-col h-dvh">
-    <main class="relative flex-1 overflow-hidden" :class="{ 'pb-20': showBottomTabBar }">
+  <div
+    v-if="isMobile"
+    class="flex flex-col h-dvh"
+  >
+    <main
+      class="relative flex-1 overflow-hidden"
+      :class="{ 'pb-20': showBottomTabBar }"
+    >
       <slot />
     </main>
     <AppBottomTabBar v-if="showBottomTabBar" />
   </div>
-  <div v-else class="flex h-dvh">
+  <div
+    v-else
+    class="flex h-dvh"
+  >
     <AppRail v-if="showRail" />
     <main class="relative flex-1 flex flex-col overflow-hidden">
       <slot />

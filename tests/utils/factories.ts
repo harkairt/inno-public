@@ -37,8 +37,13 @@ export function makeApiResponse<T>(data: T) {
  * @example
  * vi.mocked(apiClient.post).mockRejectedValue(makeAxiosError(401, 'UNAUTHORIZED'))
  */
-export function makeAxiosError(status: number, code?: string): Error & { response: { status: number; data?: unknown } } {
-  const error = new Error(code ?? `HTTP ${status}`) as Error & { response: { status: number; data?: unknown } }
+export function makeAxiosError(
+  status: number,
+  code?: string,
+): Error & { response: { status: number; data?: unknown } } {
+  const error = new Error(code ?? `HTTP ${status}`) as Error & {
+    response: { status: number; data?: unknown }
+  }
   error.response = { status, data: code ? { error: { code } } : undefined }
   return error
 }

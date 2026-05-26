@@ -19,7 +19,6 @@ export class UserService {
         { params: { email } },
       )
 
-      
       const users = response.data.data ?? []
 
       // Validate each user with Zod
@@ -27,12 +26,14 @@ export class UserService {
       for (const user of users) {
         const parseResult = UserDTOSchema.safeParse(user)
         if (!parseResult.success) {
-          return err(new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            'Invalid user data format',
-            undefined,
-            parseResult.error,
-          ))
+          return err(
+            new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              'Invalid user data format',
+              undefined,
+              parseResult.error,
+            ),
+          )
         }
         validatedUsers.push(parseResult.data)
       }

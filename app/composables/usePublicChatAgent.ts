@@ -20,7 +20,7 @@ export function usePublicChatAgent(
   agentId: MaybeRefOrGetter<number | null>,
   options?: {
     enabled?: MaybeRefOrGetter<boolean>
-  }
+  },
 ) {
   const authStore = useAuthStore()
 
@@ -63,7 +63,11 @@ export function usePublicChatAgent(
     retry: (failureCount, error) => {
       if (error && typeof error === 'object' && 'code' in error) {
         const appError = error as AppError
-        if (appError.code === 'UNAUTHORIZED' || appError.code === 'FORBIDDEN' || appError.code === 'NOT_FOUND') {
+        if (
+          appError.code === 'UNAUTHORIZED' ||
+          appError.code === 'FORBIDDEN' ||
+          appError.code === 'NOT_FOUND'
+        ) {
           return false
         }
       }

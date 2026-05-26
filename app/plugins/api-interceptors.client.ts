@@ -21,6 +21,9 @@ import {
   setAuthStore,
 } from '@/lib/api/interceptors/response'
 import { useAuthStore } from '@/app/stores/auth'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('ApiInterceptors')
 
 // Module-level flag to track if interceptors have been set up
 let interceptorsConfigured = false
@@ -28,11 +31,11 @@ let interceptorsConfigured = false
 export default defineNuxtPlugin(() => {
   // Check if interceptors are already set up to avoid duplication
   if (interceptorsConfigured) {
-    console.log('🔌 API interceptors already configured')
+    logger.debug('API interceptors already configured')
     return
   }
 
-  console.log('🔌 Setting up API interceptors...')
+  logger.debug('Setting up API interceptors...')
 
   // Get auth store in plugin context (where we have Nuxt context)
   const authStore = useAuthStore()
@@ -77,7 +80,7 @@ export default defineNuxtPlugin(() => {
   // Mark interceptors as configured
   interceptorsConfigured = true
 
-  console.log('✅ API interceptors configured successfully')
+  logger.info('API interceptors configured successfully')
 })
 
 // ============================================================================
@@ -98,7 +101,7 @@ export function clearApiInterceptors(): void {
   // Reset configuration flag
   interceptorsConfigured = false
 
-  console.log('🧹 All API interceptors cleared')
+  logger.debug('All API interceptors cleared')
 }
 
 // Export for type augmentation and testing

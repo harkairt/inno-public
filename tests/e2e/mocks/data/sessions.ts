@@ -142,7 +142,9 @@ export const mockSessions = {
 }
 
 // Helper to create a custom session header
-export function createMockSessionHeader(overrides: Partial<AISessionHeaderDTO>): AISessionHeaderDTO {
+export function createMockSessionHeader(
+  overrides: Partial<AISessionHeaderDTO>,
+): AISessionHeaderDTO {
   return {
     ...mockSessions.basicHeader,
     sessionId: `session-${Date.now()}`,

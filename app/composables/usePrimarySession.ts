@@ -14,7 +14,7 @@ function isPrimarySessionCheck(
   session: AISessionDTO | AISessionHeaderDTO,
   allSessions: AISessionHeaderDTO[],
   users: UserDTO[],
-  currentUserEmail: string
+  currentUserEmail: string,
 ): boolean {
   // Must have exactly 2 members
   if (session.members.length !== 2) {
@@ -27,22 +27,22 @@ function isPrimarySessionCheck(
   }
 
   // Get the other member's email
-  const otherEmail = session.members.find(email => email !== currentUserEmail)
+  const otherEmail = session.members.find((email) => email !== currentUserEmail)
   if (!otherEmail) {
     return false
   }
 
   // Check if the other member is a real (non-virtual) user
-  const memberDetail = session.memberDetails?.find(m => m.email === otherEmail)
+  const memberDetail = session.memberDetails?.find((m) => m.email === otherEmail)
   if (memberDetail) {
     if (memberDetail.isVirtual) return false
   } else {
-    const user = users.find(u => u.email === otherEmail)
+    const user = users.find((u) => u.email === otherEmail)
     if (!user || user.isVirtual) return false
   }
 
   // Find all 2-member sessions between current user and the other user
-  const sessionsBetweenUsers = allSessions.filter(s => {
+  const sessionsBetweenUsers = allSessions.filter((s) => {
     if (s.members.length !== 2) return false
     return s.members.includes(currentUserEmail) && s.members.includes(otherEmail)
   })
@@ -52,8 +52,8 @@ function isPrimarySessionCheck(
   }
 
   // Sort by insertDate (oldest first)
-  const sorted = [...sessionsBetweenUsers].sort((a, b) =>
-    new Date(a.insertDate).getTime() - new Date(b.insertDate).getTime()
+  const sorted = [...sessionsBetweenUsers].sort(
+    (a, b) => new Date(a.insertDate).getTime() - new Date(b.insertDate).getTime(),
   )
 
   // This session is primary if it's the oldest one
@@ -67,25 +67,25 @@ function isPrimarySessionCheck(
 function getOtherMemberInfo(
   session: AISessionDTO | AISessionHeaderDTO,
   currentUserEmail: string,
-  users: UserDTO[]
+  users: UserDTO[],
 ): { email: string; name: string; id: number | undefined } | null {
   if (session.members.length !== 2) {
     return null
   }
 
-  const otherEmail = session.members.find(email => email !== currentUserEmail)
+  const otherEmail = session.members.find((email) => email !== currentUserEmail)
   if (!otherEmail) {
     return null
   }
 
   // Try to get name from memberDetails first
-  const memberDetail = session.memberDetails?.find(m => m.email === otherEmail)
-  const user = users.find(u => u.email === otherEmail)
+  const memberDetail = session.memberDetails?.find((m) => m.email === otherEmail)
+  const user = users.find((u) => u.email === otherEmail)
 
   return {
     email: otherEmail,
     name: memberDetail?.name ?? user?.name ?? otherEmail,
-    id: user?.id
+    id: user?.id,
   }
 }
 
@@ -96,7 +96,7 @@ export function usePrimarySession(
   session: Ref<AISessionDTO | AISessionHeaderDTO | null | undefined>,
   allSessions: Ref<AISessionHeaderDTO[] | undefined>,
   selectableUsers: Ref<UserDTO[] | undefined>,
-  currentUserEmail: Ref<string | undefined>
+  currentUserEmail: Ref<string | undefined>,
 ): {
   isPrimarySession: ComputedRef<boolean>
   otherMemberName: ComputedRef<string>
@@ -106,7 +106,12 @@ export function usePrimarySession(
     if (!session.value || !allSessions.value || !selectableUsers.value || !currentUserEmail.value) {
       return false
     }
-    return isPrimarySessionCheck(session.value, allSessions.value, selectableUsers.value, currentUserEmail.value)
+    return isPrimarySessionCheck(
+      session.value,
+      allSessions.value,
+      selectableUsers.value,
+      currentUserEmail.value,
+    )
   })
 
   const otherMemberInfo = computed(() => {
@@ -127,7 +132,7 @@ export function usePrimarySession(
   return {
     isPrimarySession,
     otherMemberName,
-    otherMemberId
+    otherMemberId,
   }
 }
 
@@ -139,7 +144,7 @@ export function getPrimarySessionForUser(
   userId: number,
   currentUserEmail: string,
   sessions: AISessionHeaderDTO[],
-  users: UserDTO[]
+  users: UserDTO[],
 ): AISessionHeaderDTO | null {
   // Must have current user email
   if (!currentUserEmail) {
@@ -147,13 +152,13 @@ export function getPrimarySessionForUser(
   }
 
   // Find the target user's email
-  const targetUser = users.find(u => u.id === userId)
+  const targetUser = users.find((u) => u.id === userId)
   if (!targetUser || targetUser.isVirtual) {
     return null
   }
 
   // Find all 2-member sessions between current user and target user
-  const candidateSessions = sessions.filter(s => {
+  const candidateSessions = sessions.filter((s) => {
     if (s.members.length !== 2) return false
     return s.members.includes(currentUserEmail) && s.members.includes(targetUser.email)
   })
@@ -163,9 +168,9 @@ export function getPrimarySessionForUser(
   }
 
   // Filter to sessions where target user is real (current user is obviously real)
-  const realSessions = candidateSessions.filter(s => {
+  const realSessions = candidateSessions.filter((s) => {
     // Check if target user is real via memberDetails or users array
-    const memberDetail = s.memberDetails?.find(m => m.email === targetUser.email)
+    const memberDetail = s.memberDetails?.find((m) => m.email === targetUser.email)
     if (memberDetail) {
       return !memberDetail.isVirtual
     }
@@ -178,8 +183,8 @@ export function getPrimarySessionForUser(
   }
 
   // Return the oldest session (the primary one)
-  const sorted = [...realSessions].sort((a, b) =>
-    new Date(a.insertDate).getTime() - new Date(b.insertDate).getTime()
+  const sorted = [...realSessions].sort(
+    (a, b) => new Date(a.insertDate).getTime() - new Date(b.insertDate).getTime(),
   )
 
   return sorted[0] ?? null
@@ -194,7 +199,7 @@ export function getSessionDisplayName(
   session: AISessionHeaderDTO,
   currentUserEmail: string,
   sessions: AISessionHeaderDTO[],
-  users: UserDTO[]
+  users: UserDTO[],
 ): string {
   // Check if this is a primary session
   const isPrimary = isPrimarySessionCheck(session, sessions, users, currentUserEmail)
@@ -216,7 +221,7 @@ export function checkIsPrimarySession(
   session: AISessionHeaderDTO,
   sessions: AISessionHeaderDTO[],
   users: UserDTO[],
-  currentUserEmail: string
+  currentUserEmail: string,
 ): boolean {
   return isPrimarySessionCheck(session, sessions, users, currentUserEmail)
 }

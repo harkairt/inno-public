@@ -4,8 +4,8 @@ import { useConfigStore } from '~/stores/config'
 
 vi.mock('@/lib/api/services/ConfigService', () => ({
   configService: {
-    getConfig: vi.fn()
-  }
+    getConfig: vi.fn(),
+  },
 }))
 
 describe('Config Store — loadConfig', () => {
@@ -28,7 +28,7 @@ describe('Config Store — loadConfig', () => {
     vi.mocked(configService.getConfig).mockResolvedValue({
       isOk: () => true,
       isErr: () => false,
-      value: { mainColor: '#ff0000' }
+      value: { mainColor: '#ff0000' },
     } as ReturnType<typeof configService.getConfig> extends Promise<infer R> ? R : never)
 
     const store = useConfigStore()
@@ -47,7 +47,7 @@ describe('Config Store — loadConfig', () => {
     vi.mocked(configService.getConfig).mockResolvedValue({
       isOk: () => false,
       isErr: () => true,
-      error: new Error('Config unavailable')
+      error: new Error('Config unavailable'),
     } as ReturnType<typeof configService.getConfig> extends Promise<infer R> ? R : never)
 
     const store = useConfigStore()

@@ -49,9 +49,7 @@ export class AuthService {
    * Login with email and password
    * Returns Result<LoginResponseDTO, AppError> for explicit error handling
    */
-  async login(
-    credentials: LoginRequestDTO,
-  ): Promise<Result<LoginResponseDTO, AppError>> {
+  async login(credentials: LoginRequestDTO): Promise<Result<LoginResponseDTO, AppError>> {
     try {
       const response = await apiClient.post<ApiResponse<LoginResponseDTO['data']>>(
         '/api/authentication/login',
@@ -72,12 +70,14 @@ export class AuthService {
       })
 
       if (!validationResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid response from server',
-          undefined,
-          validationResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid response from server',
+            undefined,
+            validationResult.error,
+          ),
+        )
       }
 
       return ok(validationResult.data)
@@ -89,7 +89,10 @@ export class AuthService {
   /**
    * Refresh access token using accessToken and refreshToken
    */
-  async refreshToken(accessToken: string, refreshToken: string): Promise<Result<RefreshTokenResponseDTO, AppError>> {
+  async refreshToken(
+    accessToken: string,
+    refreshToken: string,
+  ): Promise<Result<RefreshTokenResponseDTO, AppError>> {
     try {
       const response = await apiClient.post<ApiResponse<RefreshTokenResponseDTO>>(
         '/api/authentication/refresh-token',
@@ -114,10 +117,9 @@ export class AuthService {
    */
   async getProfile(email: string): Promise<Result<UserDTO, AppError>> {
     try {
-      const response = await apiClient.get<ApiResponse<UserDTO>>(
-        '/api/authentication/profile',
-        { params: { email } },
-      )
+      const response = await apiClient.get<ApiResponse<UserDTO>>('/api/authentication/profile', {
+        params: { email },
+      })
 
       if (!response.data.data) {
         return err(new AppError(ErrorCode.NOT_FOUND, 'User not found'))
@@ -127,12 +129,14 @@ export class AuthService {
       const parseResult = UserDTOSchema.safeParse(response.data.data)
 
       if (!parseResult.success) {
-        return err(new AppError(
-          ErrorCode.VALIDATION_ERROR,
-          'Invalid user data from server',
-          undefined,
-          parseResult.error,
-        ))
+        return err(
+          new AppError(
+            ErrorCode.VALIDATION_ERROR,
+            'Invalid user data from server',
+            undefined,
+            parseResult.error,
+          ),
+        )
       }
 
       return ok(parseResult.data)
@@ -158,10 +162,7 @@ export class AuthService {
   /**
    * Set new password (after forgotten password flow)
    */
-  async setPassword(
-    token: string,
-    newPassword: string,
-  ): Promise<Result<void, AppError>> {
+  async setPassword(token: string, newPassword: string): Promise<Result<void, AppError>> {
     try {
       await apiClient.patch('/api/authentication/set-password', {
         token,

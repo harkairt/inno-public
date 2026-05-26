@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import { ref } from 'vue'
+import { ref, type Component } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 
@@ -31,7 +31,9 @@ async function renderMenu(props = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
-  const { default: SessionItemMenu } = await import('~/components/chat/SessionItemMenu.vue')
+  const { default: SessionItemMenu } = (await import('~/components/chat/SessionItemMenu.vue')) as {
+    default: Component
+  }
 
   return render(SessionItemMenu, {
     props: {
@@ -46,26 +48,30 @@ async function renderMenu(props = {}) {
         UButton: {
           name: 'UButton',
           props: ['disabled', 'type', 'loading', 'icon', 'color', 'variant', 'size', 'label'],
-          template: '<button :disabled="disabled" :type="type" v-bind="$attrs"><slot>{{ label }}</slot></button>',
+          template:
+            '<button :disabled="disabled" :type="type" v-bind="$attrs"><slot>{{ label }}</slot></button>',
         },
         UDropdownMenu: {
           name: 'UDropdownMenu',
           props: ['items'],
-          template: '<div data-testid="dropdown"><slot /><button v-for="item in items" :key="item.label" @click="item.onSelect" :data-label="item.label">{{ item.label }}</button></div>',
+          template:
+            '<div data-testid="dropdown"><slot /><button v-for="item in items" :key="item.label" @click="item.onSelect" :data-label="item.label">{{ item.label }}</button></div>',
         },
         UModal: {
           name: 'UModal',
           props: ['open', 'title'],
           emits: ['update:open'],
-          template: '<div v-if="open" data-testid="modal" :data-title="title"><slot name="content" /></div>',
+          template:
+            '<div v-if="open" data-testid="modal" :data-title="title"><slot name="content" /></div>',
         },
         UInput: {
           name: 'UInput',
           props: ['modelValue', 'placeholder', 'disabled'],
           emits: ['update:modelValue'],
-          template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" data-testid="session-name-input" />',
+          template:
+            '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" data-testid="session-name-input" />',
         },
-      }
+      },
     },
   })
 }
@@ -156,12 +162,12 @@ describe('SessionItemMenu — rename', () => {
 describe('SessionItemMenu — delete', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(global.useRoute).mockReturnValue({
+    ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
       params: {},
       query: {},
       path: '/',
       fullPath: '/',
-    } as any)
+    } as ReturnType<typeof useRoute>)
   })
 
   it('opens delete confirmation when delete is clicked', async () => {
@@ -171,17 +177,19 @@ describe('SessionItemMenu — delete', () => {
 
     // Delete modal should appear with confirmation
     const modals = screen.getAllByTestId('modal')
-    const deleteModal = modals.find(m => m.getAttribute('data-title') === 'chat.sessionMenu.deleteConfirmTitle')
+    const deleteModal = modals.find(
+      (m) => m.getAttribute('data-title') === 'chat.sessionMenu.deleteConfirmTitle',
+    )
     expect(deleteModal).toBeTruthy()
   })
 
   it('navigates to /chats when deleting the active session', async () => {
-    vi.mocked(global.useRoute).mockReturnValue({
+    ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
       params: { sessionId: 'session-1' },
       query: {},
       path: '/chats/session-1',
       fullPath: '/chats/session-1',
-    } as any)
+    } as ReturnType<typeof useRoute>)
 
     await renderMenu({ isPrimarySession: false })
 

@@ -1,37 +1,23 @@
-import { ref, computed, onUnmounted, readonly, type Ref } from 'vue'
+import { ref, computed, getCurrentInstance, onUnmounted, readonly, type Ref } from 'vue'
 import { SignalRService } from '@/lib/signalr/SignalRService'
 import { SignalROperations } from '@/lib/signalr/SignalROperations'
 import type { ConnectionState, SignalRConnectionInfo } from '@/lib/signalr/types'
 import { useAuthStore } from '@/app/stores/auth'
 
-export function useSignalR() {
-  const config = useRuntimeConfig()
-
-  // Get SignalR hub URL - use relative path in dev, full URL in production
-  const getSignalRHubUrl = (): string => {
-    if (import.meta.dev) {
-      return '/chatHub' // Relative URL proxied by Nitro in dev
-    }
-
-    // In production, use the API base URL (Netlify proxy)
-    const apiBaseUrl = config.public.apiBaseUrl
-    return `${apiBaseUrl}/chatHub`
+function getSignalRHubUrl(config: ReturnType<typeof useRuntimeConfig>): string {
+  if (import.meta.dev) {
+    return '/chatHub' // Relative URL proxied by Nitro in dev
   }
 
-  const service = SignalRService.getInstance({
-    hubUrl: getSignalRHubUrl(),
-    automaticReconnect: true,
-    reconnectDelays: [0, 1000, 2000, 5000, 10000],  // Exponential backoff
-  })
+  // In production, use the API base URL (Netlify proxy)
+  const apiBaseUrl = config.public.apiBaseUrl
+  return `${apiBaseUrl}/chatHub`
+}
 
-  // Operations for hub method invocations
-  const operations = new SignalROperations(service)
-
-  // Reactive state
+function createReactiveState(service: SignalRService) {
   const state: Ref<ConnectionState> = ref(service.getState())
   const connectionInfo: Ref<SignalRConnectionInfo> = ref(service.getConnectionInfo())
 
-  // Computed properties
   const isConnected = computed(() => state.value === 'connected')
   const isConnecting = computed(() => state.value === 'connecting')
   const isReconnecting = computed(() => state.value === 'reconnecting')
@@ -41,11 +27,28 @@ export function useSignalR() {
   const lastError = computed(() => connectionInfo.value.lastError)
   const connectionId = computed(() => connectionInfo.value.connectionId)
 
-  // Subscribe to state changes
+  return {
+    state,
+    connectionInfo,
+    isConnected,
+    isConnecting,
+    isReconnecting,
+    isDisconnected,
+    hasError,
+    reconnectAttempts,
+    lastError,
+    connectionId,
+  }
+}
+
+function subscribeToStateChanges(
+  service: SignalRService,
+  state: Ref<ConnectionState>,
+  connectionInfo: Ref<SignalRConnectionInfo>,
+) {
   const unsubscribeStateChange = service.on('stateChange', (...args: unknown[]) => {
     const newState = args[0] as unknown as ConnectionState
     state.value = newState
-
     connectionInfo.value = service.getConnectionInfo()
   })
 
@@ -57,39 +60,44 @@ export function useSignalR() {
     connectionInfo.value = service.getConnectionInfo()
   })
 
-  // Cleanup on unmount
-  onUnmounted(() => {
-    unsubscribeStateChange()
-    unsubscribeReconnected()
-    unsubscribeClosed()
+  return { unsubscribeStateChange, unsubscribeReconnected, unsubscribeClosed }
+}
+
+export function useSignalR() {
+  const config = useRuntimeConfig()
+
+  const service = SignalRService.getInstance({
+    hubUrl: getSignalRHubUrl(config),
+    automaticReconnect: true,
+    reconnectDelays: [0, 1000, 2000, 5000, 10000], // Exponential backoff
   })
 
-  /**
-   * Connect to SignalR hub
-   * Failures are silently handled - SignalR is optional (app uses HTTP polling as fallback)
-   */
+  const operations = new SignalROperations(service)
+  const reactiveState = createReactiveState(service)
+  const { state, connectionInfo, isConnected } = reactiveState
+
+  const subs = subscribeToStateChanges(service, state, connectionInfo)
+
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      subs.unsubscribeStateChange()
+      subs.unsubscribeReconnected()
+      subs.unsubscribeClosed()
+    })
+  }
+
   async function connect(accessToken?: string): Promise<void> {
     const authStore = useAuthStore()
-
     try {
-      // Get token from auth store if not provided
       const token = accessToken ?? authStore.accessToken ?? ''
-
-      if (!token) {
-        return // Silent fail - app works without SignalR
-      }
-
+      if (!token) return
       await service.connect(token)
       connectionInfo.value = service.getConnectionInfo()
     } catch {
-      // Silent fail - SignalR is for real-time updates only, app uses HTTP polling as fallback
       connectionInfo.value = service.getConnectionInfo()
     }
   }
 
-  /**
-   * Disconnect from SignalR hub
-   */
   async function disconnect(): Promise<void> {
     try {
       await service.disconnect()
@@ -100,91 +108,51 @@ export function useSignalR() {
     }
   }
 
-  /**
-   * Force reconnection
-   * Failures are silently handled - SignalR is optional
-   */
   async function forceReconnect(accessToken?: string): Promise<void> {
     const authStore = useAuthStore()
-
     try {
       const token = accessToken ?? authStore.accessToken ?? ''
-
-      if (!token) {
-        return // Silent fail
-      }
-
+      if (!token) return
       await service.forceReconnect(token)
       connectionInfo.value = service.getConnectionInfo()
     } catch {
-      // Silent fail - app works without SignalR
       connectionInfo.value = service.getConnectionInfo()
     }
   }
 
-  /**
-   * Subscribe to SignalR event with automatic cleanup
-   */
   function onEvent<T extends readonly unknown[] = readonly unknown[]>(
     eventName: string,
-    handler: (...args: T) => void
+    handler: (...args: T) => void,
   ): () => void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SignalR handler requires flexible typing
     return service.on(eventName, handler as (...args: any[]) => void)
   }
 
-  /**
-   * Invoke server method
-   */
-  async function invoke<TResult = unknown>(methodName: string, ...args: unknown[]): Promise<TResult> {
+  async function invoke<TResult = unknown>(
+    methodName: string,
+    ...args: unknown[]
+  ): Promise<TResult> {
     return await service.invoke(methodName, ...args)
   }
 
-  /**
-   * Send message to server without waiting for response
-   */
   function send(methodName: string, ...args: unknown[]): void {
-    service.send(methodName, ...args)
+    void service.send(methodName, ...args)
   }
 
-  /**
-   * Check if service is ready for operations
-   */
-  function isReady(): boolean {
-    return isConnected.value
-  }
-
-  /**
-   * Get service instance for advanced usage
-   */
-  function getService(): SignalRService {
-    return service
-  }
+  const { state: _state, connectionInfo: _connInfo, ...derivedState } = reactiveState
 
   return {
-    // State (readonly for external consumers)
     state: readonly(state),
     connectionInfo: readonly(connectionInfo),
-    isConnected,
-    isConnecting,
-    isReconnecting,
-    isDisconnected,
-    hasError,
-    reconnectAttempts,
-    lastError,
-    connectionId,
-
-    // Methods
+    ...derivedState,
     connect,
     disconnect,
     forceReconnect,
     onEvent,
     invoke,
     send,
-    isReady,
-    getService,
-
-    // Hub operations
+    isReady: (): boolean => isConnected.value,
+    getService: (): SignalRService => service,
     operations,
   }
 }

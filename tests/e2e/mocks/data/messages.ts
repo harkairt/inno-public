@@ -200,7 +200,8 @@ export const mockConversation: AISessionMessageDTO[] = [
   {
     ...mockMessages.agentText,
     messageID: 'conv-004',
-    messageText: 'I\'d be happy to help with coding! What programming language are you working with?',
+    messageText:
+      "I'd be happy to help with coding! What programming language are you working with?",
     sendDate: '2024-01-15T10:31:30Z',
   },
 ]

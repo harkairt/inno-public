@@ -45,8 +45,8 @@ export function groupMessagesByDate(messages: ChatMessage[]): MessageGroup[] {
   groups.forEach((messages, date) => {
     result.push({
       date,
-      messages: messages.sort((a, b) =>
-        new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime()
+      messages: messages.sort(
+        (a, b) => new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime(),
       ),
     })
   })
@@ -80,13 +80,13 @@ function formatDate(date: Date): string {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      weekday: 'short'
+      weekday: 'short',
     })
   } else {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     })
   }
 }
@@ -125,10 +125,9 @@ export function formatTime(dateString: string): string {
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
     })
-  } catch (error) {
-    console.warn('Error formatting time:', dateString, error)
+  } catch {
     return ''
   }
 }

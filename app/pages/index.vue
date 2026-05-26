@@ -2,7 +2,7 @@
 definePageMeta({
   middleware: () => {
     return navigateTo('/chats')
-  }
+  },
 })
 </script>
 

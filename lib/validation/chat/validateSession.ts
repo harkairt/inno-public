@@ -16,14 +16,15 @@ export function validateSession(session: unknown): Result<ChatSession, Validatio
 
   if (!parseResult.success) {
     // Extract validation errors from Zod error
-    const validationErrors = parseResult.error.issues.map(issue => ({
+    const validationErrors = parseResult.error.issues.map((issue) => ({
       field: issue.path.join('.'),
-      message: getValidationErrorMessage(issue)
+      message: getValidationErrorMessage(issue),
     }))
 
-    const errorMessage = validationErrors.length > 0
-      ? `Session validation failed: ${validationErrors.map(e => e.message).join(', ')}`
-      : 'Session validation failed'
+    const errorMessage =
+      validationErrors.length > 0
+        ? `Session validation failed: ${validationErrors.map((e) => e.message).join(', ')}`
+        : 'Session validation failed'
 
     return err(new ValidationError(errorMessage, validationErrors))
   }
@@ -37,7 +38,7 @@ export function validateSession(session: unknown): Result<ChatSession, Validatio
  * @param issue - Zod validation issue
  * @returns User-friendly error message
  */
-function getValidationErrorMessage(issue: {
+interface SessionValidationIssue {
   code: string
   path: PropertyKey[]
   message: string
@@ -45,50 +46,54 @@ function getValidationErrorMessage(issue: {
   received?: string
   minimum?: number | bigint
   maximum?: number | bigint
-}): string {
+}
+
+function getValidationErrorMessage(issue: SessionValidationIssue): string {
   const field = issue.path.join('.')
 
   switch (issue.code) {
     case 'invalid_uuid':
       return `${field} must be a valid UUID`
-
     case 'invalid_string':
-      if (issue.received === 'undefined' || issue.received === 'null') {
-        return `${field} is required`
-      }
-      return `${field} must be a valid string`
-
+      return formatSessionInvalidString(field, issue)
     case 'too_small':
-      if (issue.minimum === 1) {
-        return `${field} cannot be empty`
-      }
-      return `${field} must be at least ${issue.minimum} characters`
-
+      return issue.minimum === 1
+        ? `${field} cannot be empty`
+        : `${field} must be at least ${issue.minimum} characters`
     case 'too_big':
       return `${field} cannot exceed ${issue.maximum} characters`
-
     case 'invalid_date':
       return `${field} must be a valid date`
-
     case 'invalid_number':
       return `${field} must be a valid number`
-
     case 'negative':
       return `${field} cannot be negative`
-
     case 'invalid_type':
-      if (issue.expected === 'number' && issue.received === 'nan') {
-        return `${field} must be a valid number`
-      }
-      return `${field} must be of type ${issue.expected}`
-
+      return formatSessionInvalidType(field, issue)
     case 'custom':
-      if (field === 'updatedAt' && issue.message.includes('updatedAt must be >= createdAt')) {
-        return 'Updated date cannot be earlier than creation date'
-      }
-      return issue.message
-
+      return formatSessionCustom(field, issue)
     default:
       return `${field}: ${issue.message}`
   }
+}
+
+function formatSessionInvalidString(field: string, issue: SessionValidationIssue): string {
+  if (issue.received === 'undefined' || issue.received === 'null') {
+    return `${field} is required`
+  }
+  return `${field} must be a valid string`
+}
+
+function formatSessionInvalidType(field: string, issue: SessionValidationIssue): string {
+  if (issue.expected === 'number' && issue.received === 'nan') {
+    return `${field} must be a valid number`
+  }
+  return `${field} must be of type ${issue.expected}`
+}
+
+function formatSessionCustom(field: string, issue: SessionValidationIssue): string {
+  if (field === 'updatedAt' && issue.message.includes('updatedAt must be >= createdAt')) {
+    return 'Updated date cannot be earlier than creation date'
+  }
+  return issue.message
 }

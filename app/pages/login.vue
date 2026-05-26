@@ -1,14 +1,25 @@
 <template>
-  <div class="bg-[hsl(var(--card))] dark:bg-[hsl(var(--card))] rounded-xl p-8 sm:p-10" style="box-shadow: var(--shadow-lg);">
+  <div
+    class="bg-[hsl(var(--card))] dark:bg-[hsl(var(--card))] rounded-xl p-8 sm:p-10"
+    style="box-shadow: var(--shadow-lg)"
+  >
     <div class="text-center mb-8">
-      <h1 class="font-display text-3xl font-bold text-[hsl(var(--foreground))]">{{ t('login.title') }}</h1>
+      <h1 class="font-display text-3xl font-bold text-[hsl(var(--foreground))]">
+        {{ t('login.title') }}
+      </h1>
       <p class="text-[hsl(var(--muted-foreground))] mt-2">{{ t('login.subtitle') }}</p>
     </div>
 
-    <form class="space-y-6" @submit.prevent="handleLogin">
+    <form
+      class="space-y-6"
+      @submit.prevent="handleLogin"
+    >
       <!-- Email Field -->
       <div>
-        <label for="email" class="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
+        <label
+          for="email"
+          class="block text-sm font-medium text-[hsl(var(--foreground))] mb-2"
+        >
           {{ t('login.email') }}
         </label>
         <UInput
@@ -25,7 +36,10 @@
 
       <!-- Password Field -->
       <div>
-        <label for="password" class="block text-sm font-medium text-[hsl(var(--foreground))] mb-2">
+        <label
+          for="password"
+          class="block text-sm font-medium text-[hsl(var(--foreground))] mb-2"
+        >
           {{ t('login.password') }}
         </label>
         <div class="relative">
@@ -44,8 +58,16 @@
             class="absolute inset-y-0 right-0 flex items-center pr-3 text-[hsl(var(--foreground))] hover:bg-[hsl(var(--accent))] rounded-md transition-colors"
             @click="showPassword = !showPassword"
           >
-            <UIcon v-if="showPassword" name="i-heroicons-eye-slash" class="size-5" />
-            <UIcon v-else name="i-heroicons-eye" class="size-5" />
+            <UIcon
+              v-if="showPassword"
+              name="i-heroicons-eye-slash"
+              class="size-5"
+            />
+            <UIcon
+              v-else
+              name="i-heroicons-eye"
+              class="size-5"
+            />
           </button>
         </div>
       </div>
@@ -120,7 +142,7 @@ const handleLogin = async () => {
   login(
     { email: email.value, password: password.value, mode: AuthenticationMode.Basic },
     {
-      onSuccess: async () => {
+      onSuccess: () => {
         // Save or clear remembered email based on checkbox
         if (rememberMe.value) {
           saveRememberedEmail(email.value)
@@ -129,13 +151,16 @@ const handleLogin = async () => {
         }
         // Redirect to the intended page or home
         const redirect = (route.query.redirect as string) || '/'
-        const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://') ? redirect : '/'
-        await router.push(safeRedirect)
+        const safeRedirect =
+          redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://')
+            ? redirect
+            : '/'
+        void router.push(safeRedirect)
       },
       onError: (error: unknown) => {
         loginError.value = error instanceof Error ? error.message : t('login.invalidCredentials')
       },
-    }
+    },
   )
 }
 
@@ -143,8 +168,11 @@ const handleLogin = async () => {
 onMounted(() => {
   if (authStore.isAuthenticated) {
     const redirect = (route.query.redirect as string) || '/'
-    const safeRedirect = redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://') ? redirect : '/'
-    router.push(safeRedirect)
+    const safeRedirect =
+      redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('://')
+        ? redirect
+        : '/'
+    void router.push(safeRedirect)
   }
 
   // Sync dev email after hydration (fixes SSR/client mismatch)

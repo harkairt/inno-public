@@ -12,7 +12,9 @@
         :key="item.to"
         :to="item.to"
         class="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors duration-150"
-        :class="isActive(item.to) ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]'"
+        :class="
+          isActive(item.to) ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]'
+        "
         :aria-current="isActive(item.to) ? 'page' : undefined"
         :aria-label="item.label"
         :data-testid="`tab-${item.key}`"
@@ -26,9 +28,16 @@
             color="error"
             :inset="false"
           >
-            <UIcon :name="item.icon" class="size-6" />
+            <UIcon
+              :name="item.icon"
+              class="size-6"
+            />
           </UChip>
-          <UIcon v-else :name="item.icon" class="size-6" />
+          <UIcon
+            v-else
+            :name="item.icon"
+            class="size-6"
+          />
         </div>
         <span class="text-[10px] font-medium leading-none">{{ item.label }}</span>
       </NuxtLink>

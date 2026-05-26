@@ -19,12 +19,15 @@ function getApiBaseUrl(): string {
 
   // In browser context, check if window.__NUXT__ has runtime config
   type NuxtWindow = Window & { __NUXT__?: { config?: { public?: { apiBaseUrl?: string } } } }
-  if (typeof window !== 'undefined' && (window as NuxtWindow).__NUXT__?.config?.public?.apiBaseUrl) {
+  if (
+    typeof window !== 'undefined' &&
+    (window as NuxtWindow).__NUXT__?.config?.public?.apiBaseUrl
+  ) {
     return (window as NuxtWindow).__NUXT__!.config!.public!.apiBaseUrl!
   }
 
   // Fallback to environment variable or empty string (use relative URLs for proxy)
-  return import.meta.env.NUXT_PUBLIC_API_BASE_URL ?? ''
+  return (import.meta.env.NUXT_PUBLIC_API_BASE_URL as string | undefined) ?? ''
 }
 
 export function createApiClient(): AxiosInstance {
@@ -35,7 +38,7 @@ export function createApiClient(): AxiosInstance {
     timeout: 300000, // 5 minutes
     headers: {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     },
   })
 

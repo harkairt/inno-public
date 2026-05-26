@@ -1,27 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import { AxiosHeaders } from 'axios'
 import { apiClient } from '@/lib/api/client'
 import { responseErrorInterceptor, setAuthStore } from '@/lib/api/interceptors/response'
 
 vi.mock('@/lib/api/client', () => ({
   apiClient: {
     post: vi.fn(),
-    request: vi.fn()
-  }
+    request: vi.fn(),
+  },
 }))
 
 vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((error) => error)
+  normalizeApiError: vi.fn((error: unknown) => error),
 }))
 
 vi.mock('@/lib/errors/utils', () => ({
   globalErrorTracker: {
-    track: vi.fn()
-  }
+    track: vi.fn(),
+  },
 }))
 
+interface MockAuthStore {
+  accessToken: string | null
+  refreshToken: string | null
+  setTokens: ReturnType<typeof vi.fn>
+  clearAuth: ReturnType<typeof vi.fn>
+}
+
 describe('Token Refresh in Response Interceptor', () => {
-  let mockAuthStore: any
+  let mockAuthStore: MockAuthStore
   let mockSetTokens: ReturnType<typeof vi.fn>
   let mockClearAuth: ReturnType<typeof vi.fn>
 
@@ -35,7 +43,7 @@ describe('Token Refresh in Response Interceptor', () => {
       accessToken: 'old-access-token',
       refreshToken: 'old-refresh-token',
       setTokens: mockSetTokens,
-      clearAuth: mockClearAuth
+      clearAuth: mockClearAuth,
     }
 
     setAuthStore(mockAuthStore)
@@ -50,14 +58,14 @@ describe('Token Refresh in Response Interceptor', () => {
       data: {
         data: {
           accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token'
-        }
+          refreshToken: 'new-refresh-token',
+        },
       },
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     const mockRetryResponse: AxiosResponse = {
@@ -66,7 +74,7 @@ describe('Token Refresh in Response Interceptor', () => {
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
@@ -76,7 +84,7 @@ describe('Token Refresh in Response Interceptor', () => {
       config: {
         url: '/api/test',
         method: 'GET',
-        headers: {} as any
+        headers: new AxiosHeaders(),
       } as InternalAxiosRequestConfig,
       response: {
         status: 401,
@@ -84,12 +92,12 @@ describe('Token Refresh in Response Interceptor', () => {
         data: {},
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       },
       isAxiosError: true,
       toJSON: () => ({}),
       name: 'AxiosError',
-      message: 'Request failed with status code 401'
+      message: 'Request failed with status code 401',
     }
 
     const result = await responseErrorInterceptor(error)
@@ -98,9 +106,9 @@ describe('Token Refresh in Response Interceptor', () => {
       '/api/authentication/refresh-token',
       {
         accessToken: 'old-access-token',
-        refreshToken: 'old-refresh-token'
+        refreshToken: 'old-refresh-token',
       },
-      expect.objectContaining({ skipAuthRefresh: true })
+      expect.objectContaining({ skipAuthRefresh: true }),
     )
 
     expect(mockSetTokens).toHaveBeenCalledWith('new-access-token', 'new-refresh-token')
@@ -113,14 +121,14 @@ describe('Token Refresh in Response Interceptor', () => {
       data: {
         data: {
           accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token'
-        }
+          refreshToken: 'new-refresh-token',
+        },
       },
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     const mockRetryResponse: AxiosResponse = {
@@ -129,7 +137,7 @@ describe('Token Refresh in Response Interceptor', () => {
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
@@ -139,7 +147,7 @@ describe('Token Refresh in Response Interceptor', () => {
       config: {
         url: '/api/test',
         method: 'GET',
-        headers: {} as any
+        headers: new AxiosHeaders(),
       } as InternalAxiosRequestConfig,
       response: {
         status: 401,
@@ -147,12 +155,12 @@ describe('Token Refresh in Response Interceptor', () => {
         data: {},
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       },
       isAxiosError: true,
       toJSON: () => ({}),
       name: 'AxiosError',
-      message: 'Request failed with status code 401'
+      message: 'Request failed with status code 401',
     }
 
     await responseErrorInterceptor(error)
@@ -168,14 +176,14 @@ describe('Token Refresh in Response Interceptor', () => {
       data: {
         data: {
           accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token'
-        }
+          refreshToken: 'new-refresh-token',
+        },
       },
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     const mockRetryResponse: AxiosResponse = {
@@ -184,7 +192,7 @@ describe('Token Refresh in Response Interceptor', () => {
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
@@ -193,7 +201,7 @@ describe('Token Refresh in Response Interceptor', () => {
     const originalRequestConfig: InternalAxiosRequestConfig = {
       url: '/api/test',
       method: 'GET',
-      headers: {} as any
+      headers: new AxiosHeaders(),
     }
 
     const error: AxiosError = {
@@ -204,12 +212,12 @@ describe('Token Refresh in Response Interceptor', () => {
         data: {},
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       },
       isAxiosError: true,
       toJSON: () => ({}),
       name: 'AxiosError',
-      message: 'Request failed with status code 401'
+      message: 'Request failed with status code 401',
     }
 
     const result = await responseErrorInterceptor(error)
@@ -218,8 +226,8 @@ describe('Token Refresh in Response Interceptor', () => {
       expect.objectContaining({
         url: '/api/test',
         method: 'GET',
-        _retry: true
-      })
+        _retry: true,
+      }),
     )
 
     expect(result).toEqual(mockRetryResponse)
@@ -234,7 +242,7 @@ describe('Token Refresh in Response Interceptor', () => {
       config: {
         url: '/api/test',
         method: 'GET',
-        headers: {} as any
+        headers: new AxiosHeaders(),
       } as InternalAxiosRequestConfig,
       response: {
         status: 401,
@@ -242,12 +250,12 @@ describe('Token Refresh in Response Interceptor', () => {
         data: {},
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       },
       isAxiosError: true,
       toJSON: () => ({}),
       name: 'AxiosError',
-      message: 'Request failed with status code 401'
+      message: 'Request failed with status code 401',
     }
 
     await expect(responseErrorInterceptor(error)).rejects.toThrow()
@@ -260,14 +268,14 @@ describe('Token Refresh in Response Interceptor', () => {
       data: {
         data: {
           accessToken: 'new-access-token-camel',
-          refreshToken: 'new-refresh-token-camel'
-        }
+          refreshToken: 'new-refresh-token-camel',
+        },
       },
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     const mockRetryResponse: AxiosResponse = {
@@ -276,7 +284,7 @@ describe('Token Refresh in Response Interceptor', () => {
       statusText: 'OK',
       headers: {},
       config: {} as InternalAxiosRequestConfig,
-      request: {}
+      request: {},
     }
 
     vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
@@ -286,7 +294,7 @@ describe('Token Refresh in Response Interceptor', () => {
       config: {
         url: '/api/test',
         method: 'GET',
-        headers: {} as any
+        headers: new AxiosHeaders(),
       } as InternalAxiosRequestConfig,
       response: {
         status: 401,
@@ -294,20 +302,17 @@ describe('Token Refresh in Response Interceptor', () => {
         data: {},
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       },
       isAxiosError: true,
       toJSON: () => ({}),
       name: 'AxiosError',
-      message: 'Request failed with status code 401'
+      message: 'Request failed with status code 401',
     }
 
     await responseErrorInterceptor(error)
 
-    expect(mockSetTokens).toHaveBeenCalledWith(
-      'new-access-token-camel',
-      'new-refresh-token-camel'
-    )
+    expect(mockSetTokens).toHaveBeenCalledWith('new-access-token-camel', 'new-refresh-token-camel')
   })
 
   describe('Request Queue Management', () => {
@@ -316,14 +321,14 @@ describe('Token Refresh in Response Interceptor', () => {
         data: {
           data: {
             accessToken: 'new-access-token',
-            refreshToken: 'new-refresh-token'
-          }
+            refreshToken: 'new-refresh-token',
+          },
         },
         status: 200,
         statusText: 'OK',
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       }
 
       const mockRetryResponse: AxiosResponse = {
@@ -332,12 +337,12 @@ describe('Token Refresh in Response Interceptor', () => {
         statusText: 'OK',
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       }
 
       // Make refresh take some time so we can queue requests
-      vi.mocked(apiClient.post).mockImplementation(() =>
-        new Promise(resolve => setTimeout(() => resolve(mockRefreshResponse), 50))
+      vi.mocked(apiClient.post).mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockRefreshResponse), 50)),
       )
 
       vi.mocked(apiClient.request).mockResolvedValue(mockRetryResponse)
@@ -346,7 +351,7 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/endpoint1',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -354,19 +359,19 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       const error2: AxiosError = {
         config: {
           url: '/api/endpoint2',
           method: 'POST',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -374,18 +379,18 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       // Fire both requests concurrently
       const [result1, result2] = await Promise.all([
         responseErrorInterceptor(error1),
-        responseErrorInterceptor(error2)
+        responseErrorInterceptor(error2),
       ])
 
       // Both should succeed with the same mock response
@@ -400,15 +405,15 @@ describe('Token Refresh in Response Interceptor', () => {
     })
 
     it('should reject all queued requests when refresh fails', async () => {
-      vi.mocked(apiClient.post).mockImplementation(() =>
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh failed')), 50))
+      vi.mocked(apiClient.post).mockImplementation(
+        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh failed')), 50)),
       )
 
       const error1: AxiosError = {
         config: {
           url: '/api/endpoint1',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -416,19 +421,19 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       const error2: AxiosError = {
         config: {
           url: '/api/endpoint2',
           method: 'POST',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -436,18 +441,18 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       // Fire both requests concurrently
       const results = await Promise.allSettled([
         responseErrorInterceptor(error1),
-        responseErrorInterceptor(error2)
+        responseErrorInterceptor(error2),
       ])
 
       // Both should fail
@@ -468,7 +473,7 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -476,12 +481,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       await expect(responseErrorInterceptor(error)).rejects.toThrow()
@@ -496,7 +501,7 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -504,12 +509,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       await expect(responseErrorInterceptor(error)).rejects.toThrow()
@@ -524,7 +529,7 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -532,12 +537,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       await expect(responseErrorInterceptor(error)).rejects.toThrow()
@@ -551,8 +556,8 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/authentication/refresh-token',
           method: 'POST',
-          headers: {} as any,
-          skipAuthRefresh: true
+          headers: new AxiosHeaders(),
+          skipAuthRefresh: true,
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -560,12 +565,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       // The current implementation doesn't check skipAuthRefresh before attempting refresh
@@ -581,8 +586,8 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any,
-          _retry: true
+          headers: new AxiosHeaders(),
+          _retry: true,
         } as InternalAxiosRequestConfig,
         response: {
           status: 401,
@@ -590,12 +595,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 401'
+        message: 'Request failed with status code 401',
       }
 
       await expect(responseErrorInterceptor(error)).rejects.toBeDefined()
@@ -615,7 +620,7 @@ describe('Token Refresh in Response Interceptor', () => {
         statusText: 'OK',
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       }
 
       vi.mocked(apiClient.request).mockResolvedValue(mockSuccessResponse)
@@ -624,7 +629,7 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 429,
@@ -632,12 +637,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 429'
+        message: 'Request failed with status code 429',
       }
 
       const resultPromise = responseErrorInterceptor(error)
@@ -660,8 +665,8 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any,
-          _retryCount: 3
+          headers: new AxiosHeaders(),
+          _retryCount: 3,
         } as InternalAxiosRequestConfig,
         response: {
           status: 429,
@@ -669,12 +674,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 429'
+        message: 'Request failed with status code 429',
       }
 
       await expect(responseErrorInterceptor(error)).rejects.toBeDefined()
@@ -693,7 +698,7 @@ describe('Token Refresh in Response Interceptor', () => {
         statusText: 'OK',
         headers: {},
         config: {} as InternalAxiosRequestConfig,
-        request: {}
+        request: {},
       }
 
       vi.mocked(apiClient.request).mockResolvedValue(mockSuccessResponse)
@@ -702,7 +707,7 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any
+          headers: new AxiosHeaders(),
         } as InternalAxiosRequestConfig,
         response: {
           status: 503,
@@ -710,12 +715,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 503'
+        message: 'Request failed with status code 503',
       }
 
       const resultPromise = responseErrorInterceptor(error)
@@ -737,8 +742,8 @@ describe('Token Refresh in Response Interceptor', () => {
         config: {
           url: '/api/test',
           method: 'GET',
-          headers: {} as any,
-          _retryCount: 2
+          headers: new AxiosHeaders(),
+          _retryCount: 2,
         } as InternalAxiosRequestConfig,
         response: {
           status: 503,
@@ -746,12 +751,12 @@ describe('Token Refresh in Response Interceptor', () => {
           data: {},
           headers: {},
           config: {} as InternalAxiosRequestConfig,
-          request: {}
+          request: {},
         },
         isAxiosError: true,
         toJSON: () => ({}),
         name: 'AxiosError',
-        message: 'Request failed with status code 503'
+        message: 'Request failed with status code 503',
       }
 
       await expect(responseErrorInterceptor(error)).rejects.toBeDefined()

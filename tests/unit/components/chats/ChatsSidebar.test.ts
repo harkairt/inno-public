@@ -1,18 +1,24 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import type { Component } from 'vue'
 
 // Mock the UsersExpandableTile component
 vi.mock('@/app/components/chats/UsersExpandableTile.vue', () => ({
   default: {
     name: 'UsersExpandableTile',
-    template: '<div data-testid="users-expandable-tile"></div>'
-  }
+    template: '<div data-testid="users-expandable-tile"></div>',
+  },
 }))
+
+async function importChatsSidebar(): Promise<Component> {
+  const mod = (await import('@/app/components/chats/ChatsSidebar.vue')) as { default: Component }
+  return mod.default
+}
 
 describe('ChatsSidebar', () => {
   it('renders the sidebar with correct structure', async () => {
     // Import the component
-    const { default: ChatsSidebar } = await import('@/app/components/chats/ChatsSidebar.vue')
+    const ChatsSidebar = await importChatsSidebar()
 
     const wrapper = mount(ChatsSidebar)
 
@@ -28,7 +34,7 @@ describe('ChatsSidebar', () => {
   })
 
   it('displays the chats header', async () => {
-    const { default: ChatsSidebar } = await import('@/app/components/chats/ChatsSidebar.vue')
+    const ChatsSidebar = await importChatsSidebar()
 
     const wrapper = mount(ChatsSidebar)
 
@@ -41,7 +47,7 @@ describe('ChatsSidebar', () => {
   })
 
   it('renders the UsersExpandableTile component', async () => {
-    const { default: ChatsSidebar } = await import('@/app/components/chats/ChatsSidebar.vue')
+    const ChatsSidebar = await importChatsSidebar()
 
     const wrapper = mount(ChatsSidebar)
 
@@ -50,7 +56,7 @@ describe('ChatsSidebar', () => {
   })
 
   it('has the correct container structure', async () => {
-    const { default: ChatsSidebar } = await import('@/app/components/chats/ChatsSidebar.vue')
+    const ChatsSidebar = await importChatsSidebar()
 
     const wrapper = mount(ChatsSidebar)
 

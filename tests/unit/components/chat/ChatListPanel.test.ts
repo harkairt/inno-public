@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import { ref } from 'vue'
+import { ref, type Component } from 'vue'
 
 const clearDraftConversationMock = vi.fn()
 const navigateToMock = vi.fn()
@@ -8,7 +8,17 @@ const navigateToMock = vi.fn()
 const listDataMock = {
   users: ref([{ id: 10, email: 'alice@example.com', name: 'Alice Agent', isVirtual: false }]),
   filteredSessions: ref([]),
-  filteredDraftSessions: ref([{ draftId: 'draft-new-10', draftKey: 'new-10', userId: 10, userName: 'Alice Agent', userEmail: 'alice@example.com', preview: 'Draft preview', route: '/chats/new/10' }]),
+  filteredDraftSessions: ref([
+    {
+      draftId: 'draft-new-10',
+      draftKey: 'new-10',
+      userId: 10,
+      userName: 'Alice Agent',
+      userEmail: 'alice@example.com',
+      preview: 'Draft preview',
+      route: '/chats/new/10',
+    },
+  ]),
   isLoadingSessions: ref(false),
   sessionsError: ref(null),
   sessionSearchQuery: ref(''),
@@ -41,26 +51,29 @@ describe('ChatListPanel drafts', () => {
     })
     ;(global.navigateTo as ReturnType<typeof vi.fn>).mockImplementation(navigateToMock)
     listDataMock.filteredSessions.value = []
-    listDataMock.filteredDraftSessions.value = [{
-      draftId: 'draft-new-10',
-      draftKey: 'new-10',
-      userId: 10,
-      userName: 'Alice Agent',
-      userEmail: 'alice@example.com',
-      preview: 'Draft preview',
-      route: '/chats/new/10',
-    }]
+    listDataMock.filteredDraftSessions.value = [
+      {
+        draftId: 'draft-new-10',
+        draftKey: 'new-10',
+        userId: 10,
+        userName: 'Alice Agent',
+        userEmail: 'alice@example.com',
+        preview: 'Draft preview',
+        route: '/chats/new/10',
+      },
+    ]
   })
 
   async function renderPanel() {
-    const { default: ChatListPanel } = await import('~/components/chat/ChatListPanel.vue')
-    return render(ChatListPanel, {
+    const mod = (await import('~/components/chat/ChatListPanel.vue')) as { default: Component }
+    return render(mod.default, {
       global: {
         stubs: {
           UInput: { template: '<input />' },
           UButton: {
             props: ['ariaLabel'],
-            template: '<button :aria-label="ariaLabel" @click="$emit(\'click\', $event)"><slot /></button>',
+            template:
+              '<button :aria-label="ariaLabel" @click="$emit(\'click\', $event)"><slot /></button>',
           },
           USkeleton: { template: '<div />' },
           UAlert: { template: '<div><slot /></div>' },

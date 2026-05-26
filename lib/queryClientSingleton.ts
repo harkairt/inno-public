@@ -24,7 +24,13 @@ export function createQueryClient(): QueryClient {
         retry: (failureCount, error) => {
           if (failureCount >= 2) return false
           if (error instanceof AppError && error.code === ErrorCode.VALIDATION_ERROR) return false
-          if (error instanceof AppError && error.statusCode && error.statusCode >= 400 && error.statusCode < 500) return false
+          if (
+            error instanceof AppError &&
+            error.statusCode &&
+            error.statusCode >= 400 &&
+            error.statusCode < 500
+          )
+            return false
           return true
         },
         retryDelay: 1000,

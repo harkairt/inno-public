@@ -7,30 +7,29 @@ import type { AppError } from '@/lib/errors/AppError'
 
 vi.mock('@/lib/api/services/AuthService', () => ({
   authService: {
-    refreshToken: vi.fn()
-  }
+    refreshToken: vi.fn(),
+  },
 }))
 
 const mockLocalStorage = (() => {
   let store: Record<string, string> = {}
   return {
-    getItem: vi.fn((key: string) => store[key] || null),
+    getItem: vi.fn((key: string) => store[key] ?? null),
     setItem: vi.fn((key: string, value: string) => {
       store[key] = value
     }),
     removeItem: vi.fn((key: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- localStorage mock requires dynamic property deletion
       delete store[key]
     }),
     clear: vi.fn(() => {
       store = {}
-    })
+    }),
   }
 })()
 
 Object.defineProperty(global, 'localStorage', {
   value: mockLocalStorage,
-  writable: true
+  writable: true,
 })
 
 describe('Auth Store Token Refresh', () => {
@@ -45,13 +44,13 @@ describe('Auth Store Token Refresh', () => {
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
       accessToken: 'new-access-token',
-      refreshToken: 'new-refresh-token'
+      refreshToken: 'new-refresh-token',
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
       isOk: () => true,
       isErr: () => false,
-      value: mockRefreshResponse
+      value: mockRefreshResponse,
     } as Result<RefreshTokenResponseDTO, AppError>)
 
     const authStore = useAuthStore()
@@ -62,7 +61,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
     const result = await authStore.refreshAuthToken()
@@ -74,11 +73,11 @@ describe('Auth Store Token Refresh', () => {
 
     expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
       'innochat-auth',
-      expect.stringContaining('new-access-token')
+      expect.stringContaining('new-access-token'),
     )
     expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
       'innochat-auth',
-      expect.stringContaining('new-refresh-token')
+      expect.stringContaining('new-refresh-token'),
     )
   })
 
@@ -87,13 +86,13 @@ describe('Auth Store Token Refresh', () => {
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
       accessToken: 'refreshed-token',
-      refreshToken: 'refreshed-refresh-token'
+      refreshToken: 'refreshed-refresh-token',
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
       isOk: () => true,
       isErr: () => false,
-      value: mockRefreshResponse
+      value: mockRefreshResponse,
     } as Result<RefreshTokenResponseDTO, AppError>)
 
     const authStore = useAuthStore()
@@ -104,7 +103,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
     await authStore.refreshAuthToken()
@@ -112,7 +111,7 @@ describe('Auth Store Token Refresh', () => {
     const savedData = mockLocalStorage.getItem('innochat-auth')
     expect(savedData).toBeTruthy()
 
-    const parsedData = JSON.parse(savedData!)
+    const parsedData = JSON.parse(savedData!) as Record<string, unknown>
     expect(parsedData.accessToken).toBe('refreshed-token')
     expect(parsedData.refreshToken).toBe('refreshed-refresh-token')
   })
@@ -122,13 +121,13 @@ describe('Auth Store Token Refresh', () => {
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
       accessToken: 'pascal-access-token',
-      refreshToken: 'pascal-refresh-token'
+      refreshToken: 'pascal-refresh-token',
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
       isOk: () => true,
       isErr: () => false,
-      value: mockRefreshResponse
+      value: mockRefreshResponse,
     } as Result<RefreshTokenResponseDTO, AppError>)
 
     const authStore = useAuthStore()
@@ -139,7 +138,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
     await authStore.refreshAuthToken()
@@ -156,8 +155,8 @@ describe('Auth Store Token Refresh', () => {
       isErr: () => true,
       error: {
         code: 'UNAUTHORIZED',
-        message: 'Invalid refresh token'
-      }
+        message: 'Invalid refresh token',
+      },
     } as Result<RefreshTokenResponseDTO, AppError>)
 
     const authStore = useAuthStore()
@@ -168,14 +167,17 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
-    mockLocalStorage.setItem('innochat-auth', JSON.stringify({
-      user: authStore.user,
-      accessToken: 'old-access-token',
-      refreshToken: 'old-refresh-token'
-    }))
+    mockLocalStorage.setItem(
+      'innochat-auth',
+      JSON.stringify({
+        user: authStore.user,
+        accessToken: 'old-access-token',
+        refreshToken: 'old-refresh-token',
+      }),
+    )
 
     const result = await authStore.refreshAuthToken()
 
@@ -191,13 +193,13 @@ describe('Auth Store Token Refresh', () => {
 
     const mockRefreshResponse: RefreshTokenResponseDTO = {
       accessToken: 'new-token',
-      refreshToken: 'new-refresh'
+      refreshToken: 'new-refresh',
     }
 
     vi.mocked(authService.refreshToken).mockResolvedValue({
       isOk: () => true,
       isErr: () => false,
-      value: mockRefreshResponse
+      value: mockRefreshResponse,
     } as Result<RefreshTokenResponseDTO, AppError>)
 
     const authStore = useAuthStore()
@@ -208,7 +210,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
     await authStore.refreshAuthToken()
@@ -219,7 +221,7 @@ describe('Auth Store Token Refresh', () => {
     const savedData = mockLocalStorage.getItem('innochat-auth')
     expect(savedData).toBeTruthy()
 
-    const parsedData = JSON.parse(savedData!)
+    const parsedData = JSON.parse(savedData!) as Record<string, unknown>
     expect(parsedData.accessToken).toBe('new-token')
     expect(parsedData.refreshToken).toBe('new-refresh')
   })
@@ -248,7 +250,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
     authStore.accessToken = null
     authStore.refreshToken = 'valid-refresh-token'
@@ -269,7 +271,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
     authStore.accessToken = 'valid-access-token'
     authStore.refreshToken = null
@@ -296,7 +298,7 @@ describe('Auth Store Token Refresh', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
     const result = await authStore.refreshAuthToken()
@@ -370,7 +372,7 @@ describe('setTokens Method', () => {
       id: '1',
       email: 'test@example.com',
       firstName: 'Test',
-      lastName: 'User'
+      lastName: 'User',
     }
 
     await authStore.setTokens('persisted-access', 'persisted-refresh')
@@ -378,7 +380,7 @@ describe('setTokens Method', () => {
     const savedData = mockLocalStorage.getItem('innochat-auth')
     expect(savedData).toBeTruthy()
 
-    const parsedData = JSON.parse(savedData!)
+    const parsedData = JSON.parse(savedData!) as Record<string, unknown>
     expect(parsedData.accessToken).toBe('persisted-access')
     expect(parsedData.refreshToken).toBe('persisted-refresh')
   })

@@ -29,12 +29,22 @@
         <!-- User List -->
         <div class="max-h-[60vh] md:max-h-[400px] overflow-y-auto">
           <!-- Loading State -->
-          <div v-if="isLoading" class="p-6 space-y-3">
-            <USkeleton v-for="i in 3" :key="i" class="h-10 w-full" />
+          <div
+            v-if="isLoading"
+            class="p-6 space-y-3"
+          >
+            <USkeleton
+              v-for="i in 3"
+              :key="i"
+              class="h-10 w-full"
+            />
           </div>
 
           <!-- Empty State (No Users) -->
-          <div v-else-if="mutuallyVisibleUsers?.length === 0" class="p-6">
+          <div
+            v-else-if="mutuallyVisibleUsers?.length === 0"
+            class="p-6"
+          >
             <UEmpty
               :title="t('chat.manageUsers.noUsers')"
               :description="t('chat.manageUsers.noUsersDescription')"
@@ -43,7 +53,10 @@
           </div>
 
           <!-- Empty State (No Search Results) -->
-          <div v-else-if="filteredUsers.length === 0" class="p-6">
+          <div
+            v-else-if="filteredUsers.length === 0"
+            class="p-6"
+          >
             <UEmpty
               :title="t('chat.manageUsers.noUsersFound')"
               :description="t('chat.manageUsers.tryDifferentSearch')"
@@ -127,8 +140,8 @@ const toast = useToast()
 
 // Computed: Check if ANY mutation is currently pending
 // This disables ALL checkboxes to prevent concurrent operations
-const isAnyMutationPending = computed(() =>
-  addUserMutation.isPending.value ?? removeUserMutation.isPending.value
+const isAnyMutationPending = computed(
+  () => addUserMutation.isPending.value ?? removeUserMutation.isPending.value,
 )
 
 // Helper: Check if a user is currently in the session
@@ -143,7 +156,7 @@ const filteredUsers = computed(() => {
   const query = searchQuery.value.toLowerCase().trim()
 
   // Filter by search query
-  const filtered = mutuallyVisibleUsers.value.filter(user => {
+  const filtered = mutuallyVisibleUsers.value.filter((user) => {
     if (!query) return true
     const name = (user.name ?? '').toLowerCase()
     const email = user.email.toLowerCase()
@@ -173,14 +186,14 @@ const handleUserToggle = async (user: UserDTO, isCurrentlyChecked: boolean) => {
       await removeUserMutation.mutateAsync({
         sessionId: props.sessionId,
         userCode: user.email,
-        agentId: props.agentId
+        agentId: props.agentId,
       })
     } else {
       // User is not in session → add them
       await addUserMutation.mutateAsync({
         sessionId: props.sessionId,
         userCode: user.email,
-        agentId: props.agentId
+        agentId: props.agentId,
       })
     }
     // On success: TanStack Query auto-invalidates the session query
