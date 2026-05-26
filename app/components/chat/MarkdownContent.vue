@@ -14,6 +14,14 @@
     >
       <ChatChart :config="chart.config" />
     </Teleport>
+    <Teleport
+      v-for="table in tableEntries"
+      :key="table.id"
+      :to="`[data-table-id='${table.id}']`"
+      :defer="true"
+    >
+      <ChatTable :table-data="table.data" />
+    </Teleport>
   </div>
   <!-- eslint-enable vue/no-v-html -->
 </template>
@@ -25,7 +33,9 @@ import { useShiki } from '@/app/composables/useShiki'
 import { useChartJs } from '~/composables/useChartJs'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
+import { parseRowsBlock, parseHRowsBlock, type TableData } from '@/lib/validation/table'
 import ChatChart from '~/components/chat/ChatChart.vue'
+import ChatTable from '~/components/chat/ChatTable.vue'
 
 interface Props {
   content?: string | null
@@ -45,8 +55,14 @@ interface ChartEntry {
   config: ChartConfig
 }
 
+interface TableEntry {
+  id: string
+  data: TableData
+}
+
 const renderedHTML = ref('')
 const chartEntries = ref<ChartEntry[]>([])
+const tableEntries = ref<TableEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
 
@@ -61,6 +77,11 @@ const hasChartBlocks = (content: string | null | undefined): boolean => {
   return content.indexOf('```', openIdx + 11) !== -1
 }
 
+const hasTableBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  return content.includes('```rows') || content.includes('```h-rows')
+}
+
 const MAX_CONTENT_SIZE = 100000
 
 const decodeHtmlEntities = (encoded: string): string =>
@@ -70,6 +91,24 @@ const decodeHtmlEntities = (encoded: string): string =>
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+
+const extractTableBlocks = (html: string): { html: string; entries: TableEntry[] } => {
+  const entries: TableEntry[] = []
+  let index = 0
+  const tableBlockRegex = /<pre><code\s+class="language-(h-rows|rows)">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(tableBlockRegex, (match, lang: string, encoded: string) => {
+    const json = decodeHtmlEntities(encoded)
+    const data = lang === 'h-rows' ? parseHRowsBlock(json) : parseRowsBlock(json)
+    if (!data) return match
+
+    const id = `${instancePrefix}-table-${index++}`
+    entries.push({ id, data })
+    return `<div class="table-placeholder" data-table-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
 
 const extractChartBlocks = (html: string): { html: string; entries: ChartEntry[] } => {
   const entries: ChartEntry[] = []
@@ -111,12 +150,26 @@ const renderContent = () => {
   if (!props.content) {
     renderedHTML.value = ''
     chartEntries.value = []
+    tableEntries.value = []
     return
   }
 
   try {
     const { parse } = useMarkdown()
     let html = parse(props.content)
+
+    // Extract table blocks BEFORE charts and Shiki
+    if (hasTableBlocks(props.content)) {
+      try {
+        const result = extractTableBlocks(html)
+        html = result.html
+        tableEntries.value = result.entries
+      } catch {
+        tableEntries.value = []
+      }
+    } else {
+      tableEntries.value = []
+    }
 
     // Extract chart blocks BEFORE Shiki — Shiki's \w+ regex won't match "chart.js"
     if (hasChartBlocks(props.content)) {
@@ -135,6 +188,7 @@ const renderContent = () => {
   } catch {
     renderedHTML.value = props.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')
     chartEntries.value = []
+    tableEntries.value = []
   }
 }
 

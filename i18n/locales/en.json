@@ -123,7 +123,12 @@
       "customOption": "Other",
       "plainTextPlaceholder": "Type your answer..."
     },
-    "createNewSession": "Create new session"
+    "createNewSession": "Create new session",
+    "table": {
+      "filter-placeholder": "Filter...",
+      "no-data": "No data",
+      "no-results": "No matching results"
+    }
   },
   "errors": {
     "sessionNotFound": "Chat session not found",
