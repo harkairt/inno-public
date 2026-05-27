@@ -123,7 +123,12 @@
       "customOption": "Egyéb",
       "plainTextPlaceholder": "Írja be válaszát..."
     },
-    "createNewSession": "Új munkamenet létrehozása"
+    "createNewSession": "Új munkamenet létrehozása",
+    "table": {
+      "filter-placeholder": "Szűrés...",
+      "no-data": "Nincs adat",
+      "no-results": "Nincs találat"
+    }
   },
   "errors": {
     "sessionNotFound": "Chat munkamenet nem található",

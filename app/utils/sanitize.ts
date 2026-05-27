@@ -63,6 +63,7 @@ const config: Config = {
     'class',
     'data-language',
     'data-chart-id',
+    'data-table-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',
     'width',

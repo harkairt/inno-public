@@ -308,6 +308,45 @@
   padding: 1rem;
 }
 
+/* Table placeholder — container for UTable rendered via Teleport */
+.table-placeholder {
+  margin: 0.75rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.table-container {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-style: normal;
+}
+
+.table-container .table-root {
+  font-size: 0.8125rem;
+}
+
+.table-empty {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8125rem;
+  text-align: center;
+  padding: 1.5rem 1rem;
+}
+
+.table-filter {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.table-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid hsl(var(--border));
+}
+
+
 /* Mobile responsiveness */
 @media (max-width: 767px) {
   .markdown-content {
