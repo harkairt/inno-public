@@ -128,6 +128,11 @@
       "filter-placeholder": "Filter...",
       "no-data": "No data",
       "no-results": "No matching results"
+    },
+    "pivot": {
+      "openTable": "Open the table",
+      "tabTable": "Table",
+      "tabPivot": "Pivot"
     }
   },
   "errors": {

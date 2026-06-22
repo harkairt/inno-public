@@ -22,6 +22,14 @@
     >
       <ChatTable :table-data="table.data" />
     </Teleport>
+    <Teleport
+      v-for="pivot in pivotEntries"
+      :key="pivot.id"
+      :to="`[data-pivot-id='${pivot.id}']`"
+      :defer="true"
+    >
+      <ChatPivotTable :data="pivot.data" />
+    </Teleport>
   </div>
   <!-- eslint-enable vue/no-v-html -->
 </template>
@@ -33,9 +41,16 @@ import { useShiki } from '@/app/composables/useShiki'
 import { useChartJs } from '~/composables/useChartJs'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
-import { parseRowsBlock, parseHRowsBlock, type TableData } from '@/lib/validation/table'
+import {
+  parseRowsBlock,
+  parseHRowsBlock,
+  parsePivotBlock,
+  type TableData,
+  type PivotData,
+} from '@/lib/validation/table'
 import ChatChart from '~/components/chat/ChatChart.vue'
 import ChatTable from '~/components/chat/ChatTable.vue'
+import ChatPivotTable from '~/components/chat/ChatPivotTable.vue'
 
 interface Props {
   content?: string | null
@@ -60,9 +75,15 @@ interface TableEntry {
   data: TableData
 }
 
+interface PivotEntry {
+  id: string
+  data: PivotData
+}
+
 const renderedHTML = ref('')
 const chartEntries = ref<ChartEntry[]>([])
 const tableEntries = ref<TableEntry[]>([])
+const pivotEntries = ref<PivotEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
 
@@ -80,6 +101,11 @@ const hasChartBlocks = (content: string | null | undefined): boolean => {
 const hasTableBlocks = (content: string | null | undefined): boolean => {
   if (!content) return false
   return content.includes('```rows') || content.includes('```h-rows')
+}
+
+const hasPivotBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  return content.includes('```pivot')
 }
 
 const MAX_CONTENT_SIZE = 100000
@@ -105,6 +131,24 @@ const extractTableBlocks = (html: string): { html: string; entries: TableEntry[]
     const id = `${instancePrefix}-table-${index++}`
     entries.push({ id, data })
     return `<div class="table-placeholder" data-table-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const extractPivotBlocks = (html: string): { html: string; entries: PivotEntry[] } => {
+  const entries: PivotEntry[] = []
+  let index = 0
+  const pivotBlockRegex = /<pre><code\s+class="language-pivot">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(pivotBlockRegex, (match, encoded: string) => {
+    const json = decodeHtmlEntities(encoded)
+    const data = parsePivotBlock(json)
+    if (!data) return match
+
+    const id = `${instancePrefix}-pivot-${index++}`
+    entries.push({ id, data })
+    return `<div class="pivot-placeholder" data-pivot-id="${id}"></div>`
   })
 
   return { html: replaced, entries }
@@ -151,6 +195,7 @@ const renderContent = () => {
     renderedHTML.value = ''
     chartEntries.value = []
     tableEntries.value = []
+    pivotEntries.value = []
     return
   }
 
@@ -171,6 +216,19 @@ const renderContent = () => {
       tableEntries.value = []
     }
 
+    // Extract pivot blocks BEFORE charts and Shiki
+    if (hasPivotBlocks(props.content)) {
+      try {
+        const result = extractPivotBlocks(html)
+        html = result.html
+        pivotEntries.value = result.entries
+      } catch {
+        pivotEntries.value = []
+      }
+    } else {
+      pivotEntries.value = []
+    }
+
     // Extract chart blocks BEFORE Shiki — Shiki's \w+ regex won't match "chart.js"
     if (hasChartBlocks(props.content)) {
       const result = extractChartBlocks(html)
@@ -189,6 +247,7 @@ const renderContent = () => {
     renderedHTML.value = props.content.replace(/</g, '&lt;').replace(/>/g, '&gt;')
     chartEntries.value = []
     tableEntries.value = []
+    pivotEntries.value = []
   }
 }
 

@@ -94,13 +94,6 @@ export class NotFoundError extends AppError {
   }
 }
 
-export class ConflictError extends AppError {
-  constructor(message = 'Resource conflict') {
-    super(ErrorCode.CONFLICT, message, 409)
-    this.name = 'ConflictError'
-  }
-}
-
 export class ServerError extends AppError {
   constructor(message = 'Internal server error', details?: unknown) {
     super(ErrorCode.SERVER_ERROR, message, 500, details)
@@ -144,13 +137,6 @@ export class TokenExpiredError extends AuthenticationError {
   constructor(message = 'Authentication token has expired') {
     super(message)
     this.name = 'TokenExpiredError'
-  }
-}
-
-export class InvalidTokenError extends AuthenticationError {
-  constructor(message = 'Invalid authentication token') {
-    super(message)
-    this.name = 'InvalidTokenError'
   }
 }
 
@@ -226,26 +212,6 @@ function mapStatusToErrorCode(statusCode: number): ErrorCode {
   }
 }
 
-export class CacheError extends AppError {
-  constructor(
-    message = 'Cache operation failed',
-    public readonly cacheKey?: string,
-  ) {
-    super(ErrorCode.UNKNOWN_ERROR, message, undefined, { cacheKey })
-    this.name = 'CacheError'
-  }
-}
-
-export class ConfigurationError extends AppError {
-  constructor(
-    message = 'Configuration error',
-    public readonly configKey?: string,
-  ) {
-    super(ErrorCode.UNKNOWN_ERROR, message, undefined, { configKey })
-    this.name = 'ConfigurationError'
-  }
-}
-
 // ============================================================================
 // ERROR GUARD TYPES
 // ============================================================================
@@ -309,72 +275,4 @@ export function createNetworkError(originalError: unknown): NetworkError {
 
 export function createTimeoutError(timeoutMs: number): TimeoutError {
   return new TimeoutError(`Request timed out after ${timeoutMs}ms`)
-}
-
-// ============================================================================
-// ERROR BAG CLASS
-// ============================================================================
-
-export class ErrorBag {
-  private errors: AppError[] = []
-
-  add(error: AppError): void {
-    this.errors.push(error)
-  }
-
-  addAll(errors: AppError[]): void {
-    this.errors.push(...errors)
-  }
-
-  hasErrors(): boolean {
-    return this.errors.length > 0
-  }
-
-  hasErrorCode(code: ErrorCode): boolean {
-    return this.errors.some((error) => error.code === code)
-  }
-
-  getErrorsByCode(code: ErrorCode): AppError[] {
-    return this.errors.filter((error) => error.code === code)
-  }
-
-  getValidationErrors(): ValidationError[] {
-    return this.errors.filter((error): error is ValidationError => error instanceof ValidationError)
-  }
-
-  getNetworkErrors(): NetworkError[] {
-    return this.errors.filter((error): error is NetworkError => error instanceof NetworkError)
-  }
-
-  getServerErrors(): ServerError[] {
-    return this.errors.filter((error): error is ServerError => error instanceof ServerError)
-  }
-
-  getAll(): AppError[] {
-    return [...this.errors]
-  }
-
-  clear(): void {
-    this.errors = []
-  }
-
-  clearByCode(code: ErrorCode): void {
-    this.errors = this.errors.filter((error) => error.code !== code)
-  }
-
-  // Get user-friendly summary of all errors
-  getSummary(): string {
-    if (this.errors.length === 0) return ''
-
-    const messages = this.errors
-      .map((error) => {
-        if (error instanceof ValidationError) {
-          return error.validationErrors.map((ve) => ve.message).join(', ')
-        }
-        return error.message
-      })
-      .filter(Boolean)
-
-    return [...new Set(messages)].join('; ')
-  }
 }

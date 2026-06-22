@@ -362,57 +362,6 @@ export function cacheResponseInterceptor(response: AxiosResponse): AxiosResponse
   return response
 }
 
-/**
- * Check if a cached response exists for a request
- * Note: This cannot be used as a request interceptor since request interceptors
- * can only modify requests, not return responses. Use this before making requests
- * or implement caching at a higher level (e.g., in a service layer).
- */
-export function getCachedResponse(config: InternalAxiosRequestConfig): AxiosResponse | undefined {
-  const url = config.url ?? ''
-  const method = config.method?.toLowerCase()
-
-  // Only check cache for GET requests
-  if (method !== 'get') return
-
-  const cacheKey = `${method}:${url}:${JSON.stringify(config.params)}`
-  const cached = responseCache.get(cacheKey)
-
-  if (!cached) return
-
-  // Check if cache is still valid
-  const now = Date.now()
-  const isExpired = now - cached.timestamp > cached.ttl
-
-  if (isExpired) {
-    responseCache.delete(cacheKey)
-    return
-  }
-
-  if (import.meta.dev) logger.debug(`Serving cached response for ${cacheKey}`)
-
-  // Return cached response
-  return {
-    data: cached.data,
-    status: 200,
-    statusText: 'OK',
-    headers: {},
-    config,
-    request: {},
-    metadata: {
-      requestId: config.headers['X-Request-ID'] as string | undefined,
-      cached: true,
-    },
-  } as AxiosResponse
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Helper function to transform snake_case to camelCase
- */
 function transformToCamelCase(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj
   if (typeof obj !== 'object') return obj
@@ -427,17 +376,7 @@ function transformToCamelCase(obj: unknown): unknown {
   return result
 }
 
-/**
- * Clear all cached responses
- */
-export function clearResponseCache(): void {
-  responseCache.clear()
-}
-
-/**
- * Clear expired cached responses
- */
-export function clearExpiredCache(): void {
+function clearExpiredCache(): void {
   const now = Date.now()
   for (const [key, cached] of responseCache.entries()) {
     if (now - cached.timestamp > cached.ttl) {
@@ -446,7 +385,6 @@ export function clearExpiredCache(): void {
   }
 }
 
-// Clean up expired cache periodically
 if (typeof setInterval !== 'undefined') {
-  setInterval(clearExpiredCache, 60000) // Every minute
+  setInterval(clearExpiredCache, 60000)
 }
