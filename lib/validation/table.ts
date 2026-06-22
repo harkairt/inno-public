@@ -91,6 +91,46 @@ export const parseRowsBlock = (json: string): TableData | null => {
   }
 }
 
+export type PivotData = Record<string, CellValue>[]
+
+export const parsePivotBlock = (json: string): PivotData | null => {
+  if (json.length > MAX_JSON_SIZE) return null
+
+  try {
+    const parsed: unknown = JSON.parse(json)
+    const result = rowsArraySchema.safeParse(parsed)
+    if (!result.success) return null
+    return result.data as PivotData
+  } catch {
+    return null
+  }
+}
+
+export const pivotDataToTableData = (data: PivotData): TableData => {
+  const keySet = new Set<string>()
+  for (const row of data) {
+    for (const key of Object.keys(row)) {
+      keySet.add(key)
+    }
+  }
+
+  const keys = [...keySet]
+  const columns: ColumnMeta[] = keys.map((key) => ({
+    name: key,
+    type: inferColumnType(data.map((r) => r[key])),
+  }))
+
+  const rows = data.map((row) => {
+    const normalized: Record<string, CellValue> = {}
+    for (const key of keys) {
+      normalized[key] = (row[key] ?? null) as CellValue
+    }
+    return normalized
+  })
+
+  return { columns, rows }
+}
+
 export const parseHRowsBlock = (json: string): TableData | null => {
   if (json.length > MAX_JSON_SIZE) return null
 

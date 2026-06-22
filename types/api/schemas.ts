@@ -156,8 +156,6 @@ export const LoginResponseDTOSchema = ApiResponseSchema(
   }),
 )
 
-export const RefreshTokenRequestDTOSchema = z.object({}).optional()
-
 export const RefreshTokenResponseDTOSchema = z.object({
   accessToken: z.string().nullable().optional(),
   refreshToken: z.string().nullable().optional(),
@@ -189,14 +187,6 @@ export const AiQuestionResponseDTOSchema = z.object({
   question: z.string(),
   group: z.string(),
   options: z.array(AIQuestionOptionDTOSchema).default([]),
-})
-
-export const AIAnswerDTOSchema = z.object({
-  answer: z.string(),
-  isRated: z.boolean(),
-  messageID: z.string(),
-  rating: z.number().nullable().optional(),
-  answerType: AIAnswerTypeSchema,
 })
 
 // DataTable structure (for messageType = 'dataTable')
@@ -393,17 +383,6 @@ export const GetUnreadMessagesDTOSchema = z.object({
 // REACTIONS AND NOTIFICATIONS SCHEMAS
 // ============================================================================
 
-export const ReactDTOSchema = z.object({
-  sessionId: z.string().optional(),
-  messageId: z.string().optional(),
-  agentId: z.number(),
-})
-
-export const NotifyDtoSchema = z.object({
-  SessionId: z.string().optional(),
-  AgentId: z.string().optional(),
-})
-
 // ============================================================================
 // PUBLIC CHAT SCHEMAS
 // ============================================================================
@@ -490,39 +469,6 @@ export const InnoChatConfigSchema = z.object({
 })
 
 // ============================================================================
-// UTILITY SCHEMAS
-// ============================================================================
-
-// Common email validation
-export const EmailSchema = z
-  .string()
-  .regex(/^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{1,63}$/, 'Invalid email format')
-
-// Common UUID validation
-export const UUIDSchema = z
-  .string()
-  .regex(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    'Invalid UUID format',
-  )
-
-// Common ISO date validation
-export const ISODateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/, 'Invalid datetime format')
-
-// Pagination schemas
-export const PaginationRequestSchema = z.object({
-  page: z.number().min(1).default(1),
-  pageSize: z.number().min(1).max(100).default(20),
-})
-
-export const SortRequestSchema = z.object({
-  field: z.string(),
-  direction: z.enum(['asc', 'desc']).default('desc'),
-})
-
-// ============================================================================
 // MUTATION SUCCESS RESPONSE SCHEMA
 // ============================================================================
 
@@ -557,7 +503,6 @@ export const MutationSuccessResponseSchema = z.string().transform((val, ctx) => 
 // Type inference helpers for use in components and services
 export type LoginRequestDTO = z.infer<typeof LoginRequestDTOSchema>
 export type LoginResponseDTO = z.infer<typeof LoginResponseDTOSchema>
-export type RefreshTokenRequestDTO = z.infer<typeof RefreshTokenRequestDTOSchema>
 export type RefreshTokenResponseDTO = z.infer<typeof RefreshTokenResponseDTOSchema>
 export type UserDTO = z.infer<typeof UserDTOSchema>
 export type AiQuestionRequestDTO = z.infer<typeof AiQuestionRequestDTOSchema>
@@ -581,7 +526,6 @@ export type SetSessionMessageRatingRequestDTO = z.infer<
 >
 export type GetUnreadMessagesRequestDTO = z.infer<typeof GetUnreadMessagesRequestDTOSchema>
 export type GetUnreadMessagesDTO = z.infer<typeof GetUnreadMessagesDTOSchema>
-export type ReactDTO = z.infer<typeof ReactDTOSchema>
 export type LogInfoDTO = z.infer<typeof LogInfoDTOSchema>
 export type InnoChatConfig = z.infer<typeof InnoChatConfigSchema>
 export type GetMessageRequestDTO = z.infer<typeof GetMessageRequestDTOSchema>
@@ -590,44 +534,6 @@ export type GetSessionUnreadMessagesRequestDTO = z.infer<
 >
 export type StartPublicChatrequestDTO = z.infer<typeof StartPublicChatrequestDTOSchema>
 export type AIPublicChatStartDTO = z.infer<typeof AIPublicChatStartDTOSchema>
-
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-
-// Helper function to validate unknown data against a schema
-export function validateDTO<T>(
-  schema: z.ZodType<T>,
-  data: unknown,
-): {
-  success: boolean
-  data?: T
-  errors?: z.ZodError
-} {
-  const result = schema.safeParse(data)
-
-  if (result.success) {
-    return { success: true, data: result.data }
-  } else {
-    return { success: false, errors: result.error }
-  }
-}
-
-// Helper to extract error messages from Zod error
-export function formatZodError(error: z.ZodError): string[] {
-  return error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-}
-
-// Helper to create a validation middleware for API responses
-export function createAPIResponseValidator<T>(schema: z.ZodType<T>) {
-  return (response: unknown): T => {
-    const result = schema.safeParse(response)
-    if (!result.success) {
-      throw new Error(`Invalid API response: ${formatZodError(result.error).join(', ')}`)
-    }
-    return result.data
-  }
-}
 
 /**
  * Validates if an API response indicates mutation success

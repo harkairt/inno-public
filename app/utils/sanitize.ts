@@ -64,6 +64,7 @@ const config: Config = {
     'data-language',
     'data-chart-id',
     'data-table-id',
+    'data-pivot-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',
     'width',
