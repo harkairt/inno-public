@@ -40,7 +40,8 @@
     "colorModeLight": "Light",
     "colorModeDark": "Dark",
     "colorModeSystem": "System",
-    "connectionStatus": "Connection"
+    "connectionStatus": "Connection",
+    "build-info": "Build"
   },
   "users": {
     "aiAgent": "AI Agent"

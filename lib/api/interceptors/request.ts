@@ -28,10 +28,9 @@ export function requestInterceptor(config: InternalAxiosRequestConfig): Internal
   }
 
   // Add app version if available
-  const appVersion = process.env.npm_package_version
-  if (appVersion) {
-    config.headers['X-App-Version'] = appVersion
-  }
+  const buildVersion =
+    (import.meta.env.NUXT_PUBLIC_BUILD_VERSION as string | undefined) ?? 'unknown'
+  config.headers['X-App-Version'] = buildVersion
 
   return config
 }

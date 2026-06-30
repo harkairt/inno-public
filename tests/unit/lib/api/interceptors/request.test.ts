@@ -58,18 +58,34 @@ describe('requestInterceptor', () => {
     expect(typeof result.headers['X-Client-User-Agent']).toBe('string')
   })
 
-  it('adds X-App-Version header when npm_package_version is set', async () => {
-    const originalVersion = process.env.npm_package_version
-    process.env.npm_package_version = '1.2.3'
+  it('adds X-App-Version header from NUXT_PUBLIC_BUILD_VERSION', async () => {
+    const original = import.meta.env.NUXT_PUBLIC_BUILD_VERSION
+    import.meta.env.NUXT_PUBLIC_BUILD_VERSION = '847-a1b2c3d'
 
+    vi.resetModules()
     const { requestInterceptor } = await import('@/lib/api/interceptors/request')
     const config = makeConfig()
 
     const result = requestInterceptor(config)
 
-    expect(result.headers['X-App-Version']).toBe('1.2.3')
+    expect(result.headers['X-App-Version']).toBe('847-a1b2c3d')
 
-    process.env.npm_package_version = originalVersion
+    import.meta.env.NUXT_PUBLIC_BUILD_VERSION = original
+  })
+
+  it('defaults X-App-Version to unknown when env var is not set', async () => {
+    const original = import.meta.env.NUXT_PUBLIC_BUILD_VERSION
+    delete import.meta.env.NUXT_PUBLIC_BUILD_VERSION
+
+    vi.resetModules()
+    const { requestInterceptor } = await import('@/lib/api/interceptors/request')
+    const config = makeConfig()
+
+    const result = requestInterceptor(config)
+
+    expect(result.headers['X-App-Version']).toBe('unknown')
+
+    import.meta.env.NUXT_PUBLIC_BUILD_VERSION = original
   })
 
   it('returns the config object', async () => {

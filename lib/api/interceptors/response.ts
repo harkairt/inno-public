@@ -248,14 +248,9 @@ function handleTokenRefreshFailure(refreshError: unknown): Promise<never> {
   return Promise.reject(normalizedRefreshError)
 }
 
-/**
- * Redirect the user to the login page
- */
 function redirectToLogin(): void {
   if (typeof window !== 'undefined') {
-    type NuxtWindow = { __NUXT__?: { config?: { app?: { baseURL?: string } } } }
-    const baseUrl = (window as unknown as NuxtWindow).__NUXT__?.config?.app?.baseURL ?? '/'
-    window.location.href = `${baseUrl}login`
+    window.location.href = `${import.meta.env.BASE_URL}login`
   }
 }
 

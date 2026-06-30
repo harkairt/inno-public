@@ -1,7 +1,25 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { defineNuxtConfig } from 'nuxt/config'
+import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
+
+function getGitInfo() {
+  try {
+    const commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+    const commitCount = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim()
+    return { commitHash, commitCount }
+  } catch {
+    return { commitHash: 'unknown', commitCount: '0' }
+  }
+}
+
+const gitInfo = getGitInfo()
+const buildVersion = `${gitInfo.commitCount}-${gitInfo.commitHash}`
+const buildTimestamp = new Date().toISOString()
+
+const rawBase = process.env.NUXT_APP_BASE_URL ?? '/'
+const baseURL = rawBase.endsWith('/') ? rawBase : `${rawBase}/`
 
 export default defineNuxtConfig({
   ssr: false,
@@ -10,7 +28,7 @@ export default defineNuxtConfig({
     host: '0.0.0.0',
   },
   app: {
-    baseURL: process.env.NUXT_APP_BASE_URL ?? '/',
+    baseURL,
     head: {
       link: [
         // Google Fonts: Outfit (headings) + DM Sans (body)
@@ -115,6 +133,8 @@ export default defineNuxtConfig({
       transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL ?? '',
       // Sentry
       sentryDsn: process.env.NUXT_PUBLIC_SENTRY_DSN ?? '',
+      buildVersion,
+      buildTimestamp,
     },
   },
 
@@ -123,8 +143,8 @@ export default defineNuxtConfig({
     registerType: 'prompt',
 
     workbox: {
-      navigateFallback: '/offline.html',
-      navigateFallbackDenylist: [/^\/api\//, /^\/chatHub\//, /^\/assets\//],
+      navigateFallback: `${baseURL}index.html`,
+      navigateFallbackDenylist: [/\/api\//, /\/chatHub\//, /\/assets\//],
       globPatterns: ['**/*.{js,css,html,png,svg,ico,txt}'],
       skipWaiting: true,
       clientsClaim: true,
@@ -168,8 +188,8 @@ export default defineNuxtConfig({
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'portrait',
-      scope: process.env.NUXT_APP_BASE_URL ?? '/',
-      start_url: process.env.NUXT_APP_BASE_URL ?? '/',
+      scope: baseURL,
+      start_url: baseURL,
       icons: [
         {
           src: 'icons/icon-72x72.png',
@@ -218,14 +238,14 @@ export default defineNuxtConfig({
           name: 'Chats',
           short_name: 'Chats',
           description: 'View your conversations',
-          url: '/chats',
+          url: `${baseURL}chats`,
           icons: [{ src: 'icons/chat-96x96.png', sizes: '96x96', type: 'image/png' }],
         },
         {
           name: 'Users',
           short_name: 'Users',
           description: 'Browse users',
-          url: '/users',
+          url: `${baseURL}users`,
           icons: [{ src: 'icons/history-96x96.png', sizes: '96x96', type: 'image/png' }],
         },
       ],

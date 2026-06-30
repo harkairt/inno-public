@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/nuxt'
 
 Sentry.init({
   dsn: useRuntimeConfig().public.sentryDsn,
+  release: `vonno@${useRuntimeConfig().public.buildVersion}`,
 
   sendDefaultPii: true,
 
