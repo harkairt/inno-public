@@ -118,10 +118,11 @@ const members = computed(() => {
   return [authStore.user.email, agentEmail]
 })
 
-// Get messages from cache (mutation adds optimistic messages here)
-// Session doesn't exist on server until first message is sent, so disable the query
+// Session doesn't exist on server until first message is sent.
+// Once messages arrive, enable the query so SignalR invalidations trigger refetch.
+const sessionQueryEnabled = ref(false)
 const { data: sessionData } = useChatSession(sessionId.value, {
-  enabled: false,
+  enabled: sessionQueryEnabled,
 })
 
 const messages = computed(() => {
@@ -129,6 +130,13 @@ const messages = computed(() => {
   const failedMessages = chatStore.getFailedMessages(sessionId.value)
   return [...queryMessages, ...failedMessages]
 })
+
+watch(
+  () => messages.value.length > 0,
+  (hasMessages) => {
+    if (hasMessages) sessionQueryEnabled.value = true
+  },
+)
 
 // Send mutation for disabling button while pending
 const mutation = useSendMessage()

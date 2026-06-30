@@ -76,7 +76,7 @@ export function useChatSessions(options?: { enabled?: boolean; staleTime?: numbe
 export function useChatSession(
   sessionId: string,
   options?: {
-    enabled?: boolean
+    enabled?: MaybeRefOrGetter<boolean>
     staleTime?: number
     includeMessages?: boolean
   },
@@ -103,7 +103,7 @@ export function useChatSession(
 
       return result.value
     },
-    enabled: options?.enabled ?? (authStore.isAuthenticated && !!sessionId),
+    enabled: toValue(options?.enabled) ?? (authStore.isAuthenticated && !!sessionId),
     staleTime: options?.staleTime ?? 10 * 1000, // 10 seconds - messages update frequently
     gcTime: 2 * 60 * 1000, // 2 minutes
     placeholderData: (previousData) => {

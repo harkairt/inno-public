@@ -132,9 +132,10 @@ export function useSignalRChat(options?: { autoConnect?: boolean; reconnectOnAut
     autoConnect: options?.autoConnect ?? true,
   })
 
-  onUnmounted(async () => {
+  // Connection lifecycle is app-level (plugin connects, auth store disconnects on logout).
+  // Calling stop() here would kill the shared singleton and bypass withAutomaticReconnect.
+  onUnmounted(() => {
     cleanupEventListeners(unsubscribers)
-    await disconnect()
   })
 
   const sendTypingIndicator = (sessionId: string, memberEmails: string[]) => {

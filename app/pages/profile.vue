@@ -94,6 +94,28 @@
             </span>
           </div>
         </div>
+
+        <!-- Build Info -->
+        <div
+          class="flex items-center justify-between px-4 py-3.5"
+          data-testid="profile-build-info"
+        >
+          <div class="flex items-center gap-3">
+            <UIcon
+              name="i-heroicons-information-circle"
+              class="size-5 text-[hsl(var(--muted-foreground))]"
+            />
+            <span class="text-sm font-medium">{{ t('profile.build-info') }}</span>
+          </div>
+          <div class="flex flex-col items-end">
+            <span class="text-sm text-[hsl(var(--muted-foreground))] font-mono">
+              {{ runtimeConfig.public.buildVersion }}
+            </span>
+            <span class="text-xs text-[hsl(var(--muted-foreground))]">
+              {{ formattedBuildTimestamp }}
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- Logout -->
@@ -121,6 +143,7 @@ import UserAvatar from '~/components/UserAvatar.vue'
 
 const { t, locale, setLocale } = useI18n()
 const colorMode = useColorMode()
+const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const {
   statusMessage,
@@ -134,6 +157,14 @@ const localeOptions = [
   { label: 'English', value: 'en' },
   { label: 'Magyar', value: 'hu' },
 ]
+
+const formattedBuildTimestamp = computed(() => {
+  const ts = runtimeConfig.public.buildTimestamp
+  if (!ts) return ''
+  const d = new Date(ts as string)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}, ${pad(d.getHours())}:${pad(d.getMinutes())}`
+})
 
 const colorModeOptions = computed(() => [
   { label: t('profile.colorModeLight'), value: 'light' },

@@ -40,7 +40,8 @@
     "colorModeLight": "Világos",
     "colorModeDark": "Sötét",
     "colorModeSystem": "Rendszer",
-    "connectionStatus": "Kapcsolat"
+    "connectionStatus": "Kapcsolat",
+    "build-info": "Verzió"
   },
   "users": {
     "aiAgent": "AI Ügynök"
