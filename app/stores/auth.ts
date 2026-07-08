@@ -12,6 +12,9 @@ import { extractTokensFromResponse } from '@/lib/api/utils/tokens'
 import { useSignalR } from '@/app/composables/useSignalR'
 import { useChatStore } from '@/app/stores/chat'
 import { getQueryClient } from '@/lib/queryClientSingleton'
+import { createLogger } from '@/lib/utils/logger'
+
+const logger = createLogger('AuthStore')
 
 // Manual localStorage persistence functions (fallback for Pinia persistence issues)
 const AUTH_STORAGE_KEY = 'innochat-auth'
@@ -53,17 +56,30 @@ export function getStorageMode(): StorageMode {
 // Note: Remember Me always uses localStorage (not affected by storage mode)
 export function saveRememberedEmail(email: string): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
+  try {
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
+  } catch {
+    // Blocked/quota-full Storage — degrade to no-op.
+  }
 }
 
 export function getRememberedEmail(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(REMEMBERED_EMAIL_KEY)
+  try {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY)
+  } catch {
+    // Blocked Storage — behave as if no email was remembered.
+    return null
+  }
 }
 
 export function clearRememberedEmail(): void {
   if (typeof window === 'undefined') return
-  localStorage.removeItem(REMEMBERED_EMAIL_KEY)
+  try {
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY)
+  } catch {
+    // Blocked Storage — degrade to no-op.
+  }
 }
 
 function saveAuthStateToStorage(
@@ -71,7 +87,7 @@ function saveAuthStateToStorage(
   accessToken: string | null,
   refreshToken: string | null,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     try {
       const authData = {
         user,
@@ -80,10 +96,13 @@ function saveAuthStateToStorage(
         timestamp: new Date().toISOString(),
       }
       getStorage().setItem(AUTH_STORAGE_KEY, JSON.stringify(authData))
-      resolve()
     } catch (error) {
-      reject(error)
+      // Blocked/quota-full Storage (Safari private mode, third-party iframe):
+      // keep auth in memory for the session instead of rejecting the promise
+      // (an unhandled rejection would crash the login/refresh flow).
+      logger.warn('Failed to persist auth state to storage', error)
     }
+    resolve()
   })
 }
 

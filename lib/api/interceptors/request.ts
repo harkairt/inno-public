@@ -108,10 +108,22 @@ class RateLimiter {
     const oldestRequest = Math.min(...timestamps)
     return oldestRequest + this.windowMs
   }
+
+  reset(): void {
+    this.requests.clear()
+  }
 }
 
 // Global rate limiter instance
 const rateLimiter = new RateLimiter()
+
+/**
+ * Reset the rate limiter's internal request map. For test isolation — the
+ * singleton keys by Date.now() and otherwise persists across tests.
+ */
+export function resetRateLimiter(): void {
+  rateLimiter.reset()
+}
 
 export function rateLimitInterceptor(
   config: InternalAxiosRequestConfig,

@@ -11,36 +11,38 @@ test.describe('Chat Messaging', () => {
   // In a real test environment, you'd create a session first or use test fixtures
 
   test.describe('Message Input', () => {
-    test('should display message input area', async ({ authenticatedPage }) => {
+    test('should display message input area', async ({ mockedAuthenticatedPage: page }) => {
       // Navigate to chats - we need a valid session for this
-      await authenticatedPage.goto('/chats')
+      await page.goto('/chats')
 
       // Try to find any existing session in sidebar and click it
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
         // Message input should be visible
-        await expect(authenticatedPage.locator(selectors.chat.messageInput)).toBeVisible()
-        await expect(authenticatedPage.locator(selectors.chat.sendButton)).toBeVisible()
+        await expect(page.locator(selectors.chat.messageInput)).toBeVisible()
+        await expect(page.locator(selectors.chat.sendButton)).toBeVisible()
       }
     })
 
-    test('should enable send button when message has content', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('should enable send button when message has content', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
-        const sendButton = authenticatedPage.locator(selectors.chat.sendButton)
-        const messageInput = authenticatedPage.locator(selectors.chat.messageInput)
+        const sendButton = page.locator(selectors.chat.sendButton)
+        const messageInput = page.locator(selectors.chat.messageInput)
 
         // Initially button may be disabled (empty input)
         await messageInput.fill('Test message')
@@ -50,21 +52,21 @@ test.describe('Chat Messaging', () => {
       }
     })
 
-    test('should clear input after sending message', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('@real should clear input after sending message', async ({ authenticatedPage: page }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
-        const messageInput = authenticatedPage.locator(selectors.chat.messageInput)
+        const messageInput = page.locator(selectors.chat.messageInput)
 
         // Type and send a message
         await messageInput.fill('Test message')
-        await authenticatedPage.locator(selectors.chat.sendButton).click()
+        await page.locator(selectors.chat.sendButton).click()
 
         // Input should be cleared after sending
         await expect(messageInput).toHaveValue('')
@@ -73,36 +75,36 @@ test.describe('Chat Messaging', () => {
   })
 
   test.describe('Message Display', () => {
-    test('should display messages container', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('should display messages container', async ({ mockedAuthenticatedPage: page }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
         // Messages container should be present
-        await expect(authenticatedPage.locator(selectors.chat.messagesContainer)).toBeVisible()
+        await expect(page.locator(selectors.chat.messagesContainer)).toBeVisible()
       }
     })
 
-    test('should show existing messages in session', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('should show existing messages in session', async ({ mockedAuthenticatedPage: page }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
         // Wait for messages to load
-        await authenticatedPage.waitForTimeout(1000)
+        await page.waitForTimeout(1000)
 
         // Check if any messages are displayed
-        const messages = authenticatedPage.locator(selectors.chat.messageItems)
+        const messages = page.locator(selectors.chat.messageItems)
         const messageCount = await messages.count()
 
         // Even empty sessions may have a welcome message
@@ -113,17 +115,17 @@ test.describe('Chat Messaging', () => {
   })
 
   test.describe('Keyboard Shortcuts', () => {
-    test('should send message on Enter key', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('should send message on Enter key', async ({ mockedAuthenticatedPage: page }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
-        const messageInput = authenticatedPage.locator(selectors.chat.messageInput)
+        const messageInput = page.locator(selectors.chat.messageInput)
         await messageInput.fill('Test message via Enter')
 
         // Press Enter to send
@@ -134,17 +136,17 @@ test.describe('Chat Messaging', () => {
       }
     })
 
-    test('should add newline on Shift+Enter', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('should add newline on Shift+Enter', async ({ mockedAuthenticatedPage: page }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
-        const messageInput = authenticatedPage.locator(selectors.chat.messageInput)
+        const messageInput = page.locator(selectors.chat.messageInput)
         await messageInput.fill('Line 1')
 
         // Press Shift+Enter to add newline
@@ -159,18 +161,18 @@ test.describe('Chat Messaging', () => {
   })
 
   test.describe('Typing Indicator', () => {
-    test('should have typing indicator element', async ({ authenticatedPage }) => {
-      await authenticatedPage.goto('/chats')
+    test('should have typing indicator element', async ({ mockedAuthenticatedPage: page }) => {
+      await page.goto('/chats')
 
-      const sessionLinks = authenticatedPage.locator('a[href^="/chats/"]')
+      const sessionLinks = page.locator('a[href^="/chats/"]')
       const count = await sessionLinks.count()
 
       if (count > 0) {
         await sessionLinks.first().click()
-        await authenticatedPage.waitForURL(/\/chats\//)
+        await page.waitForURL(/\/chats\//)
 
         // Typing indicator should exist (even if empty)
-        await expect(authenticatedPage.locator(selectors.chat.typingIndicator)).toBeVisible()
+        await expect(page.locator(selectors.chat.typingIndicator)).toBeVisible()
       }
     })
   })

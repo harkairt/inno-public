@@ -221,21 +221,8 @@ export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError
 }
 
-// Type guard to check if an error is a specific error type
-export function isValidationError(error: unknown): error is ValidationError {
-  return error instanceof ValidationError
-}
-
 export function isUnauthorizedError(error: unknown): error is UnauthorizedError {
   return error instanceof UnauthorizedError
-}
-
-export function isNetworkError(error: unknown): error is NetworkError {
-  return error instanceof NetworkError
-}
-
-export function isServerError(error: unknown): error is ServerError {
-  return error instanceof ServerError
 }
 
 export function isInvalidCredentialsError(error: unknown): error is InvalidCredentialsError {

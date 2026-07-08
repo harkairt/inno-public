@@ -1,23 +1,29 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
+import { server, http } from '@/tests/msw/server'
+import { apiOk, apiError, mutationOk } from '@/tests/msw/http'
 import { chatService } from '@/lib/api/services/ChatService'
-import { apiClient } from '@/lib/api/client'
+import { makeSession, makeRawMessage } from '@/tests/utils/factories'
 import { AIAnswerType } from '@/types/enums'
-import { makeApiResponse, makeAxiosError } from '@/tests/utils/factories'
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    post: vi.fn(),
-    get: vi.fn(),
-  },
-}))
+// MSW at the network boundary — no apiClient mock. Zod validation now really runs
+// (a wrong response shape fails the test) and a wrong path trips onUnhandledRequest.
 
-vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((error: unknown) => error),
-}))
-
-// ---------------------------------------------------------------------------
-// Shared test fixtures
-// ---------------------------------------------------------------------------
+const P = {
+  question: '/api/AIWebAPI/question/text',
+  welcome: '/api/AIWebAPI/welcomeText',
+  headers: '/api/AIWebAPI/GetSessionHeadersByUserId',
+  byId: '/api/AIWebAPI/GetSessionById',
+  setName: '/api/AIWebAPI/SetSessionName',
+  del: '/api/AIWebAPI/DeleteSessionById',
+  rate: '/api/AIWebAPI/SetSessionMessageRating',
+  read: '/api/AIWebAPI/Set_SessionMessagesRead',
+  unread: '/api/AIWebAPI/GetUnreadMessages',
+  sessionUnread: '/api/AIWebAPI/GetSessionUnreadMessages',
+  getMessage: '/api/AIWebAPI/getMessage',
+  addUser: '/api/AIWebAPI/addUserToSession',
+  removeUser: '/api/AIWebAPI/removeUserFromSession',
+  startPublic: '/api/AIWebAPI/startPublicChat',
+} as const
 
 const mockQuestion = {
   userCode: 'testuser',
@@ -30,44 +36,19 @@ const mockQuestion = {
   options: [],
 }
 
-const mockRawMessage = {
-  messageID: 'msg-1',
-  messageText: 'AI response',
-  messageType: 'text',
-  isRated: false,
-  rating: null,
-  readByUsers: null,
-  sendDate: '2024-01-01T00:00:00Z',
-  senderName: 'AI',
-  senderUserCode: 'ai',
-  sessionId: 'session-1',
-  dataTable: null,
-  options: null,
-}
-
-const mockRawSession = {
-  sessionId: 'session-1',
-  sessionName: 'Test Session',
-  agentId: 1,
-  agentImage: null,
-  agentDarkImage: null,
-  insertDate: '2024-01-01T00:00:00Z',
-  members: ['testuser'],
-  memberDetails: null,
-  userCode: 'testuser',
-}
-
 // ---------------------------------------------------------------------------
 // sendQuestion
 // ---------------------------------------------------------------------------
 
 describe('ChatService.sendQuestion', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns parsed AISessionMessageDTO on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(mockRawMessage))
+    let capturedBody: unknown
+    server.use(
+      http.post(P.question, async ({ request }) => {
+        capturedBody = await request.json()
+        return apiOk(makeRawMessage({ messageID: 'msg-1', messageType: 'text' }))
+      }),
+    )
 
     const result = await chatService.sendQuestion(mockQuestion)
 
@@ -76,18 +57,19 @@ describe('ChatService.sendQuestion', () => {
       expect(result.value.messageID).toBe('msg-1')
       expect(result.value.messageType).toBe(AIAnswerType.Text)
     }
+    expect(capturedBody).toMatchObject({ sessionId: 'session-1', question: 'What is the answer?' })
   })
 
   it('returns EMPTY_RESPONSE error when data is null', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.question, () => apiOk(null)))
 
     const result = await chatService.sendQuestion(mockQuestion)
 
     expect(result.isErr()).toBe(true)
   })
 
-  it('returns error on network failure', async () => {
-    vi.mocked(apiClient.post).mockRejectedValue(makeAxiosError(500))
+  it('returns an error on network failure', async () => {
+    server.use(http.post(P.question, () => apiError(500)))
 
     const result = await chatService.sendQuestion(mockQuestion)
 
@@ -95,7 +77,7 @@ describe('ChatService.sendQuestion', () => {
   })
 
   it('returns VALIDATION_ERROR when response shape is invalid', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse({ invalid: true }))
+    server.use(http.post(P.question, () => apiOk({ invalid: true })))
 
     const result = await chatService.sendQuestion(mockQuestion)
 
@@ -108,23 +90,17 @@ describe('ChatService.sendQuestion', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.getWelcomeMessage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns welcome message on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse({ message: 'Welcome!' }))
+    server.use(http.post(P.welcome, () => apiOk({ message: 'Welcome!' })))
 
     const result = await chatService.getWelcomeMessage(mockQuestion)
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value.message).toBe('Welcome!')
-    }
+    if (result.isOk()) expect(result.value.message).toBe('Welcome!')
   })
 
   it('returns error when data is null', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.welcome, () => apiOk(null)))
 
     const result = await chatService.getWelcomeMessage(mockQuestion)
 
@@ -137,18 +113,12 @@ describe('ChatService.getWelcomeMessage', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.getSessionHeaders', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+  const request = { userCode: 'testuser', agents: [1], filterText: '' }
 
   it('returns array of session headers on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse([mockRawSession]))
+    server.use(http.post(P.headers, () => apiOk([makeSession({ sessionId: 'session-1' })])))
 
-    const result = await chatService.getSessionHeaders({
-      userCode: 'testuser',
-      agents: [1],
-      filterText: '',
-    })
+    const result = await chatService.getSessionHeaders(request)
 
     expect(result.isOk()).toBe(true)
     if (result.isOk()) {
@@ -158,40 +128,26 @@ describe('ChatService.getSessionHeaders', () => {
   })
 
   it('returns empty array when no sessions', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.headers, () => apiOk(null)))
 
-    const result = await chatService.getSessionHeaders({
-      userCode: 'testuser',
-      agents: [1],
-      filterText: '',
-    })
+    const result = await chatService.getSessionHeaders(request)
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value).toHaveLength(0)
-    }
+    if (result.isOk()) expect(result.value).toHaveLength(0)
   })
 
-  it('returns VALIDATION_ERROR when session header shape is invalid', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse([{ badField: true }]))
+  it('returns VALIDATION_ERROR when a session header shape is invalid', async () => {
+    server.use(http.post(P.headers, () => apiOk([{ badField: true }])))
 
-    const result = await chatService.getSessionHeaders({
-      userCode: 'testuser',
-      agents: [1],
-      filterText: '',
-    })
+    const result = await chatService.getSessionHeaders(request)
 
     expect(result.isErr()).toBe(true)
   })
 
-  it('returns error on network failure', async () => {
-    vi.mocked(apiClient.post).mockRejectedValue(makeAxiosError(500))
+  it('returns an error on network failure', async () => {
+    server.use(http.post(P.headers, () => apiError(500)))
 
-    const result = await chatService.getSessionHeaders({
-      userCode: 'testuser',
-      agents: [1],
-      filterText: '',
-    })
+    const result = await chatService.getSessionHeaders(request)
 
     expect(result.isErr()).toBe(true)
   })
@@ -202,24 +158,21 @@ describe('ChatService.getSessionHeaders', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.getSessionById', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns full session on success', async () => {
-    const fullSession = { ...mockRawSession, messages: [mockRawMessage] }
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(fullSession))
+    server.use(
+      http.post(P.byId, () =>
+        apiOk({ ...makeSession({ sessionId: 'session-1' }), messages: [makeRawMessage()] }),
+      ),
+    )
 
     const result = await chatService.getSessionById('session-1')
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value.sessionId).toBe('session-1')
-    }
+    if (result.isOk()) expect(result.value.sessionId).toBe('session-1')
   })
 
   it('returns NOT_FOUND when data is null', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.byId, () => apiOk(null)))
 
     const result = await chatService.getSessionById('session-1')
 
@@ -228,18 +181,12 @@ describe('ChatService.getSessionById', () => {
 })
 
 // ---------------------------------------------------------------------------
-// updateSessionName
+// updateSessionName / deleteSession (mutation-success contract)
 // ---------------------------------------------------------------------------
 
 describe('ChatService.updateSessionName', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns MutationSuccess on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(
-      makeApiResponse(JSON.stringify({ message: 'kész.' })),
-    )
+    server.use(http.post(P.setName, () => mutationOk()))
 
     const result = await chatService.updateSessionName({
       sessionId: 'session-1',
@@ -248,13 +195,11 @@ describe('ChatService.updateSessionName', () => {
     })
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value).toBe(true)
-    }
+    if (result.isOk()) expect(result.value).toBe(true)
   })
 
-  it('returns error on network failure', async () => {
-    vi.mocked(apiClient.post).mockRejectedValue(makeAxiosError(500))
+  it('returns an error on network failure', async () => {
+    server.use(http.post(P.setName, () => apiError(500)))
 
     const result = await chatService.updateSessionName({
       sessionId: 'session-1',
@@ -266,19 +211,9 @@ describe('ChatService.updateSessionName', () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// deleteSession
-// ---------------------------------------------------------------------------
-
 describe('ChatService.deleteSession', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns MutationSuccess on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(
-      makeApiResponse(JSON.stringify({ message: 'kész.' })),
-    )
+    server.use(http.post(P.del, () => mutationOk()))
 
     const result = await chatService.deleteSession({ sessionId: 'session-1', agentId: 1 })
 
@@ -286,8 +221,8 @@ describe('ChatService.deleteSession', () => {
     expect(result.isOk() && result.value).toBe(true)
   })
 
-  it('returns error on network failure', async () => {
-    vi.mocked(apiClient.post).mockRejectedValue(makeAxiosError(500))
+  it('returns an error on network failure', async () => {
+    server.use(http.post(P.del, () => apiError(500)))
 
     const result = await chatService.deleteSession({ sessionId: 'session-1', agentId: 1 })
 
@@ -300,12 +235,8 @@ describe('ChatService.deleteSession', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.rateMessage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns void on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({})
+    server.use(http.post(P.rate, () => apiOk(null)))
 
     const result = await chatService.rateMessage({
       sessionId: 'session-1',
@@ -317,8 +248,8 @@ describe('ChatService.rateMessage', () => {
     expect(result.isOk()).toBe(true)
   })
 
-  it('returns error on failure', async () => {
-    vi.mocked(apiClient.post).mockRejectedValue(makeAxiosError(500))
+  it('returns an error on failure', async () => {
+    server.use(http.post(P.rate, () => apiError(500)))
 
     const result = await chatService.rateMessage({
       sessionId: 'session-1',
@@ -332,25 +263,23 @@ describe('ChatService.rateMessage', () => {
 })
 
 // ---------------------------------------------------------------------------
-// markMessagesRead
+// markMessagesRead (request-shape via handler spy)
 // ---------------------------------------------------------------------------
 
 describe('ChatService.markMessagesRead', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('returns void on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({})
+  it('posts the mapped body shape and returns void on success', async () => {
+    let capturedBody: unknown
+    server.use(
+      http.post(P.read, async ({ request }) => {
+        capturedBody = await request.json()
+        return apiOk(null)
+      }),
+    )
 
     const result = await chatService.markMessagesRead('session-1', 1, 'testuser')
 
     expect(result.isOk()).toBe(true)
-    expect(apiClient.post).toHaveBeenCalledWith('/api/AIWebAPI/Set_SessionMessagesRead', {
-      sessionID: 'session-1',
-      agent: 1,
-      userCode: 'testuser',
-    })
+    expect(capturedBody).toEqual({ sessionID: 'session-1', agent: 1, userCode: 'testuser' })
   })
 })
 
@@ -359,32 +288,24 @@ describe('ChatService.markMessagesRead', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.getUnreadMessages', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns unread message counts on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(
-      makeApiResponse([{ sessionId: 'session-1', unreadMessageCount: 3 }]),
+    server.use(
+      http.post(P.unread, () => apiOk([{ sessionId: 'session-1', unreadMessageCount: 3 }])),
     )
 
     const result = await chatService.getUnreadMessages({ userCode: 'testuser' })
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value[0]?.unreadMessageCount).toBe(3)
-    }
+    if (result.isOk()) expect(result.value[0]?.unreadMessageCount).toBe(3)
   })
 
   it('returns empty array when no unread messages', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.unread, () => apiOk(null)))
 
     const result = await chatService.getUnreadMessages({ userCode: 'testuser' })
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value).toHaveLength(0)
-    }
+    if (result.isOk()) expect(result.value).toHaveLength(0)
   })
 })
 
@@ -393,12 +314,8 @@ describe('ChatService.getUnreadMessages', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.getSessionUnreadMessages', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns count on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(5))
+    server.use(http.post(P.sessionUnread, () => apiOk(5)))
 
     const result = await chatService.getSessionUnreadMessages({
       sessionId: 'session-1',
@@ -406,13 +323,11 @@ describe('ChatService.getSessionUnreadMessages', () => {
     })
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value).toBe(5)
-    }
+    if (result.isOk()) expect(result.value).toBe(5)
   })
 
   it('returns error when response is null', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.sessionUnread, () => apiOk(null)))
 
     const result = await chatService.getSessionUnreadMessages({
       sessionId: 'session-1',
@@ -428,12 +343,8 @@ describe('ChatService.getSessionUnreadMessages', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.getMessage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns parsed message on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(mockRawMessage))
+    server.use(http.post(P.getMessage, () => apiOk(makeRawMessage({ messageID: 'msg-1' }))))
 
     const result = await chatService.getMessage({
       messageId: 'msg-1',
@@ -442,13 +353,11 @@ describe('ChatService.getMessage', () => {
     })
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value.messageID).toBe('msg-1')
-    }
+    if (result.isOk()) expect(result.value.messageID).toBe('msg-1')
   })
 
   it('returns NOT_FOUND when data is null', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.getMessage, () => apiOk(null)))
 
     const result = await chatService.getMessage({
       messageId: 'msg-1',
@@ -461,16 +370,12 @@ describe('ChatService.getMessage', () => {
 })
 
 // ---------------------------------------------------------------------------
-// addUserToSession / removeUserFromSession
+// addUserToSession / removeUserFromSession / reactToMessage
 // ---------------------------------------------------------------------------
 
 describe('ChatService.addUserToSession', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns void on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({})
+    server.use(http.post(P.addUser, () => apiOk(null)))
 
     const result = await chatService.addUserToSession({
       sessionId: 'session-1',
@@ -483,12 +388,8 @@ describe('ChatService.addUserToSession', () => {
 })
 
 describe('ChatService.removeUserFromSession', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns void on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({})
+    server.use(http.post(P.removeUser, () => apiOk(null)))
 
     const result = await chatService.removeUserFromSession({
       sessionId: 'session-1',
@@ -505,12 +406,8 @@ describe('ChatService.removeUserFromSession', () => {
 // ---------------------------------------------------------------------------
 
 describe('ChatService.startPublicChat', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('returns AIPublicChatStartDTO on success', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse({ user: null, agent: null }))
+    server.use(http.post(P.startPublic, () => apiOk({ user: null, agent: null })))
 
     const result = await chatService.startPublicChat({ agentId: 1 })
 
@@ -518,7 +415,7 @@ describe('ChatService.startPublicChat', () => {
   })
 
   it('returns error when data is null', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue(makeApiResponse(null))
+    server.use(http.post(P.startPublic, () => apiOk(null)))
 
     const result = await chatService.startPublicChat({ agentId: 1 })
 

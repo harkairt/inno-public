@@ -9,14 +9,20 @@ export const selectors = {
     passwordInput: '#password',
     rememberCheckbox: '#remember',
     submitButton: { role: 'button' as const, name: /sign in/i },
-    logoutButton: { role: 'button' as const, name: /logout/i },
+    // Logout lives on the /profile page (icon-labelled UButton), not an inline
+    // nav button — target it by test id.
+    logoutButton: '[data-testid="profile-logout-button"]',
     errorAlert: '[data-testid="login-error"]',
   },
 
+  // App shell (authenticated). Desktop renders AppRail + a ChatListPanel on
+  // /chats; mobile renders AppBottomTabBar (no rail/panel). There is no
+  // collapsible "sidebar" — the old sidebar/sidebar-toggle/sidebar-collapse
+  // testids never existed in the app.
   layout: {
-    sidebar: '[data-testid="sidebar"]',
-    sidebarToggle: '[data-testid="sidebar-toggle"]',
-    sidebarCollapse: '[data-testid="sidebar-collapse"]',
+    appRail: '[data-testid="app-rail"]',
+    bottomTabBar: '[data-testid="bottom-tab-bar"]',
+    chatListPanel: '[data-testid="chat-list-panel"]',
   },
 
   chats: {
@@ -26,10 +32,11 @@ export const selectors = {
     unreadCard: (sessionId: string) => `[data-testid="unread-card-${sessionId}"]`,
     unreadCards: '[data-testid^="unread-card-"]',
 
-    // Session list in sidebar
-    sessionList: '[data-testid="session-list"]',
+    // Session list (ChatListPanel)
+    sessionList: '[data-testid="chat-list-panel"]',
     sessionItem: (sessionId: string) => `[data-testid="session-item-${sessionId}"]`,
-    sessionSearch: '[data-testid="session-search"]',
+    sessionItems: '[data-testid^="session-item-"]',
+    sessionSearch: '[data-testid="session-search-input"]',
   },
 
   chat: {
@@ -52,10 +59,11 @@ export const selectors = {
   },
 
   users: {
-    userList: '[data-testid="user-list"]',
-    userCard: (id: number) => `[data-testid="user-card-${id}"]`,
-    userCards: '[data-testid^="user-card-"]',
-    userSearch: '[data-testid="user-search"]',
+    // Dedicated /users page (not a sidebar accordion).
+    usersPage: '[data-testid="users-page"]',
+    userItem: (id: number) => `[data-testid="user-item-${id}"]`,
+    userItems: '[data-testid^="user-item-"]',
+    userSearch: '[data-testid="user-search-input"]',
   },
 }
 

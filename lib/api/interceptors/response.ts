@@ -53,12 +53,6 @@ interface QueuedRequest {
 let isRefreshing = false
 let failedQueue: QueuedRequest[] = []
 let authStoreInstance: AuthStore | null = null
-let loginRedirectBase = '/'
-
-// Set app base URL for login redirects (called from plugin; Nuxt context unavailable here)
-export function setLoginRedirectBase(baseURL: string): void {
-  loginRedirectBase = baseURL.endsWith('/') ? baseURL : `${baseURL}/`
-}
 
 // Set auth store instance (called from plugin)
 export function setAuthStore(authStore: AuthStore): void {
@@ -254,11 +248,29 @@ function handleTokenRefreshFailure(refreshError: unknown): Promise<never> {
   return Promise.reject(normalizedRefreshError)
 }
 
+let redirectToLoginFn: (() => void) | null = null
+
+/**
+ * Inject a router-aware login redirect (called from Nuxt plugin context).
+ * Keeps this module framework-agnostic, mirroring the setAuthStore pattern.
+ */
+export function setRedirectToLogin(fn: () => void): void {
+  redirectToLoginFn = fn
+}
+
 function redirectToLogin(): void {
+  if (redirectToLoginFn) {
+    redirectToLoginFn()
+    return
+  }
+  // Fallback (plugin not yet initialized): build an absolute URL from the
+  // runtime baseURL. import.meta.env.BASE_URL is './' in production builds,
+  // which resolves relative to the current path and stacks segments.
   if (typeof window !== 'undefined') {
-    // Do not use import.meta.env.BASE_URL here: Nuxt prod client builds set it to "./",
-    // which the browser resolves relative to the current path (e.g. /aichat/chats/login)
-    window.location.href = `${loginRedirectBase}login`
+    type NuxtWindow = { __NUXT__?: { config?: { app?: { baseURL?: string } } } }
+    const base = (window as unknown as NuxtWindow).__NUXT__?.config?.app?.baseURL ?? '/'
+    const normalizedBase = base.endsWith('/') ? base : `${base}/`
+    window.location.href = new URL(`${normalizedBase}login`, window.location.origin).href
   }
 }
 
@@ -388,6 +400,24 @@ function clearExpiredCache(): void {
   }
 }
 
-if (typeof setInterval !== 'undefined') {
-  setInterval(clearExpiredCache, 60000)
+/**
+ * Start the periodic cache-cleanup timer. Called once at startup from the API
+ * interceptors plugin — NOT at import time, so tests don't leak a timer.
+ * @returns a stop function that clears the interval.
+ */
+export function startCacheCleanup(intervalMs = 60_000): () => void {
+  const id = setInterval(clearExpiredCache, intervalMs)
+  return () => clearInterval(id)
+}
+
+/**
+ * Reset all module-level interceptor state. For test isolation — restores the
+ * module to a pristine state between tests (see tests/utils/resetAllState.ts).
+ */
+export function resetResponseInterceptorState(): void {
+  isRefreshing = false
+  failedQueue = []
+  authStoreInstance = null
+  redirectToLoginFn = null
+  responseCache.clear()
 }

@@ -172,6 +172,11 @@ export function useUnreadMessageCounts(options?: { enabled?: boolean; staleTime?
  */
 const agentsWithoutWelcomeMessage = new Set<number>()
 
+/** Reset the module-level welcome-message tracking set (test isolation). */
+export function resetWelcomeMessageTracking(): void {
+  agentsWithoutWelcomeMessage.clear()
+}
+
 /**
  * Welcome message query composable
  * Fetches welcome message for a specific agent

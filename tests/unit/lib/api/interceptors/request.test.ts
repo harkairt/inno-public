@@ -3,6 +3,15 @@ import { AxiosHeaders } from 'axios'
 import type { InternalAxiosRequestConfig } from 'axios'
 import type { AppError } from '@/lib/errors/types'
 import { ErrorCode } from '@/types/enums'
+import { rateLimitInterceptor, resetRateLimiter } from '@/lib/api/interceptors/request'
+import { apiClient } from '@/lib/api/client'
+import { configureApiInterceptors, clearApiInterceptors } from '@/lib/api/interceptors/setup'
+import { server, http } from '@/tests/msw/server'
+import { apiOk } from '@/tests/msw/http'
+import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { makeUser } from '@/tests/utils/factories'
+import { useAuthStore } from '@/app/stores/auth'
+import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
 
 vi.mock('@/lib/utils/uuid', () => ({
   generateUUID: vi.fn(() => 'mock-uuid-1234'),
@@ -152,19 +161,65 @@ describe('createAuthRequestInterceptor', () => {
   })
 })
 
+describe('auth-header injection through the real client (MSW)', () => {
+  const PROBE_PATH = '/api/authentication/profile'
+
+  function armInterceptors() {
+    // Earlier vi.resetModules() tests in this file can leave a stale interceptor
+    // armed against a previous store; clear via the same module reference used to
+    // configure so this block always starts from a clean chain.
+    clearApiInterceptors()
+    const authStore = useAuthStore()
+    configureApiInterceptors({ authStore, redirectToLogin: vi.fn() })
+    return authStore
+  }
+
+  it('injects the Bearer token onto outgoing requests', async () => {
+    seedAuthStorage({ accessToken: 'wire-access-token', refreshToken: 'wire-refresh-token' })
+    armInterceptors()
+
+    let sentAuth: string | null = null
+    server.use(
+      http.get(PROBE_PATH, ({ request }) => {
+        sentAuth = request.headers.get('Authorization')
+        return apiOk(makeUser())
+      }),
+    )
+
+    await apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })
+
+    expect(sentAuth).toBe('Bearer wire-access-token')
+  })
+
+  it('omits the Authorization header when there is no token', async () => {
+    armInterceptors() // unseeded store → no access token
+
+    let sentAuth: string | null = 'unset'
+    server.use(
+      http.get(PROBE_PATH, ({ request }) => {
+        sentAuth = request.headers.get('Authorization')
+        return apiOk(makeUser())
+      }),
+    )
+
+    await apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })
+
+    expect(sentAuth).toBeNull()
+  })
+})
+
 describe('rateLimitInterceptor', () => {
+  // The rate limiter is a module singleton; resetRateLimiter() (also called by
+  // the global resetAllState) isolates each test — no vi.resetModules() needed.
   beforeEach(() => {
-    vi.useFakeTimers()
-    // Re-import to get a fresh RateLimiter instance each time
-    vi.resetModules()
+    resetRateLimiter()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    useRealTimers()
   })
 
-  it('allows requests under the limit', async () => {
-    const { rateLimitInterceptor } = await import('@/lib/api/interceptors/request')
+  it('allows requests under the limit', () => {
     const config = makeConfig({ method: 'get', url: '/api/items' })
 
     const result = rateLimitInterceptor(config)
@@ -172,9 +227,7 @@ describe('rateLimitInterceptor', () => {
     expect(result).toBe(config)
   })
 
-  it('allows multiple requests under the limit', async () => {
-    const { rateLimitInterceptor } = await import('@/lib/api/interceptors/request')
-
+  it('allows multiple requests under the limit', () => {
     // Make 99 requests (under default limit of 100)
     for (let i = 0; i < 99; i++) {
       const config = makeConfig({ method: 'get', url: '/api/data' })
@@ -184,8 +237,6 @@ describe('rateLimitInterceptor', () => {
   })
 
   it('rejects when the rate limit is exceeded', async () => {
-    const { rateLimitInterceptor } = await import('@/lib/api/interceptors/request')
-
     // Exhaust the limit (100 requests for same method_url key)
     for (let i = 0; i < 100; i++) {
       const config = makeConfig({ method: 'get', url: '/api/limited' })
@@ -202,8 +253,6 @@ describe('rateLimitInterceptor', () => {
   })
 
   it('rejected error message contains wait time', async () => {
-    const { rateLimitInterceptor } = await import('@/lib/api/interceptors/request')
-
     for (let i = 0; i < 100; i++) {
       void rateLimitInterceptor(makeConfig({ method: 'post', url: '/api/action' }))
     }
@@ -219,9 +268,7 @@ describe('rateLimitInterceptor', () => {
     }
   })
 
-  it('uses method_url as the rate limit key', async () => {
-    const { rateLimitInterceptor } = await import('@/lib/api/interceptors/request')
-
+  it('uses method_url as the rate limit key', () => {
     // Exhaust limit for GET /api/a
     for (let i = 0; i < 100; i++) {
       void rateLimitInterceptor(makeConfig({ method: 'get', url: '/api/a' }))
@@ -239,7 +286,7 @@ describe('rateLimitInterceptor', () => {
   })
 
   it('resets after the time window passes', async () => {
-    const { rateLimitInterceptor } = await import('@/lib/api/interceptors/request')
+    useFakeTimersSafe()
 
     // Exhaust the limit
     for (let i = 0; i < 100; i++) {
@@ -251,8 +298,8 @@ describe('rateLimitInterceptor', () => {
       rateLimitInterceptor(makeConfig({ method: 'get', url: '/api/reset-test' })),
     ).rejects.toMatchObject({ name: 'AppError' })
 
-    // Advance time past the window (default 60000ms)
-    vi.advanceTimersByTime(60001)
+    // Advance time past the window (default 60000ms) — async advance per timer rules.
+    await advance(60001)
 
     // Should be allowed again
     const config = makeConfig({ method: 'get', url: '/api/reset-test' })

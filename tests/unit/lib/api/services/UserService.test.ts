@@ -1,47 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
+import { server, http, HttpResponse } from '@/tests/msw/server'
+import { apiOk, apiError } from '@/tests/msw/http'
 import { userService } from '@/lib/api/services/UserService'
-import { apiClient } from '@/lib/api/client'
-import { makeApiResponse, makeAxiosError } from '@/tests/utils/factories'
+import { makeUser } from '@/tests/utils/factories'
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
-}))
+// MSW at the network boundary — no apiClient mock. UserDTO Zod validation runs
+// for real; the ?email query param is asserted via a handler spy.
 
-vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((e: unknown) => e),
-}))
-
-function makeRawUser(overrides = {}) {
-  return {
-    id: 1,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: null,
-    name: 'Test User',
-    email: 'test@example.com',
-    status: 'active',
-    invitationAccepted: true,
-    roles: ['user'],
-    isVirtual: false,
-    url: null,
-    image: null,
-    darkImage: null,
-    userIds: [],
-    users: null,
-    isAvailable: true,
-    ...overrides,
-  }
-}
+const USERS_PATH = '/api/user/get-selectable-users'
 
 describe('UserService.getSelectableUsers', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('returns array of validated UserDTOs on success', async () => {
-    vi.mocked(apiClient.get).mockResolvedValue(makeApiResponse([makeRawUser()]))
+  it('returns validated UserDTOs on success and forwards the email query param', async () => {
+    let capturedEmail: string | null = null
+    server.use(
+      http.get(USERS_PATH, ({ request }) => {
+        capturedEmail = new URL(request.url).searchParams.get('email')
+        return apiOk([makeUser({ email: 'test@example.com' })])
+      }),
+    )
 
     const result = await userService.getSelectableUsers('test@example.com')
 
@@ -50,59 +26,49 @@ describe('UserService.getSelectableUsers', () => {
       expect(result.value).toHaveLength(1)
       expect(result.value[0]?.email).toBe('test@example.com')
     }
-
-    expect(apiClient.get).toHaveBeenCalledWith('/api/user/get-selectable-users', {
-      params: { email: 'test@example.com' },
-    })
+    expect(capturedEmail).toBe('test@example.com')
   })
 
   it('returns empty array when no users', async () => {
-    vi.mocked(apiClient.get).mockResolvedValue(makeApiResponse(null))
+    server.use(http.get(USERS_PATH, () => apiOk(null)))
 
     const result = await userService.getSelectableUsers('test@example.com')
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value).toHaveLength(0)
-    }
+    if (result.isOk()) expect(result.value).toHaveLength(0)
   })
 
   it('returns multiple users', async () => {
-    vi.mocked(apiClient.get).mockResolvedValue(
-      makeApiResponse([
-        makeRawUser({ id: 1, email: 'user1@example.com' }),
-        makeRawUser({ id: 2, email: 'user2@example.com' }),
-      ]),
+    server.use(
+      http.get(USERS_PATH, () =>
+        apiOk([makeUser({ email: 'user1@example.com' }), makeUser({ email: 'user2@example.com' })]),
+      ),
     )
 
     const result = await userService.getSelectableUsers('admin@example.com')
 
     expect(result.isOk()).toBe(true)
-    if (result.isOk()) {
-      expect(result.value).toHaveLength(2)
-    }
+    if (result.isOk()) expect(result.value).toHaveLength(2)
   })
 
-  it('returns VALIDATION_ERROR for invalid user shape', async () => {
-    vi.mocked(apiClient.get).mockResolvedValue(
-      makeApiResponse([{ id: 'not-a-number', name: 'Bad' }]),
-    )
+  it('returns VALIDATION_ERROR for an invalid user shape', async () => {
+    server.use(http.get(USERS_PATH, () => apiOk([{ id: 'not-a-number', name: 'Bad' }])))
 
     const result = await userService.getSelectableUsers('test@example.com')
 
     expect(result.isErr()).toBe(true)
   })
 
-  it('returns error on network failure', async () => {
-    vi.mocked(apiClient.get).mockRejectedValue(makeAxiosError(500))
+  it('returns an error on network failure', async () => {
+    server.use(http.get(USERS_PATH, () => HttpResponse.error()))
 
     const result = await userService.getSelectableUsers('test@example.com')
 
     expect(result.isErr()).toBe(true)
   })
 
-  it('returns error on 401 unauthorized', async () => {
-    vi.mocked(apiClient.get).mockRejectedValue(makeAxiosError(401, 'UNAUTHORIZED'))
+  it('returns an error on 401 unauthorized', async () => {
+    server.use(http.get(USERS_PATH, () => apiError(401)))
 
     const result = await userService.getSelectableUsers('test@example.com')
 

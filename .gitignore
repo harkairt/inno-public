@@ -35,5 +35,9 @@ playwright/.cache/
 # Test coverage output
 coverage/
 
+# Stryker mutation testing
+reports/
+.stryker-tmp/
+
 # Sentry Config File
 .env.sentry-build-plugin

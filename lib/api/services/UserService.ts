@@ -8,7 +8,7 @@ import type { UserDTO } from '@/types/api/schemas'
 import { UserDTOSchema } from '@/types/api/schemas'
 import type { ApiResponse } from '@/types/api/base'
 
-export class UserService {
+class UserService {
   async getSelectableUsers(email: string): Promise<Result<UserDTO[], AppError>> {
     try {
       const response = await apiClient.get<ApiResponse<UserDTO[]>>(

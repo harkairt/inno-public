@@ -36,7 +36,7 @@ function parseLoginResponse(
   return ok(response.data)
 }
 
-export class AuthService {
+class AuthService {
   async login(credentials: LoginRequestDTO): Promise<Result<LoginResponseDTO, AppError>> {
     try {
       const response = await apiClient.post<ApiResponse<LoginResponseDTO['data']>>(

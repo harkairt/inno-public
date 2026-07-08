@@ -3,7 +3,7 @@ import { apiClient } from '../client'
 import type { ErrorData } from '@/types/api/log-types'
 import { LogLevel } from '@/types/enums'
 
-export class LogService {
+class LogService {
   /**
    * Send client log to backend
    * Fire and forget - doesn't throw errors to avoid crashing the app

@@ -20,8 +20,9 @@ npm run lint          # ESLint
 npm run lint:fix      # ESLint with auto-fix
 npm run test          # Vitest (watch mode)
 npm run test:run      # Vitest (single run)
-npm run test:coverage # Vitest with coverage (80% threshold enforced)
+npm run test:coverage # Vitest with coverage (ratcheted thresholds in vitest.config.ts)
 npm run test:e2e      # Playwright E2E
+npm run test:mutation # Stryker mutation testing (advisory; see stryker.config.json)
 ```
 
 Run a single test file: `npx vitest run tests/path/to/file.test.ts`
@@ -85,4 +86,7 @@ Default language is Hungarian (`hu`). Always add keys to both `i18n/locales/en.j
 
 - Unit/component tests: `tests/` with Vitest + Testing Library + MSW 2
 - E2E: `tests/e2e/` with Playwright
-- MSW handlers mock API calls; never mock Pinia stores directly in integration tests
+- MSW 2 is wired into `tests/setup.ts` (`server.listen({ onUnhandledRequest: 'error' })`) — unhandled HTTP fails the test. Domain handlers in `tests/msw/handlers/` match real backend endpoints (`/api/authentication/*`, `/api/AIWebAPI/*`, `/api/settings/config.json`, ...). New tests mock at the network boundary with MSW; never mock Pinia stores, services, or `apiClient` in integration tests.
+- State reset: `tests/utils/resetAllState.ts` runs in a global `beforeEach` in `tests/setup.ts` (fresh Pinia + reset module singletons per test).
+- Render components/pages via `renderWithProviders` from `tests/utils/render.ts`.
+- Coverage: thresholds are ratcheted in `vitest.config.ts` (source of truth) and raised per backfill wave. 80% is the goal, not an enforced flat gate.

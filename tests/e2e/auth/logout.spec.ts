@@ -8,7 +8,8 @@ import { selectors } from '../selectors'
 import { logout } from '../actions/auth.actions'
 
 test.describe('Logout Flow', () => {
-  test('should logout and redirect to login', async ({ authenticatedPage }) => {
+  // @real smoke: exercises logout against the real backend.
+  test('@real should logout and redirect to login', async ({ authenticatedPage }) => {
     // Perform logout using action
     await logout(authenticatedPage)
 
@@ -21,28 +22,28 @@ test.describe('Logout Flow', () => {
   })
 
   test('should not be able to access protected routes after logout', async ({
-    authenticatedPage,
+    mockedAuthenticatedPage: page,
   }) => {
     // Logout
-    await logout(authenticatedPage)
-    await expect(authenticatedPage).toHaveURL('/login')
+    await logout(page)
+    await expect(page).toHaveURL('/login')
 
     // Try to access protected route
-    await authenticatedPage.goto('/chats')
+    await page.goto('/chats')
 
-    // Assert: Redirected back to login
-    await expect(authenticatedPage).toHaveURL('/login')
+    // Assert: Redirected back to login (middleware appends ?redirect=/chats)
+    await expect(page).toHaveURL(/\/login/)
   })
 
-  test('should clear session data on logout', async ({ authenticatedPage }) => {
-    // Verify we're authenticated
-    await expect(authenticatedPage.getByRole('button', { name: /logout/i })).toBeVisible()
+  test('should clear session data on logout', async ({ mockedAuthenticatedPage: page }) => {
+    // Verify we're authenticated (the app shell renders the rail)
+    await expect(page.locator(selectors.layout.appRail)).toBeVisible()
 
     // Logout
-    await logout(authenticatedPage)
+    await logout(page)
 
     // Verify we can't access authenticated-only content
-    await authenticatedPage.goto('/users')
-    await expect(authenticatedPage).toHaveURL('/login')
+    await page.goto('/users')
+    await expect(page).toHaveURL(/\/login/)
   })
 })

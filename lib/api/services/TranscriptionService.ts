@@ -114,5 +114,3 @@ export function useTranscriptionService(): TranscriptionService {
   _instance ??= new TranscriptionService()
   return _instance
 }
-
-export const transcriptionService = new TranscriptionService()

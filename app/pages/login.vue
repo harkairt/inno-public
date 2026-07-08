@@ -88,6 +88,7 @@
         variant="soft"
         :title="loginError"
         icon="i-heroicons-exclamation-circle"
+        data-testid="login-error"
       />
 
       <!-- Submit Button -->

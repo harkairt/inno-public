@@ -1,7 +1,8 @@
-import { beforeAll, afterEach, vi } from 'vitest'
+import { beforeAll, beforeEach, afterAll, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { VueQueryPlugin } from '@tanstack/vue-query'
+import { server } from './msw/server'
 import {
   createApp,
   ref,
@@ -18,20 +19,36 @@ import {
   onBeforeUnmount,
 } from 'vue'
 
+// MSW network-boundary harness. onUnhandledRequest: 'error' surfaces any real
+// HTTP a test leaks — add a handler, never downgrade the policy.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
+
 // Clean up after each test
 afterEach(() => {
   cleanup()
 })
 
-// Setup Pinia and VueQuery before all tests
+// Setup VueQuery plugin globally for tests
 beforeAll(() => {
-  const pinia = createPinia()
-  setActivePinia(pinia)
-
-  // Setup VueQuery plugin globally for tests
   const app = createApp({})
-  app.use(pinia)
   app.use(VueQueryPlugin)
+})
+
+// Fresh Pinia + full singleton reset before every test (test isolation).
+// Tests that call their own setActivePinia in beforeEach still win — theirs
+// runs after this one.
+//
+// resetAllState is imported dynamically (not at the top of this setup file) so
+// its transitive app/service imports resolve AFTER each test file's vi.mock
+// registrations. A static import here would instantiate service singletons
+// (authService, chatService) bound to the real apiClient during setup-file
+// execution, defeating tests that mock '@/lib/api/client'.
+beforeEach(async () => {
+  setActivePinia(createPinia())
+  const { resetAllState } = await import('./utils/resetAllState')
+  resetAllState()
 })
 
 // Global test utilities
@@ -63,6 +80,7 @@ global.onBeforeUnmount = onBeforeUnmount
 // -----------------------------------------------------------------------
 global.definePageMeta = vi.fn()
 global.defineNuxtRouteMiddleware = vi.fn()
+global.defineNuxtPlugin = (p: unknown) => p
 global.navigateTo = vi.fn()
 global.useRouter = vi.fn(() => ({
   push: vi.fn(),

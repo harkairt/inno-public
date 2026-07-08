@@ -14,7 +14,7 @@ interface AISessionMessageDTO {
   isRated: boolean
   messageID: string
   messageText: string | null
-  messageType: number
+  messageType: string
   rating: number | null
   readByUsers: string[] | null
   sendDate: string
@@ -77,7 +77,7 @@ export const mockSessions = {
         isRated: false,
         messageID: 'msg-001',
         messageText: 'Hello AI!',
-        messageType: 0, // AIAnswerType.Text
+        messageType: 'text', // AIAnswerType.Text (wire value is the lowercase string)
         rating: null,
         readByUsers: ['ai@virtual.agent'],
         sendDate: '2024-01-15T10:31:00Z',
@@ -91,7 +91,7 @@ export const mockSessions = {
         isRated: false,
         messageID: 'msg-002',
         messageText: 'Hello! How can I help you today?',
-        messageType: 0, // AIAnswerType.Text
+        messageType: 'text', // AIAnswerType.Text (wire value is the lowercase string)
         rating: null,
         readByUsers: ['test@example.com'],
         sendDate: '2024-01-15T10:31:30Z',

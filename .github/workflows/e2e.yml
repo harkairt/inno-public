@@ -5,14 +5,21 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  schedule:
+    - cron: '0 3 * * *' # nightly 03:00 UTC — cross-browser mocked + real-backend smoke
+  workflow_dispatch: # manual dry-run of the nightly/real jobs
 
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  e2e-tests:
-    timeout-minutes: 10
+  # PR GATE — hermetic, fully route-mocked, chromium only. No secrets, no backend.
+  # playwright.config.ts's webServer builds + previews the SPA locally (TEST_BASE_URL
+  # is absent → isRealBackend=false → webServer runs). Fast + deterministic.
+  e2e-mocked:
+    name: E2E mocked (chromium, PR gate)
+    timeout-minutes: 15
     runs-on: ubuntu-latest
 
     steps:
@@ -28,23 +35,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
 
-      - name: Create .env.test file
-        run: |
-          echo "TEST_BASE_URL=${{ secrets.TEST_BASE_URL }}" >> .env.test
-          echo "TEST_USER_EMAIL=${{ secrets.TEST_USER_EMAIL }}" >> .env.test
-          echo "TEST_USER_PASSWORD=${{ secrets.TEST_USER_PASSWORD }}" >> .env.test
+      - name: Run mocked E2E (chromium)
+        run: npx playwright test --project=chromium-mocked
 
-      - name: Run E2E tests
-        run: npm run test:e2e
-
-      - name: Upload test results
+      - name: Upload test report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-mocked
           path: playwright-report/
           retention-days: 30
 
@@ -52,6 +53,114 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-traces
+          name: playwright-traces-mocked
+          path: test-results/
+          retention-days: 7
+
+  # NIGHTLY CROSS-BROWSER — firefox + webkit mocked. Off the PR path (PR wall-clock
+  # budget), runs on the nightly cron and manual dispatch only.
+  e2e-mocked-nightly:
+    name: E2E mocked (${{ matrix.browser }}, nightly)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: firefox-mocked
+            browser: firefox
+          - project: webkit-mocked
+            browser: webkit
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser (${{ matrix.browser }})
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run mocked E2E (${{ matrix.project }})
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload test traces
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-${{ matrix.project }}
+          path: test-results/
+          retention-days: 7
+
+  # REAL-BACKEND SMOKE — @real-tagged subset vs the deployed TEST_BASE_URL. Secrets-
+  # gated; kept off the PR gate (flakiness quarantine). Runs on push to develop, the
+  # nightly cron, and manual dispatch. TEST_BASE_URL in .env.test → isRealBackend=true
+  # → no local webServer; the real-backend project targets the deployment.
+  e2e-real:
+    name: E2E real backend (@real smoke)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/develop'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Create .env.test file
+        env:
+          TEST_BASE_URL: ${{ secrets.TEST_BASE_URL }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: |
+          {
+            echo "TEST_BASE_URL=$TEST_BASE_URL"
+            echo "TEST_USER_EMAIL=$TEST_USER_EMAIL"
+            echo "TEST_USER_PASSWORD=$TEST_USER_PASSWORD"
+          } >> .env.test
+
+      - name: Run real-backend E2E (@real)
+        run: npx playwright test --project=real-backend
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-real
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test traces
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-real
           path: test-results/
           retention-days: 7
