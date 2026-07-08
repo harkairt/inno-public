@@ -3,7 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/app/stores/auth'
 import type { Result } from 'neverthrow'
 import type { RefreshTokenResponseDTO } from '@/types/api/schemas'
-import type { AppError } from '@/lib/errors/AppError'
+import type { AppError } from '@/lib/errors/types'
 
 vi.mock('@/lib/api/services/AuthService', () => ({
   authService: {
@@ -283,6 +283,40 @@ describe('Auth Store Token Refresh', () => {
       expect(result.error.code).toBe('UNAUTHORIZED')
       expect(result.error.message).toBe('No tokens available for refresh')
     }
+  })
+
+  it('keeps refreshed tokens in memory when storage.setItem throws (blocked/quota)', async () => {
+    const { authService } = await import('@/lib/api/services/AuthService')
+
+    vi.mocked(authService.refreshToken).mockResolvedValue({
+      isOk: () => true,
+      isErr: () => false,
+      value: { accessToken: 'mem-access', refreshToken: 'mem-refresh' },
+    } as Result<RefreshTokenResponseDTO, AppError>)
+
+    const authStore = useAuthStore()
+    authStore.accessToken = 'old-access'
+    authStore.refreshToken = 'old-refresh'
+    authStore.user = {
+      id: '1',
+      email: 'test@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+    }
+
+    // The persist that setTokens performs after a successful refresh fails
+    // (blocked/quota-full Storage). The guard must swallow it so the refresh
+    // resolves ok and tokens stay in memory — no unhandled rejection, no reset.
+    mockLocalStorage.setItem.mockImplementationOnce(() => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError')
+    })
+
+    const result = await authStore.refreshAuthToken()
+
+    expect(result.isOk()).toBe(true)
+    expect(authStore.accessToken).toBe('mem-access')
+    expect(authStore.refreshToken).toBe('mem-refresh')
+    expect(authStore.user).not.toBeNull()
   })
 
   it('should clear auth state on unexpected exception', async () => {

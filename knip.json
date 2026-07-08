@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    "app.config.ts",
+    "app/types/markdown-it-texmath.d.ts",
+    "types/**",
+    "lib/errors/types.ts",
+    "lib/errors/normalize.ts",
+    "lib/signalr/types.ts",
+    "lib/validation/**",
+    "lib/api/validation.ts",
+    "lib/types/chat/Message.ts",
+    "tests/e2e/actions/**",
+    "tests/e2e/fixtures/**",
+    "tests/e2e/mocks/**",
+    "tests/e2e/selectors/**",
+    "tests/utils/**"
+  ],
+  "ignoreDependencies": [
+    "buffer",
+    "@nuxt/test-utils",
+    "@types/katex",
+    "vue-i18n",
+    "dotenv",
+    "@vitejs/plugin-vue"
+  ]
+}

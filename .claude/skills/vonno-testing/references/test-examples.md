@@ -230,3 +230,124 @@ await waitFor(() => {
   expect(sessions).toHaveLength(2)
 })
 ```
+
+## Integration Test — Login + Silent Token Refresh (MSW at the boundary)
+
+The reference integration test (`tests/integration/auth-token-lifecycle.test.ts`)
+exercises the **real** stack end-to-end: real Pinia auth store → real
+`AuthService` / `ChatService` → real axios → real interceptor chain
+(401 → refresh → retry queue). Nothing mocks `apiClient`, a service, or a store —
+HTTP is faked only at the network boundary by MSW.
+
+```typescript
+import { describe, it, expect, vi } from 'vitest'
+import { sha512 } from 'js-sha512'
+import { server, http } from '@/tests/msw/server'
+import { apiOk, apiError } from '@/tests/msw/http'
+import { makeUser, makeSession } from '@/tests/utils/factories'
+import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { installFakeSignalR } from '@/tests/utils/fakeSignalR'
+import { useAuthStore } from '@/app/stores/auth'
+import { chatService } from '@/lib/api/services/ChatService'
+import { configureApiInterceptors } from '@/lib/api/interceptors/setup'
+import { AuthenticationMode } from '@/types/enums'
+import type { GetSessionHeadersByUserIdRequestDTO } from '@/types/api/schemas'
+
+const SESSIONS_PATH = '/api/AIWebAPI/GetSessionHeadersByUserId'
+const REFRESH_PATH = '/api/authentication/refresh-token'
+
+const sessionsRequest: GetSessionHeadersByUserIdRequestDTO = {
+  userCode: 'testuser',
+  agents: [1],
+  filterText: '',
+}
+
+/** Arm the real interceptor chain against the real auth store. */
+function armInterceptors() {
+  const authStore = useAuthStore()
+  const redirectToLogin = vi.fn()
+  configureApiInterceptors({ authStore, redirectToLogin })
+  return { authStore, redirectToLogin }
+}
+
+describe('auth token lifecycle (real stack, MSW at the boundary)', () => {
+  it('logs in, hashes the password (SHA-512), and persists tokens + user', async () => {
+    installFakeSignalR() // avoid a real /chatHub negotiate on login
+    const { authStore } = armInterceptors()
+
+    const rawPassword = 'my-Secret-Password-123'
+    let capturedPassword: unknown
+    server.use(
+      http.post('/api/authentication/login', async ({ request }) => {
+        const body = (await request.json()) as { password?: unknown }
+        capturedPassword = body.password
+        return apiOk({
+          user: makeUser({ email: 'agent@example.com' }),
+          accessToken: 'access-token-1',
+          refreshToken: 'refresh-token-1',
+        })
+      }),
+    )
+
+    const result = await authStore.login({
+      email: 'agent@example.com',
+      password: rawPassword,
+      mode: AuthenticationMode.Basic,
+    })
+
+    expect(result.isOk()).toBe(true)
+    // Password reached the wire hashed, never as plaintext.
+    expect(capturedPassword).toBe(sha512(rawPassword))
+    expect(authStore.isAuthenticated).toBe(true)
+    expect(authStore.accessToken).toBe('access-token-1')
+  })
+
+  it('recovers silently from a 401: refreshes once and retries with the new token', async () => {
+    // Seed BEFORE the first useAuthStore() so the store hydrates as logged-in.
+    seedAuthStorage({ accessToken: 'seeded-access-token', refreshToken: 'seeded-refresh-token' })
+    const { authStore } = armInterceptors()
+
+    let refreshCount = 0
+    let retriedAuthHeader: string | null = null
+
+    // Registration order matters: last-registered matches first. The success
+    // handler is the fallback; the { once: true } 401 fires on the initial
+    // request, is consumed, and the retry falls through to success.
+    server.use(
+      http.post(SESSIONS_PATH, ({ request }) => {
+        retriedAuthHeader = request.headers.get('Authorization')
+        return apiOk([makeSession()])
+      }),
+    )
+    server.use(http.post(SESSIONS_PATH, () => apiError(401), { once: true }))
+    server.use(
+      http.post(REFRESH_PATH, () => {
+        refreshCount++
+        return apiOk({ accessToken: 'access-token-2', refreshToken: 'refresh-token-2' })
+      }),
+    )
+
+    const result = await chatService.getSessionHeaders(sessionsRequest)
+
+    expect(result.isOk()).toBe(true)
+    expect(refreshCount).toBe(1)
+    expect(retriedAuthHeader).toBe('Bearer access-token-2')
+    expect(authStore.accessToken).toBe('access-token-2') // new token persisted
+  })
+
+  it('clears auth and redirects to login when the refresh itself fails', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token', refreshToken: 'seeded-refresh-token' })
+    const { authStore, redirectToLogin } = armInterceptors()
+
+    server.use(http.post(SESSIONS_PATH, () => apiError(401)))
+    server.use(http.post(REFRESH_PATH, () => apiError(401)))
+
+    const result = await chatService.getSessionHeaders(sessionsRequest)
+
+    expect(result.isErr()).toBe(true)
+    expect(authStore.isAuthenticated).toBe(false)
+    expect(authStore.accessToken).toBeNull()
+    expect(redirectToLogin).toHaveBeenCalledTimes(1)
+  })
+})
+```

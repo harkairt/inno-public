@@ -7,7 +7,7 @@ import type { AppError } from '@/lib/errors/types'
 import type { InnoChatConfig } from '@/types/api/schemas'
 import { InnoChatConfigSchema } from '@/types/api/schemas'
 
-export class ConfigService {
+class ConfigService {
   private config: InnoChatConfig | null = null
   private configPromise: Promise<Result<InnoChatConfig, AppError>> | null = null
 

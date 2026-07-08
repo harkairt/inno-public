@@ -100,16 +100,15 @@ description: Use before modifying fragile areas of vonno/InnoChat — intercepto
 
 ---
 
-## Test Coverage Gaps (priority order)
+## Test Coverage — the former gaps are now closed
 
-**High priority — no tests at all:**
-- `app/pages/chats/[sessionId].vue` — significant orchestration logic (scroll, options mode, primary session, title editing)
-- `useSignalR` / `useSignalRChat` / `SignalRService` — connection state, event handler registration/cleanup, reconnect token staleness
+The areas this section previously flagged as untested all have tests now:
+`[sessionId].vue`, `useSignalR`/`useSignalRChat`/`SignalRService`,
+`useChatAutoScroll`, `usePrimarySession`, `useVoiceRecording`, and
+`Log`/`Transcription`/`ConfigService`. See `vonno-testing` for the harness.
 
-**Medium priority:**
-- `useChatAutoScroll` — scroll-to-bottom, `scrollToElement` branching, race condition flag
-- `usePrimarySession` — primary session detection, `getSessionDisplayName`, edge cases
-
-**Low priority:**
-- `useVoiceRecording` — MediaRecorder lifecycle, Safari/iOS MIME type differences
-- `lib/api/services/LogService.ts`, `TranscriptionService.ts`, `ConfigService.ts`
+**Tests pin CURRENT behavior, including the known bugs above.** The bugs in
+"Known Bugs" / "Fragile Areas" were NOT fixed — tests protect the existing
+(sometimes buggy) behavior. Before fixing any bug listed here, expect a
+now-passing test to encode the old behavior: read it, and update the assertion
+as part of the fix rather than treating the red as a regression.

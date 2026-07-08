@@ -9,6 +9,14 @@ export function getQueryClient(): QueryClient {
   return _queryClient
 }
 
+/**
+ * Point the singleton at a specific QueryClient (or null to reset). For tests —
+ * lets getQueryClient() return the per-test client the providers installed.
+ */
+export function setQueryClient(client: QueryClient | null): void {
+  _queryClient = client
+}
+
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {

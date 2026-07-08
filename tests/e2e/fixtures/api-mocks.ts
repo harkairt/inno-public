@@ -1,12 +1,50 @@
 /**
  * API Mock Helpers for E2E Tests
  * Provides utilities for mocking API responses with Playwright route interception
+ *
+ * SOURCE OF TRUTH: `lib/api/services/*.ts` is authoritative for every backend
+ * path/method mocked here. The MSW handlers under `tests/msw/handlers/*.ts`
+ * mirror the same real paths and can be used to cross-check spellings/methods.
+ * Do NOT reintroduce the old `**\/api/auth/*` or `**\/api/chat/*` patterns —
+ * they match nothing against the real C# backend.
  */
 
-import type { Page } from '@playwright/test'
+import type { Page, Route } from '@playwright/test'
 import { mockUsers, mockAllUsers } from '../mocks/data/users'
 import { mockSessionHeaders, mockUnreadCounts } from '../mocks/data/sessions'
 import { mockConversation } from '../mocks/data/messages'
+
+// ============================================================================
+// ENVELOPE HELPERS
+// ============================================================================
+
+// Mirror the backend ApiResponse<T> envelope produced by `tests/msw/http.ts`
+// (apiOk / apiError). Playwright cannot cleanly import the vitest-side helpers,
+// so keep these tiny local copies. NOTE: config.json is served RAW (no envelope)
+// — do NOT route it through these.
+
+/** 200 (or init.status) + { data, success:null, warning:null, error:null }. */
+async function fulfillOk(route: Route, data: unknown, init?: { status?: number }) {
+  await route.fulfill({
+    status: init?.status ?? 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ data, success: null, warning: null, error: null }),
+  })
+}
+
+/** status + { data:null, success:null, warning:null, error:{ code, message, statusCode } }. */
+async function fulfillError(route: Route, status: number, code: string, message?: string) {
+  await route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      data: null,
+      success: null,
+      warning: null,
+      error: { code, message, statusCode: status },
+    }),
+  })
+}
 
 // ============================================================================
 // ERROR HELPERS
@@ -38,20 +76,12 @@ export async function mockAuthError(
   statusCode: 401 | 403 = 401,
 ) {
   await page.route(urlPattern, async (route) => {
-    await route.fulfill({
-      status: statusCode,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: null,
-        error: {
-          code: statusCode === 401 ? 'UNAUTHORIZED' : 'FORBIDDEN',
-          message: statusCode === 401 ? 'Invalid credentials' : 'Access denied',
-          statusCode,
-        },
-        success: null,
-        warning: null,
-      }),
-    })
+    await fulfillError(
+      route,
+      statusCode,
+      statusCode === 401 ? 'UNAUTHORIZED' : 'FORBIDDEN',
+      statusCode === 401 ? 'Invalid credentials' : 'Access denied',
+    )
   })
 }
 
@@ -92,20 +122,7 @@ export async function mockNotFoundError(
   message = 'Resource not found',
 ) {
   await page.route(urlPattern, async (route) => {
-    await route.fulfill({
-      status: 404,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: null,
-        error: {
-          code: 'NOT_FOUND',
-          message,
-          statusCode: 404,
-        },
-        success: null,
-        warning: null,
-      }),
-    })
+    await fulfillError(route, 404, 'NOT_FOUND', message)
   })
 }
 
@@ -113,302 +130,159 @@ export async function mockNotFoundError(
 // AUTH MOCKS
 // ============================================================================
 
-type AuthScenario = 'success' | 'invalid-credentials' | 'network-error' | 'locked-account'
+/**
+ * Install ONLY the login-success route. Individual override — call AFTER
+ * mockAllApis to shadow its happy-path login (see LAYERING CONTRACT below).
+ * Defaults to the standard mock user; pass `user` to log in as someone else.
+ */
+export async function mockLoginSuccess(
+  page: Page,
+  user: typeof mockUsers.regularUser = mockUsers.regularUser,
+) {
+  await page.route('**/api/authentication/login', async (route) => {
+    await fulfillOk(route, {
+      accessToken: 'mock-access-token-12345',
+      refreshToken: 'mock-refresh-token-67890',
+      user,
+    })
+  })
+}
 
 /**
- * Setup auth-related API mocks
+ * Pre-seed persisted auth state into localStorage BEFORE the app boots, so the
+ * auth store hydrates as already-authenticated without running the login UI.
+ *
+ * Writes the EXACT `innochat-auth` key + shape the store reads on boot — see
+ * app/stores/auth.ts: AUTH_STORAGE_KEY = 'innochat-auth', saveAuthStateToStorage
+ * writes `{ user, accessToken, refreshToken, timestamp }`, and
+ * loadAuthStateFromStorage() hydrates only when `user` + `accessToken` are set
+ * (the ISO timestamp is written by the app but ignored on load).
+ *
+ * Use the `mockedAuthenticatedPage` fixture when the login flow ITSELF is the
+ * subject under test; use THIS seeder when login is NOT the subject and you just
+ * need a logged-in starting point fast (it skips the whole login round-trip).
+ *
+ * Must be called BEFORE page.goto(): addInitScript runs on every navigation
+ * before app code, so the store sees the seeded state on its first hydrate.
  */
-export async function setupAuthMocks(page: Page, scenario: AuthScenario = 'success') {
-  if (scenario === 'network-error') {
-    await mockNetworkError(page, '**/api/auth/login')
-    return
+export async function seedAuthLocalStorage(
+  page: Page,
+  overrides: {
+    user?: typeof mockUsers.regularUser
+    accessToken?: string
+    refreshToken?: string
+  } = {},
+): Promise<void> {
+  const authData = {
+    user: overrides.user ?? mockUsers.regularUser,
+    accessToken: overrides.accessToken ?? 'seeded-access-token',
+    refreshToken: overrides.refreshToken ?? 'seeded-refresh-token',
+    timestamp: new Date().toISOString(),
   }
 
-  if (scenario === 'invalid-credentials') {
-    await mockAuthError(page, '**/api/auth/login', 401)
-    return
-  }
+  await page.addInitScript(
+    ({ key, value }) => {
+      window.localStorage.setItem(key, value)
+    },
+    { key: 'innochat-auth', value: JSON.stringify(authData) },
+  )
+}
 
-  if (scenario === 'locked-account') {
-    await page.route('**/api/auth/login', async (route) => {
-      await route.fulfill({
-        status: 403,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: null,
-          error: {
-            code: 'ACCOUNT_LOCKED',
-            message: 'Account is locked. Please contact support.',
-            statusCode: 403,
-          },
-          success: null,
-          warning: null,
-        }),
-      })
-    })
-    return
-  }
+/**
+ * Install a failing login route (401 by default, 403 for locked accounts).
+ * Individual override — call AFTER mockAllApis to shadow its happy-path login.
+ */
+export async function mockLoginFailure(page: Page, status: 401 | 403 = 401) {
+  await mockAuthError(page, '**/api/authentication/login', status)
+}
 
-  // Success case
-  await page.route('**/api/auth/login', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
-          accessToken: 'mock-access-token-12345',
-          refreshToken: 'mock-refresh-token-67890',
-          user: mockUsers.regularUser,
-        },
-        success: 'Login successful',
-        warning: null,
-        error: null,
-      }),
+/**
+ * Install a failing refresh-token route (401). Drives the silent-refresh →
+ * logout path. Individual override — call AFTER mockAllApis to shadow its
+ * happy-path refresh route.
+ */
+export async function mockRefreshFailure(page: Page) {
+  await page.route('**/api/authentication/refresh-token', async (route) => {
+    await fulfillError(route, 401, 'UNAUTHORIZED', 'Refresh token expired')
+  })
+}
+
+/**
+ * Install the happy-path refresh-token route. Internal — part of mockAllApis.
+ */
+async function installRefreshSuccess(page: Page) {
+  await page.route('**/api/authentication/refresh-token', async (route) => {
+    await fulfillOk(route, {
+      accessToken: 'mock-refreshed-access-token',
+      refreshToken: 'mock-refreshed-refresh-token',
     })
   })
 
-  // Mock token refresh
-  await page.route('**/api/auth/refresh', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
-          accessToken: 'mock-refreshed-access-token',
-          refreshToken: 'mock-refreshed-refresh-token',
-        },
-        success: null,
-        warning: null,
-        error: null,
-      }),
-    })
-  })
-
-  // Mock logout
-  await page.route('**/api/auth/logout', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: null,
-        success: 'Logged out successfully',
-        warning: null,
-        error: null,
-      }),
-    })
-  })
+  // NOTE: No logout mock — logout is client-side only (clears store/storage,
+  // disconnects SignalR). There is no backend logout endpoint. See
+  // app/composables/useAuth.ts (useLogout) and app/stores/auth.ts (performLogout).
 }
 
 // ============================================================================
 // USER MOCKS
 // ============================================================================
 
-type UserScenario = 'success' | 'network-error' | 'empty'
-
 /**
- * Setup user-related API mocks
+ * Install the happy-path user routes. Internal — part of mockAllApis.
  */
-export async function setupUserMocks(page: Page, scenario: UserScenario = 'success') {
-  if (scenario === 'network-error') {
-    await mockNetworkError(page, '**/api/users/**')
-    return
-  }
-
-  if (scenario === 'empty') {
-    await page.route('**/api/users', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: [],
-          success: null,
-          warning: null,
-          error: null,
-        }),
-      })
-    })
-    return
-  }
-
-  // Success - list all users
-  await page.route('**/api/users', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: mockAllUsers,
-        success: null,
-        warning: null,
-        error: null,
-      }),
-    })
+async function installUserMocks(page: Page) {
+  // Success - selectable users list (GET /api/user/get-selectable-users?email=...)
+  // The `**` suffix also matches the ?email query string.
+  await page.route('**/api/user/get-selectable-users**', async (route) => {
+    await fulfillOk(route, mockAllUsers)
   })
 
-  // Success - get single user
-  await page.route('**/api/users/*', async (route) => {
-    const url = new URL(route.request().url())
-    const userId = parseInt(url.pathname.split('/').pop() ?? '0')
-    const user = mockAllUsers.find((u) => u.id === userId)
-
-    if (user) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: user,
-          success: null,
-          warning: null,
-          error: null,
-        }),
-      })
-    } else {
-      await route.fulfill({
-        status: 404,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: null,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'User not found',
-            statusCode: 404,
-          },
-          success: null,
-          warning: null,
-        }),
-      })
-    }
-  })
+  // NOTE: There is no "get single user by id" backend endpoint. UserService only
+  // exposes getSelectableUsers (GET /api/user/get-selectable-users). The old
+  // `**/api/users/*` single-user route was removed — retargeting it to the same
+  // real path would shadow the list mock above.
 }
 
 // ============================================================================
 // CHAT MOCKS
 // ============================================================================
 
-interface ChatMockOptions {
-  sessions?: typeof mockSessionHeaders
-  messages?: typeof mockConversation
-  unreadCounts?: typeof mockUnreadCounts
-  scenario?: 'success' | 'network-error' | 'not-found' | 'empty'
-}
-
 /**
- * Setup chat-related API mocks
+ * Install the happy-path chat routes. Internal — part of mockAllApis.
  */
-export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) {
-  const {
-    sessions = mockSessionHeaders,
-    messages = mockConversation,
-    unreadCounts = mockUnreadCounts,
-    scenario = 'success',
-  } = options
-
-  if (scenario === 'network-error') {
-    await mockNetworkError(page, '**/api/chat/**')
-    return
-  }
-
-  if (scenario === 'not-found') {
-    await mockNotFoundError(page, '**/api/chat/**', 'Session not found')
-    return
-  }
-
-  if (scenario === 'empty') {
-    await page.route('**/api/chat/sessions', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: [],
-          success: null,
-          warning: null,
-          error: null,
-        }),
-      })
-    })
-    return
-  }
+async function installChatMocks(page: Page) {
+  const sessions = mockSessionHeaders
+  const messages = mockConversation
+  const unreadCounts = mockUnreadCounts
 
   // Mock session list
-  await page.route('**/api/chat/sessions', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: sessions,
-        success: null,
-        warning: null,
-        error: null,
-      }),
-    })
+  await page.route('**/api/AIWebAPI/GetSessionHeadersByUserId', async (route) => {
+    await fulfillOk(route, sessions)
   })
 
-  // Mock single session with messages
-  await page.route('**/api/chat/session/*', async (route) => {
-    const url = new URL(route.request().url())
-    const sessionId = url.pathname.split('/').pop()
+  // Mock single session with messages (POST /api/AIWebAPI/GetSessionById — sessionId is in the request body)
+  await page.route('**/api/AIWebAPI/GetSessionById', async (route) => {
+    const { sessionId } = (route.request().postDataJSON() ?? {}) as { sessionId?: string }
     const session = sessions.find((s) => s.sessionId === sessionId)
 
     if (session) {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            ...session,
-            messages,
-          },
-          success: null,
-          warning: null,
-          error: null,
-        }),
-      })
+      await fulfillOk(route, { ...session, messages })
     } else {
-      await route.fulfill({
-        status: 404,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: null,
-          error: {
-            code: 'NOT_FOUND',
-            message: 'Session not found',
-            statusCode: 404,
-          },
-          success: null,
-          warning: null,
-        }),
-      })
+      await fulfillError(route, 404, 'NOT_FOUND', 'Session not found')
     }
   })
 
   // Mock unread counts
-  await page.route('**/api/chat/unread', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: unreadCounts,
-        success: null,
-        warning: null,
-        error: null,
-      }),
-    })
+  await page.route('**/api/AIWebAPI/GetUnreadMessages', async (route) => {
+    await fulfillOk(route, unreadCounts)
   })
 
   // Mock send message
-  await page.route('**/api/chat/message', async (route) => {
+  await page.route('**/api/AIWebAPI/question/text', async (route) => {
     if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: {
-            messageID: `msg-${Date.now()}`,
-            success: true,
-          },
-          success: 'Message sent',
-          warning: null,
-          error: null,
-        }),
+      await fulfillOk(route, {
+        messageID: `msg-${Date.now()}`,
+        success: true,
       })
     } else {
       await route.continue()
@@ -416,55 +290,97 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
   })
 
   // Mock mark as read
-  await page.route('**/api/chat/read', async (route) => {
+  await page.route('**/api/AIWebAPI/Set_SessionMessagesRead', async (route) => {
     if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: null,
-          success: 'Messages marked as read',
-          warning: null,
-          error: null,
-        }),
-      })
+      await fulfillOk(route, null)
     } else {
       await route.continue()
     }
   })
 
   // Mock welcome message
-  await page.route('**/api/chat/welcome/*', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: {
-          message: 'Welcome! How can I assist you today?',
-        },
-        success: null,
-        warning: null,
-        error: null,
-      }),
+  await page.route('**/api/AIWebAPI/welcomeText', async (route) => {
+    await fulfillOk(route, {
+      message: 'Welcome! How can I assist you today?',
     })
   })
 
-  // Mock update session name
-  await page.route('**/api/chat/session/name', async (route) => {
+  // Mock update session name (POST /api/AIWebAPI/SetSessionName)
+  await page.route('**/api/AIWebAPI/SetSessionName', async (route) => {
     if (route.request().method() === 'PUT' || route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          data: null,
-          success: 'Session name updated',
-          warning: null,
-          error: null,
-        }),
-      })
+      await fulfillOk(route, null)
     } else {
       await route.continue()
     }
+  })
+
+  // Mock public-chat bootstrap (POST /api/AIWebAPI/startPublicChat). Public mode
+  // fetches the agent's UserDTO via usePublicChatAgent to render PublicChatHeader.
+  // Returns { user, agent } per AIPublicChatStartDTOSchema. mockUsers.virtualAgent
+  // has id 100, matching the publicAgent used by public-mode specs.
+  await page.route('**/api/AIWebAPI/startPublicChat', async (route) => {
+    await fulfillOk(route, { user: mockUsers.regularUser, agent: mockUsers.virtualAgent })
+  })
+}
+
+// ============================================================================
+// CONFIG MOCK
+// ============================================================================
+
+// Mirrors DEFAULT_CONFIG (lib/config/defaults.ts). ConfigService.loadConfig
+// validates response.data DIRECTLY against InnoChatConfigSchema — config.json is
+// served RAW, so this body is NOT wrapped in the { data, success, warning, error }
+// envelope. publicAgent: -1 / publicMode: 0 => authenticated (non-public) mode.
+const MOCK_CONFIG = {
+  mainColor: '#027be2',
+  backgroundColor: '#ffffff',
+  watermarkEnabled: false,
+  partnerMessageBackgroundColor: 'rgba(0, 188, 212, 0.302)',
+  ownMessageBackgroundColor: 'rgba(189, 189, 189, 0.302)',
+  messageBorderThickness: 0,
+  messageBorderColor: 'rgba(0, 0, 0, 0)',
+  messageBorderStyle: 'solid',
+  messageBorderRounded: 2,
+  messageTextOwnItalic: false,
+  messageTextOwnBold: false,
+  messageTextOwnSize: 14,
+  messageTextPartnerItalic: false,
+  messageTextPartnerBold: false,
+  messageTextPartnerSize: 14,
+  axiosTimeout: 30000,
+  publicMode: 0,
+  publicLoginEmail: null,
+  publicLoginPassword: null,
+  publicAgent: -1,
+}
+
+/**
+ * Install the config.json mock. REQUIRED for app boot — config-init.client.ts
+ * blocks startup until InnoChatConfig loads. Served raw (no envelope) by design.
+ * Internal — part of mockAllApis.
+ */
+async function installConfigMock(page: Page, config: Record<string, unknown> = MOCK_CONFIG) {
+  await page.route('**/api/settings/config.json', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(config),
+    })
+  })
+}
+
+// ============================================================================
+// LOG SINK
+// ============================================================================
+
+/**
+ * Install a 200 sink for the fire-and-forget client logger (LogService POSTs
+ * /api/Log/log). Prevents background log requests from hitting the real backend
+ * or failing the test. Internal — part of mockAllApis.
+ */
+async function installLogSink(page: Page) {
+  await page.route('**/api/Log/log', async (route) => {
+    await fulfillOk(route, null)
   })
 }
 
@@ -472,19 +388,28 @@ export async function setupChatMocks(page: Page, options: ChatMockOptions = {}) 
 // COMBINED SETUP
 // ============================================================================
 
-interface AllMocksOptions {
-  auth?: AuthScenario
-  users?: UserScenario
-  chat?: ChatMockOptions
-}
-
 /**
- * Setup all API mocks at once
+ * Install the full happy-path API mock set in one call: config.json + Log sink
+ * + login success + refresh success + users + chat. This is the default baseline
+ * for a test; layer scenario variation on top with the individual override
+ * helpers (mockLoginSuccess/mockLoginFailure/mockRefreshFailure) and the error
+ * helpers (mockNetworkError/mockTimeout/mockAuthError/...).
+ *
+ * LAYERING CONTRACT: Playwright dispatches the LAST-registered matching route
+ * first. Call mockAllApis FIRST to lay down the happy path, then call an
+ * individual override AFTER it to shadow a specific route. Each override
+ * registers the SAME URL pattern as its happy-path counterpart, so the
+ * later registration wins.
  */
-export async function setupAllMocks(page: Page, options: AllMocksOptions = {}) {
-  await setupAuthMocks(page, options.auth ?? 'success')
-  await setupUserMocks(page, options.users ?? 'success')
-  await setupChatMocks(page, options.chat ?? {})
+export async function mockAllApis(page: Page): Promise<void> {
+  // Config + log sink must be registered so app boot and background logging never
+  // hit the real backend.
+  await installConfigMock(page)
+  await installLogSink(page)
+  await mockLoginSuccess(page)
+  await installRefreshSuccess(page)
+  await installUserMocks(page)
+  await installChatMocks(page)
 }
 
 /**

@@ -30,7 +30,7 @@ function getApiBaseUrl(): string {
   return (import.meta.env.NUXT_PUBLIC_API_BASE_URL as string | undefined) ?? ''
 }
 
-export function createApiClient(): AxiosInstance {
+function createApiClient(): AxiosInstance {
   const baseURL = getApiBaseUrl()
 
   const client = axios.create({
@@ -50,6 +50,3 @@ export function createApiClient(): AxiosInstance {
 
 // Singleton instance for use throughout the application
 export const apiClient = createApiClient()
-
-// Export default for convenience
-export default apiClient

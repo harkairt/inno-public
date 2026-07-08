@@ -41,6 +41,9 @@ export default withNuxt(
       'public/**',
       '.vscode/**',
       '.idea/**',
+      // Agent-isolation worktrees are full repo copies; linting them double-counts
+      // every file (and their paths aren't in tsconfig.eslint.json → parse errors).
+      '.claude/**',
     ],
   },
   {

@@ -1,842 +1,356 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { delay } from 'msw'
 import { AxiosHeaders } from 'axios'
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { apiClient } from '@/lib/api/client'
-import {
-  responseErrorInterceptor,
-  setAuthStore,
-  setLoginRedirectBase,
-} from '@/lib/api/interceptors/response'
+import { cacheResponseInterceptor, startCacheCleanup } from '@/lib/api/interceptors/response'
+import { extractTokensFromResponse } from '@/lib/api/utils/tokens'
+import { configureApiInterceptors } from '@/lib/api/interceptors/setup'
+import { server, http, HttpResponse } from '@/tests/msw/server'
+import { apiOk, apiError } from '@/tests/msw/http'
+import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { makeUser } from '@/tests/utils/factories'
+import { useAuthStore } from '@/app/stores/auth'
+import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: {
-    post: vi.fn(),
-    request: vi.fn(),
-  },
-}))
+// The old file mocked apiClient and hand-built AxiosError objects. This version
+// drives the REAL client through MSW so the whole response interceptor chain
+// (401 → refresh → retry queue, 429/503 backoff) actually runs — plus a thin
+// unit layer for the pure helpers (extractTokensFromResponse, cache interceptor).
 
-vi.mock('@/lib/errors/normalize', () => ({
-  normalizeApiError: vi.fn((error: unknown) => error),
-}))
+const PROBE_PATH = '/api/authentication/profile'
+const REFRESH_PATH = '/api/authentication/refresh-token'
+const AUTH_STORAGE_KEY = 'innochat-auth'
 
-vi.mock('@/lib/errors/utils', () => ({
-  globalErrorTracker: {
-    track: vi.fn(),
-  },
-}))
-
-interface MockAuthStore {
-  accessToken: string | null
-  refreshToken: string | null
-  setTokens: ReturnType<typeof vi.fn>
-  clearAuth: ReturnType<typeof vi.fn>
+/** Arm the real interceptor chain against the real auth store. */
+function armInterceptors() {
+  const authStore = useAuthStore()
+  const redirectToLogin = vi.fn()
+  configureApiInterceptors({ authStore, redirectToLogin })
+  return { authStore, redirectToLogin }
 }
 
-describe('Token Refresh in Response Interceptor', () => {
-  let mockAuthStore: MockAuthStore
-  let mockSetTokens: ReturnType<typeof vi.fn>
-  let mockClearAuth: ReturnType<typeof vi.fn>
+// ---------------------------------------------------------------------------
+// Pure helper: extractTokensFromResponse
+// ---------------------------------------------------------------------------
 
-  beforeEach(() => {
-    vi.clearAllMocks()
-
-    mockSetTokens = vi.fn().mockResolvedValue(undefined)
-    mockClearAuth = vi.fn()
-
-    mockAuthStore = {
-      accessToken: 'old-access-token',
-      refreshToken: 'old-refresh-token',
-      setTokens: mockSetTokens,
-      clearAuth: mockClearAuth,
-    }
-
-    setAuthStore(mockAuthStore)
+describe('extractTokensFromResponse', () => {
+  it('reads camelCase token fields', () => {
+    expect(extractTokensFromResponse({ accessToken: 'a', refreshToken: 'r' })).toEqual({
+      accessToken: 'a',
+      refreshToken: 'r',
+    })
   })
 
-  afterEach(() => {
-    vi.clearAllMocks()
+  it('treats empty / whitespace-only tokens as null', () => {
+    expect(extractTokensFromResponse({ accessToken: '', refreshToken: '   ' })).toEqual({
+      accessToken: null,
+      refreshToken: null,
+    })
   })
 
-  it('should extract tokens from correct nesting level (data.data)', async () => {
-    const mockRefreshResponse: AxiosResponse = {
-      data: {
-        data: {
-          accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token',
-        },
-      },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
+  it('returns nulls for null / undefined / missing fields', () => {
+    expect(extractTokensFromResponse(null)).toEqual({ accessToken: null, refreshToken: null })
+    expect(extractTokensFromResponse(undefined)).toEqual({ accessToken: null, refreshToken: null })
+    expect(extractTokensFromResponse({})).toEqual({ accessToken: null, refreshToken: null })
+  })
+})
 
-    const mockRetryResponse: AxiosResponse = {
-      data: { success: true },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
+// ---------------------------------------------------------------------------
+// Pure helper: cacheResponseInterceptor + startCacheCleanup
+// ---------------------------------------------------------------------------
 
-    vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
-    vi.mocked(apiClient.request).mockResolvedValue(mockRetryResponse)
+function makeCacheableResponse(overrides: {
+  method?: string
+  url?: string
+  cacheControl?: string
+}): AxiosResponse {
+  const headers: Record<string, unknown> = {}
+  if (overrides.cacheControl) headers['cache-control'] = overrides.cacheControl
+  return {
+    data: { ok: true },
+    status: 200,
+    statusText: 'OK',
+    headers,
+    config: {
+      url: overrides.url ?? '/api/thing',
+      method: overrides.method ?? 'get',
+      headers: new AxiosHeaders(),
+    } as InternalAxiosRequestConfig,
+    request: {},
+  } as AxiosResponse
+}
 
-    const error: AxiosError = {
-      config: {
-        url: '/api/test',
-        method: 'GET',
-        headers: new AxiosHeaders(),
-      } as InternalAxiosRequestConfig,
-      response: {
-        status: 401,
-        statusText: 'Unauthorized',
-        data: {},
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      },
-      isAxiosError: true,
-      toJSON: () => ({}),
-      name: 'AxiosError',
-      message: 'Request failed with status code 401',
-    }
+describe('cacheResponseInterceptor', () => {
+  it('returns the response for a cacheable GET (default max-age)', () => {
+    const response = makeCacheableResponse({ method: 'get' })
+    expect(cacheResponseInterceptor(response)).toBe(response)
+  })
 
-    const result = await responseErrorInterceptor(error)
+  it('respects an explicit max-age directive', () => {
+    const response = makeCacheableResponse({ method: 'get', cacheControl: 'max-age=60' })
+    expect(cacheResponseInterceptor(response)).toBe(response)
+  })
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      '/api/authentication/refresh-token',
-      {
-        accessToken: 'old-access-token',
-        refreshToken: 'old-refresh-token',
-      },
-      expect.objectContaining({ skipAuthRefresh: true }),
+  it('skips caching when the response is no-cache / no-store', () => {
+    const response = makeCacheableResponse({ method: 'get', cacheControl: 'no-store' })
+    expect(cacheResponseInterceptor(response)).toBe(response)
+  })
+
+  it('skips non-GET responses', () => {
+    const response = makeCacheableResponse({ method: 'post' })
+    expect(cacheResponseInterceptor(response)).toBe(response)
+  })
+})
+
+describe('startCacheCleanup', () => {
+  afterEach(() => useRealTimers())
+
+  it('schedules periodic cleanup and returns a stop function', async () => {
+    useFakeTimersSafe()
+    // Populate an entry with a short TTL so the cleanup pass evicts it.
+    cacheResponseInterceptor(makeCacheableResponse({ method: 'get', cacheControl: 'max-age=1' }))
+
+    const stop = startCacheCleanup(1000)
+    expect(typeof stop).toBe('function')
+
+    await advance(2000) // fires clearExpiredCache; the 1s-TTL entry is now expired
+    stop()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Integration: response interceptor over the real client (MSW at the boundary)
+// ---------------------------------------------------------------------------
+
+describe('responseInterceptor success path', () => {
+  it('camelCases /user response data and attaches metadata', async () => {
+    seedAuthStorage({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    armInterceptors()
+    server.use(
+      http.get('/api/user/get-selectable-users', () =>
+        HttpResponse.json({
+          data: { user_name: 'ada' },
+          success: null,
+          warning: null,
+          error: null,
+        }),
+      ),
     )
 
-    expect(mockSetTokens).toHaveBeenCalledWith('new-access-token', 'new-refresh-token')
+    const res = await apiClient.get('/api/user/get-selectable-users', {
+      params: { email: 'a@b.c' },
+    })
 
-    expect(result).toEqual(mockRetryResponse)
+    // snake_case → camelCase transform ran for the /user endpoint.
+    expect((res.data as { data: { userName: string } }).data.userName).toBe('ada')
+    // Tracking metadata was attached.
+    expect(res.metadata).toBeDefined()
   })
+})
 
-  it('should persist tokens to localStorage via setTokens', async () => {
-    const mockRefreshResponse: AxiosResponse = {
-      data: {
-        data: {
-          accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token',
-        },
-      },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
+describe('token refresh over the real client', () => {
+  afterEach(() => useRealTimers())
 
-    const mockRetryResponse: AxiosResponse = {
-      data: { success: true },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
+  it('refreshes on 401 and retries with the new bearer token', async () => {
+    seedAuthStorage({ accessToken: 'old-access', refreshToken: 'old-refresh' })
+    const { authStore } = armInterceptors()
 
-    vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
-    vi.mocked(apiClient.request).mockResolvedValue(mockRetryResponse)
-
-    const error: AxiosError = {
-      config: {
-        url: '/api/test',
-        method: 'GET',
-        headers: new AxiosHeaders(),
-      } as InternalAxiosRequestConfig,
-      response: {
-        status: 401,
-        statusText: 'Unauthorized',
-        data: {},
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      },
-      isAxiosError: true,
-      toJSON: () => ({}),
-      name: 'AxiosError',
-      message: 'Request failed with status code 401',
-    }
-
-    await responseErrorInterceptor(error)
-
-    expect(mockSetTokens).toHaveBeenCalled()
-    expect(mockSetTokens).toHaveBeenCalledWith('new-access-token', 'new-refresh-token')
-
-    expect(mockSetTokens.mock.calls.length).toBe(1)
-  })
-
-  it('should retry original request with new token after refresh', async () => {
-    const mockRefreshResponse: AxiosResponse = {
-      data: {
-        data: {
-          accessToken: 'new-access-token',
-          refreshToken: 'new-refresh-token',
-        },
-      },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
-
-    const mockRetryResponse: AxiosResponse = {
-      data: { success: true },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
-
-    vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
-    vi.mocked(apiClient.request).mockResolvedValue(mockRetryResponse)
-
-    const originalRequestConfig: InternalAxiosRequestConfig = {
-      url: '/api/test',
-      method: 'GET',
-      headers: new AxiosHeaders(),
-    }
-
-    const error: AxiosError = {
-      config: originalRequestConfig,
-      response: {
-        status: 401,
-        statusText: 'Unauthorized',
-        data: {},
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      },
-      isAxiosError: true,
-      toJSON: () => ({}),
-      name: 'AxiosError',
-      message: 'Request failed with status code 401',
-    }
-
-    const result = await responseErrorInterceptor(error)
-
-    expect(apiClient.request).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: '/api/test',
-        method: 'GET',
-        _retry: true,
+    let refreshCount = 0
+    let retriedAuth: string | null = null
+    server.use(
+      http.get(PROBE_PATH, ({ request }) => {
+        retriedAuth = request.headers.get('Authorization')
+        return apiOk(makeUser())
+      }),
+    )
+    server.use(http.get(PROBE_PATH, () => apiError(401), { once: true }))
+    server.use(
+      http.post(REFRESH_PATH, () => {
+        refreshCount++
+        return apiOk({ accessToken: 'new-access', refreshToken: 'new-refresh' })
       }),
     )
 
-    expect(result).toEqual(mockRetryResponse)
+    const res = await apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })
+
+    expect(res.status).toBe(200)
+    expect(refreshCount).toBe(1)
+    expect(retriedAuth).toBe('Bearer new-access')
+    expect(authStore.accessToken).toBe('new-access')
   })
 
-  it('should clear auth state when refresh fails', async () => {
-    const mockRefreshError = new Error('Refresh failed')
+  it('clears auth and redirects when the refresh itself returns 401', async () => {
+    seedAuthStorage({ accessToken: 'old-access', refreshToken: 'old-refresh' })
+    const { authStore, redirectToLogin } = armInterceptors()
 
-    vi.mocked(apiClient.post).mockRejectedValue(mockRefreshError)
+    server.use(http.get(PROBE_PATH, () => apiError(401)))
+    server.use(http.post(REFRESH_PATH, () => apiError(401)))
 
-    const error: AxiosError = {
-      config: {
-        url: '/api/test',
-        method: 'GET',
-        headers: new AxiosHeaders(),
-      } as InternalAxiosRequestConfig,
-      response: {
-        status: 401,
-        statusText: 'Unauthorized',
-        data: {},
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      },
-      isAxiosError: true,
-      toJSON: () => ({}),
-      name: 'AxiosError',
-      message: 'Request failed with status code 401',
-    }
+    await expect(apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })).rejects.toBeDefined()
 
-    await expect(responseErrorInterceptor(error)).rejects.toThrow()
-
-    expect(mockClearAuth).toHaveBeenCalled()
+    expect(authStore.isAuthenticated).toBe(false)
+    expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+    expect(redirectToLogin).toHaveBeenCalledTimes(1)
   })
 
-  it('should handle camelCase token response format', async () => {
-    const mockRefreshResponse: AxiosResponse = {
-      data: {
-        data: {
-          accessToken: 'new-access-token-camel',
-          refreshToken: 'new-refresh-token-camel',
-        },
-      },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
+  it('clears auth without attempting refresh when no tokens are available', async () => {
+    // Unseeded store → no tokens → handleTokenRefresh throws before any POST.
+    const { authStore, redirectToLogin } = armInterceptors()
+    expect(authStore.isAuthenticated).toBe(false)
 
-    const mockRetryResponse: AxiosResponse = {
-      data: { success: true },
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config: {} as InternalAxiosRequestConfig,
-      request: {},
-    }
+    server.use(http.get(PROBE_PATH, () => apiError(401)))
 
-    vi.mocked(apiClient.post).mockResolvedValue(mockRefreshResponse)
-    vi.mocked(apiClient.request).mockResolvedValue(mockRetryResponse)
-
-    const error: AxiosError = {
-      config: {
-        url: '/api/test',
-        method: 'GET',
-        headers: new AxiosHeaders(),
-      } as InternalAxiosRequestConfig,
-      response: {
-        status: 401,
-        statusText: 'Unauthorized',
-        data: {},
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      },
-      isAxiosError: true,
-      toJSON: () => ({}),
-      name: 'AxiosError',
-      message: 'Request failed with status code 401',
-    }
-
-    await responseErrorInterceptor(error)
-
-    expect(mockSetTokens).toHaveBeenCalledWith('new-access-token-camel', 'new-refresh-token-camel')
+    await expect(apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })).rejects.toBeDefined()
+    expect(redirectToLogin).toHaveBeenCalledTimes(1)
   })
 
-  describe('Request Queue Management', () => {
-    it('should queue multiple 401 requests and process them after successful refresh', async () => {
-      const mockRefreshResponse: AxiosResponse = {
-        data: {
-          data: {
-            accessToken: 'new-access-token',
-            refreshToken: 'new-refresh-token',
-          },
-        },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      }
+  it('does not refresh when skipAuthRefresh is set', async () => {
+    seedAuthStorage({ accessToken: 'old-access', refreshToken: 'old-refresh' })
+    armInterceptors()
 
-      const mockRetryResponse: AxiosResponse = {
-        data: { success: true },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      }
+    let refreshCount = 0
+    server.use(http.get(PROBE_PATH, () => apiError(401)))
+    server.use(
+      http.post(REFRESH_PATH, () => {
+        refreshCount++
+        return apiOk({ accessToken: 'x', refreshToken: 'y' })
+      }),
+    )
 
-      // Make refresh take some time so we can queue requests
-      vi.mocked(apiClient.post).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockRefreshResponse), 50)),
-      )
+    await expect(
+      apiClient.get(PROBE_PATH, {
+        params: { email: 'a@b.c' },
+        skipAuthRefresh: true,
+      } as InternalAxiosRequestConfig),
+    ).rejects.toBeDefined()
 
-      vi.mocked(apiClient.request).mockResolvedValue(mockRetryResponse)
-
-      const error1: AxiosError = {
-        config: {
-          url: '/api/endpoint1',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-
-      const error2: AxiosError = {
-        config: {
-          url: '/api/endpoint2',
-          method: 'POST',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-
-      // Fire both requests concurrently
-      const [result1, result2] = await Promise.all([
-        responseErrorInterceptor(error1),
-        responseErrorInterceptor(error2),
-      ])
-
-      // Both should succeed with the same mock response
-      expect(result1.data).toEqual({ success: true })
-      expect(result2.data).toEqual({ success: true })
-
-      // Refresh should only be called once (proving the queue worked)
-      expect(apiClient.post).toHaveBeenCalledTimes(1)
-
-      // Both original requests should have been retried
-      expect(apiClient.request).toHaveBeenCalledTimes(2)
-    })
-
-    it('should reject all queued requests when refresh fails', async () => {
-      vi.mocked(apiClient.post).mockImplementation(
-        () => new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh failed')), 50)),
-      )
-
-      const error1: AxiosError = {
-        config: {
-          url: '/api/endpoint1',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-
-      const error2: AxiosError = {
-        config: {
-          url: '/api/endpoint2',
-          method: 'POST',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-
-      // Fire both requests concurrently
-      const results = await Promise.allSettled([
-        responseErrorInterceptor(error1),
-        responseErrorInterceptor(error2),
-      ])
-
-      // Both should fail
-      expect(results[0].status).toBe('rejected')
-      expect(results[1].status).toBe('rejected')
-
-      // clearAuth should be called
-      expect(mockClearAuth).toHaveBeenCalled()
-    })
+    expect(refreshCount).toBe(0)
   })
 
-  describe('Missing Token Scenarios', () => {
-    it('should throw error when accessToken is missing during refresh', async () => {
-      mockAuthStore.accessToken = null
-      mockAuthStore.refreshToken = 'valid-refresh'
+  it('does not refresh a request that already has the _retry flag', async () => {
+    seedAuthStorage({ accessToken: 'old-access', refreshToken: 'old-refresh' })
+    armInterceptors()
 
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
+    let refreshCount = 0
+    server.use(http.get(PROBE_PATH, () => apiError(401)))
+    server.use(
+      http.post(REFRESH_PATH, () => {
+        refreshCount++
+        return apiOk({ accessToken: 'x', refreshToken: 'y' })
+      }),
+    )
 
-      await expect(responseErrorInterceptor(error)).rejects.toThrow()
-      expect(mockClearAuth).toHaveBeenCalled()
-    })
+    await expect(
+      apiClient.get(PROBE_PATH, {
+        params: { email: 'a@b.c' },
+        _retry: true,
+      } as InternalAxiosRequestConfig),
+    ).rejects.toBeDefined()
 
-    it('should throw error when refreshToken is missing during refresh', async () => {
-      mockAuthStore.accessToken = 'valid-access'
-      mockAuthStore.refreshToken = null
-
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-
-      await expect(responseErrorInterceptor(error)).rejects.toThrow()
-      expect(mockClearAuth).toHaveBeenCalled()
-    })
-
-    it('should throw error when both tokens are missing during refresh', async () => {
-      mockAuthStore.accessToken = null
-      mockAuthStore.refreshToken = null
-
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-
-      await expect(responseErrorInterceptor(error)).rejects.toThrow()
-      expect(mockClearAuth).toHaveBeenCalled()
-    })
+    expect(refreshCount).toBe(0)
   })
 
-  describe('skipAuthRefresh flag', () => {
-    it('should not attempt refresh when skipAuthRefresh is true', async () => {
-      const error: AxiosError = {
-        config: {
-          url: '/api/authentication/refresh-token',
-          method: 'POST',
-          headers: new AxiosHeaders(),
-          skipAuthRefresh: true,
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
+  it('rejects all queued requests when a coalesced refresh fails', async () => {
+    seedAuthStorage({ accessToken: 'old-access', refreshToken: 'old-refresh' })
+    const { authStore } = armInterceptors()
 
-      // The current implementation doesn't check skipAuthRefresh before attempting refresh
-      // This test documents expected behavior
-      await expect(responseErrorInterceptor(error)).rejects.toBeDefined()
+    server.use(http.get(PROBE_PATH, () => apiError(401)))
+    // Slow refresh so the concurrent burst queues behind the first request.
+    server.use(
+      http.post(REFRESH_PATH, async () => {
+        await delay(30)
+        return apiError(401)
+      }),
+    )
 
-      // Should not call post again (would cause infinite loop)
-      // This verifies the _retry flag prevents that
-    })
+    const results = await Promise.allSettled([
+      apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } }),
+      apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } }),
+      apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } }),
+    ])
 
-    it('should not retry a request that already has _retry flag', async () => {
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-          _retry: true,
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
+    expect(results.every((r) => r.status === 'rejected')).toBe(true)
+    expect(authStore.isAuthenticated).toBe(false)
+  })
+})
 
-      await expect(responseErrorInterceptor(error)).rejects.toBeDefined()
+describe('rate limiting (429) and service unavailable (503) retries', () => {
+  afterEach(() => useRealTimers())
 
-      // Should not attempt to refresh
-      expect(apiClient.post).not.toHaveBeenCalled()
-    })
+  it('retries a 429 after exponential backoff and eventually succeeds', async () => {
+    useFakeTimersSafe()
+    seedAuthStorage({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    armInterceptors()
+
+    let calls = 0
+    server.use(
+      http.get(PROBE_PATH, () => {
+        calls++
+        return calls === 1 ? apiError(429) : apiOk(makeUser())
+      }),
+    )
+
+    const promise = apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })
+
+    await advance(500) // < ~1000ms backoff: the retry has not fired yet
+    expect(calls).toBe(1)
+
+    await advance(1000) // now past the backoff window
+    const res = await promise
+
+    expect(res.status).toBe(200)
+    expect(calls).toBe(2)
   })
 
-  describe('Login Redirect on Refresh Failure', () => {
-    const originalLocation = window.location
-    let mockLocation: { href: string }
+  it('gives up after the max 429 retries', async () => {
+    seedAuthStorage({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    armInterceptors()
+    server.use(http.get(PROBE_PATH, () => apiError(429)))
 
-    beforeEach(() => {
-      mockLocation = { href: '' }
-      Object.defineProperty(window, 'location', {
-        value: mockLocation,
-        writable: true,
-        configurable: true,
-      })
-    })
-
-    afterEach(() => {
-      Object.defineProperty(window, 'location', {
-        value: originalLocation,
-        writable: true,
-        configurable: true,
-      })
-      setLoginRedirectBase('/')
-    })
-
-    function make401Error(): AxiosError {
-      return {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 401,
-          statusText: 'Unauthorized',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 401',
-      }
-    }
-
-    it('should redirect to base-prefixed login URL when app is deployed under a subpath', async () => {
-      setLoginRedirectBase('/aichat/')
-      vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'))
-
-      await expect(responseErrorInterceptor(make401Error())).rejects.toThrow()
-
-      expect(mockLocation.href).toBe('/aichat/login')
-    })
-
-    it('should normalize a base URL without trailing slash', async () => {
-      setLoginRedirectBase('/aichat')
-      vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'))
-
-      await expect(responseErrorInterceptor(make401Error())).rejects.toThrow()
-
-      expect(mockLocation.href).toBe('/aichat/login')
-    })
-
-    it('should redirect to /login with default base', async () => {
-      vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'))
-
-      await expect(responseErrorInterceptor(make401Error())).rejects.toThrow()
-
-      expect(mockLocation.href).toBe('/login')
-    })
+    await expect(
+      apiClient.get(PROBE_PATH, {
+        params: { email: 'a@b.c' },
+        _retryCount: 3,
+      } as InternalAxiosRequestConfig),
+    ).rejects.toBeDefined()
   })
 
-  describe('Rate Limiting (429)', () => {
-    it('should retry request after rate limit with exponential backoff', async () => {
-      vi.useFakeTimers()
+  it('retries a 503 after a fixed delay and eventually succeeds', async () => {
+    useFakeTimersSafe()
+    seedAuthStorage({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    armInterceptors()
 
-      const mockSuccessResponse: AxiosResponse = {
-        data: { success: true },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      }
+    let calls = 0
+    server.use(
+      http.get(PROBE_PATH, () => {
+        calls++
+        return calls === 1 ? apiError(503) : apiOk(makeUser())
+      }),
+    )
 
-      vi.mocked(apiClient.request).mockResolvedValue(mockSuccessResponse)
+    const promise = apiClient.get(PROBE_PATH, { params: { email: 'a@b.c' } })
 
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 429,
-          statusText: 'Too Many Requests',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 429',
-      }
+    await advance(1000) // < 2000ms delay: retry not fired yet
+    expect(calls).toBe(1)
 
-      const resultPromise = responseErrorInterceptor(error)
+    await advance(1500)
+    const res = await promise
 
-      // Advance timers to allow retry
-      await vi.advanceTimersByTimeAsync(2000)
-
-      const result = await resultPromise
-
-      expect(result.data).toEqual({ success: true })
-      expect(apiClient.request).toHaveBeenCalled()
-
-      vi.useRealTimers()
-    })
-
-    it('should fail after max retries on persistent 429', async () => {
-      vi.useFakeTimers()
-
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-          _retryCount: 3,
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 429,
-          statusText: 'Too Many Requests',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 429',
-      }
-
-      await expect(responseErrorInterceptor(error)).rejects.toBeDefined()
-
-      vi.useRealTimers()
-    })
+    expect(res.status).toBe(200)
+    expect(calls).toBe(2)
   })
 
-  describe('Service Unavailable (503)', () => {
-    it('should retry request after 503 error', async () => {
-      vi.useFakeTimers()
+  it('gives up after the max 503 retries', async () => {
+    seedAuthStorage({ accessToken: 'access-1', refreshToken: 'refresh-1' })
+    armInterceptors()
+    server.use(http.get(PROBE_PATH, () => apiError(503)))
 
-      const mockSuccessResponse: AxiosResponse = {
-        data: { success: true },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: {} as InternalAxiosRequestConfig,
-        request: {},
-      }
-
-      vi.mocked(apiClient.request).mockResolvedValue(mockSuccessResponse)
-
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 503,
-          statusText: 'Service Unavailable',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 503',
-      }
-
-      const resultPromise = responseErrorInterceptor(error)
-
-      // Advance timers to allow retry (503 uses 2000ms delay)
-      await vi.advanceTimersByTimeAsync(3000)
-
-      const result = await resultPromise
-
-      expect(result.data).toEqual({ success: true })
-
-      vi.useRealTimers()
-    })
-
-    it('should fail after max retries on persistent 503', async () => {
-      vi.useFakeTimers()
-
-      const error: AxiosError = {
-        config: {
-          url: '/api/test',
-          method: 'GET',
-          headers: new AxiosHeaders(),
-          _retryCount: 2,
-        } as InternalAxiosRequestConfig,
-        response: {
-          status: 503,
-          statusText: 'Service Unavailable',
-          data: {},
-          headers: {},
-          config: {} as InternalAxiosRequestConfig,
-          request: {},
-        },
-        isAxiosError: true,
-        toJSON: () => ({}),
-        name: 'AxiosError',
-        message: 'Request failed with status code 503',
-      }
-
-      await expect(responseErrorInterceptor(error)).rejects.toBeDefined()
-
-      vi.useRealTimers()
-    })
+    await expect(
+      apiClient.get(PROBE_PATH, {
+        params: { email: 'a@b.c' },
+        _retryCount: 2,
+      } as InternalAxiosRequestConfig),
+    ).rejects.toBeDefined()
   })
 })

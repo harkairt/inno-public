@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { groupMessagesByDate, formatTime } from '@/lib/utils/chat/groupMessages'
 import type { ChatMessage } from '@/lib/utils/chat/groupMessages'
 import { MessageType } from '@/lib/types/chat'
+import { useFakeTimersSafe, freezeClock, useRealTimers } from '@/tests/utils/timers'
 
 function makeMessage(overrides: Partial<ChatMessage> & { sendDate: string }): ChatMessage {
   return {
@@ -112,6 +113,34 @@ describe('groupMessagesByDate', () => {
 
     expect(groups[0].date).toContain('2024')
     expect(groups[0].date).toContain('Mar')
+  })
+})
+
+// The date-boundary labels (formatDate / parseGroupDate, ~lines 68/100) are
+// already covered thoroughly by the suite above (Today / Yesterday / same-year /
+// different-year). This block adds one clock-relative characterization: the SAME
+// absolute message date is "Today" under one frozen clock and a plain formatted
+// date once the clock advances past it — proving the label tracks "now".
+describe('groupMessagesByDate — labels are relative to the frozen clock', () => {
+  afterEach(() => useRealTimers())
+
+  const SEND_DATE = '2025-06-15T09:30:00.000Z'
+
+  it('labels a fixed message date "Today" when the clock sits on that day', () => {
+    useFakeTimersSafe()
+    freezeClock('2025-06-15T12:00:00.000Z')
+    const groups = groupMessagesByDate([makeMessage({ sendDate: SEND_DATE })])
+    expect(groups[0].date).toBe('Today')
+  })
+
+  it('re-labels the SAME message date once the clock advances two days past it', () => {
+    useFakeTimersSafe()
+    freezeClock('2025-06-17T12:00:00.000Z')
+    const groups = groupMessagesByDate([makeMessage({ sendDate: SEND_DATE })])
+    expect(groups[0].date).not.toBe('Today')
+    expect(groups[0].date).not.toBe('Yesterday')
+    expect(groups[0].date).toContain('Jun')
+    expect(groups[0].date).toContain('15')
   })
 })
 

@@ -88,6 +88,22 @@ export function resetUserIdCounter(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Wire-shape message (for MSW handlers)
+// ---------------------------------------------------------------------------
+
+/**
+ * Message in the shape the backend actually serializes on the wire: messageType
+ * is the lowercase string the API sends (`'text'`, `'options'`, ...), which
+ * AISessionMessageDTOSchema transforms into the AIAnswerType enum on parse.
+ *
+ * Use this in MSW handlers (`apiOk(makeRawMessage())`); use makeMessage() for
+ * already-parsed domain-side AISessionMessageDTO fixtures.
+ */
+export function makeRawMessage(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return { ...makeMessage(), messageType: 'text', ...overrides }
+}
+
+// ---------------------------------------------------------------------------
 // Session factory
 // ---------------------------------------------------------------------------
 

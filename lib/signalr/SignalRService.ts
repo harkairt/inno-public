@@ -27,6 +27,16 @@ export class SignalRService {
     return SignalRService.instance
   }
 
+  /** Reset the singleton (test isolation). */
+  static resetInstance(): void {
+    SignalRService.instance = null as unknown as SignalRService
+  }
+
+  /** Install a (duck-typed) fake instance for tests. */
+  static setInstanceForTests(instance: SignalRService): void {
+    SignalRService.instance = instance
+  }
+
   /**
    * Connect to SignalR hub
    */

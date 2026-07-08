@@ -30,11 +30,31 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Unit tests
-        run: npm run test:run
+      - name: Unit tests + coverage gate
+        # Vitest's committed coverage.thresholds (vitest.config.ts) IS the gate:
+        # the run exits non-zero on any drop below threshold. No custom script.
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always() # keep the report even when the threshold gate fails
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
 
       - name: Build
         run: npm run build
         env:
           NUXT_PUBLIC_API_BASE_URL: ${{ vars.NUXT_PUBLIC_API_BASE_URL }}
           NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL: ${{ vars.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL }}
+
+      # Static-quality gates — BLOCKING. knip is driven to zero (real dead code
+      # removed; intended API surface + config false positives handled in
+      # knip.json) and jscpd enforces a duplication threshold (.jscpd.json). See
+      # plans/testing/Phase 3.md §C3 and the F3 follow-up.
+      - name: Dead-code check (knip)
+        run: npm run knip
+
+      - name: Duplication check (jscpd)
+        run: npm run duplication

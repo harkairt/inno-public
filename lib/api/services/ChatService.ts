@@ -40,7 +40,7 @@ import {
 import type { ApiResponse, MutationSuccess } from '@/types/api/base'
 import { ErrorCode } from '@/types/enums'
 
-export class ChatService {
+class ChatService {
   async sendQuestion(
     request: AiQuestionRequestDTO,
   ): Promise<Result<AISessionMessageDTO, AppError>> {

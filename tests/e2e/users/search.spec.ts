@@ -1,199 +1,89 @@
 /**
  * User Search Tests
- * Tests for user search functionality in sidebar
+ * Tests for user search on the dedicated /users page.
  */
 
 import { test, expect } from '../fixtures'
 import { selectors } from '../selectors'
-import { navigateToChats } from '../actions/navigation.actions'
+import { navigateToUsers } from '../actions/navigation.actions'
 
 test.describe('User Search', () => {
   test.describe('Search Input', () => {
-    test('should have search input in users section', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
+    test('should have a search input', async ({ mockedAuthenticatedPage: page }) => {
+      await navigateToUsers(page)
 
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
-
-      // Search input should be visible
-      const searchInputs = authenticatedPage.locator('input[placeholder*="earch"]')
-      await expect(searchInputs.first()).toBeVisible()
+      await expect(page.locator(selectors.users.userSearch)).toBeVisible()
     })
 
-    test('should filter users as you type', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
+    test('should filter users as you type', async ({ mockedAuthenticatedPage: page }) => {
+      await navigateToUsers(page)
 
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
-
-      // Wait for users to load
-      await authenticatedPage.waitForTimeout(2000)
-
-      // Get initial user count
-      const userItems = authenticatedPage.locator('.sidebar-item').filter({ hasText: /@/ })
+      const userItems = page.locator(selectors.users.userItems)
+      await expect(userItems.first()).toBeVisible()
       const initialCount = await userItems.count()
 
-      if (initialCount > 1) {
-        // Type in search
-        const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
-        await searchInput.fill('a')
-
-        // Wait for filter
-        await authenticatedPage.waitForTimeout(500)
-
-        // Count may change based on filter
-        const filteredCount = await userItems.count()
-        // Either same or fewer users should be shown
-        expect(filteredCount).toBeLessThanOrEqual(initialCount)
-      }
+      // Narrow the list with a query — never more than the unfiltered set.
+      await page.locator(selectors.users.userSearch).fill('admin')
+      await expect(async () => {
+        expect(await userItems.count()).toBeLessThanOrEqual(initialCount)
+      }).toPass()
     })
 
-    test('should clear search results when input is cleared', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
+    test('should clear search results when input is cleared', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
+      await navigateToUsers(page)
 
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
+      const userItems = page.locator(selectors.users.userItems)
+      await expect(userItems.first()).toBeVisible()
+      const initialCount = await userItems.count()
 
-      // Wait for users to load
-      await authenticatedPage.waitForTimeout(2000)
+      const search = page.locator(selectors.users.userSearch)
+      await search.fill('zzzznonexistentuser12345zzzzz')
+      await expect(userItems).toHaveCount(0)
 
-      const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
-
-      // Type and then clear
-      await searchInput.fill('test')
-      await authenticatedPage.waitForTimeout(500)
-      await searchInput.clear()
-      await authenticatedPage.waitForTimeout(500)
-
-      // Users should be restored (if any exist)
-      const sidebar = authenticatedPage.locator(selectors.layout.sidebar)
-      const sidebarContent = await sidebar.textContent()
-      expect(sidebarContent).toBeTruthy()
+      // Clearing restores the full list.
+      await search.clear()
+      await expect(userItems).toHaveCount(initialCount)
     })
   })
 
   test.describe('Search Behavior', () => {
-    test('should search by user name', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
+    test('should search by email', async ({ mockedAuthenticatedPage: page }) => {
+      await navigateToUsers(page)
 
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
+      await expect(page.locator(selectors.users.userItems).first()).toBeVisible()
 
-      // Wait for users to load
-      await authenticatedPage.waitForTimeout(2000)
+      // Mocked users include admin@example.com — searching the email finds it.
+      await page.locator(selectors.users.userSearch).fill('admin@example.com')
 
-      // Get a user name to search for
-      const userItems = authenticatedPage.locator('.sidebar-item').filter({ hasText: /@/ })
-      const count = await userItems.count()
-
-      if (count > 0) {
-        // Get text from first user
-        const firstUserText = await userItems.first().textContent()
-
-        // Extract a partial name to search
-        const searchTerm = firstUserText?.split(' ')[0]?.slice(0, 3)
-
-        if (searchTerm) {
-          const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
-          await searchInput.fill(searchTerm)
-
-          // Wait for search results
-          await authenticatedPage.waitForTimeout(500)
-
-          // Should still find the user
-          const filteredItems = authenticatedPage.locator('.sidebar-item').filter({ hasText: /@/ })
-          const filteredCount = await filteredItems.count()
-          expect(filteredCount).toBeGreaterThan(0)
-        }
-      }
+      const results = page.locator(selectors.users.userItems)
+      await expect(results.first()).toBeVisible()
+      expect(await results.first().textContent()).toContain('admin@example.com')
     })
 
-    test('should search by email', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
+    test('should show no results for an invalid search', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
+      await navigateToUsers(page)
 
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
+      await expect(page.locator(selectors.users.userItems).first()).toBeVisible()
 
-      // Wait for users to load
-      await authenticatedPage.waitForTimeout(2000)
+      await page.locator(selectors.users.userSearch).fill('zzzznonexistentuser12345zzzzz')
 
-      // Search for common email parts
-      const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
-      await searchInput.fill('@')
-
-      // Wait for search results
-      await authenticatedPage.waitForTimeout(500)
-
-      // Should find users with @ in their info
-      const sidebar = authenticatedPage.locator(selectors.layout.sidebar)
-      const sidebarContent = await sidebar.textContent()
-      expect(sidebarContent).toContain('@')
-    })
-
-    test('should show no results message for invalid search', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
-
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
-
-      // Wait for users to load
-      await authenticatedPage.waitForTimeout(2000)
-
-      // Search for non-existent user
-      const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
-      await searchInput.fill('zzzznonexistentuser12345zzzzz')
-
-      // Wait for search results
-      await authenticatedPage.waitForTimeout(1000)
-
-      // Either no user items or empty state message
-      const userItems = authenticatedPage.locator('.sidebar-item').filter({ hasText: /@/ })
-      const count = await userItems.count()
-      expect(count).toBe(0)
+      await expect(page.locator(selectors.users.userItems)).toHaveCount(0)
     })
   })
 
   test.describe('Search Performance', () => {
-    test('should handle rapid typing', async ({ authenticatedPage }) => {
-      await navigateToChats(authenticatedPage)
+    test('should handle rapid typing', async ({ mockedAuthenticatedPage: page }) => {
+      await navigateToUsers(page)
 
-      // Expand users section
-      const usersHeader = authenticatedPage.locator('button').filter({ hasText: /users/i }).first()
-      if (await usersHeader.isVisible()) {
-        await usersHeader.click()
-      }
+      const search = page.locator(selectors.users.userSearch)
+      await search.pressSequentially('testuser', { delay: 50 })
 
-      // Wait for users to load
-      await authenticatedPage.waitForTimeout(2000)
-
-      const searchInput = authenticatedPage.locator('input[placeholder*="earch"]').first()
-
-      // Type rapidly
-      await searchInput.pressSequentially('testuser', { delay: 50 })
-
-      // Should handle without errors
-      await authenticatedPage.waitForTimeout(1000)
-
-      const sidebar = authenticatedPage.locator(selectors.layout.sidebar)
-      await expect(sidebar).toBeVisible()
+      // Should remain responsive — the page stays mounted.
+      await expect(page.locator(selectors.users.usersPage)).toBeVisible()
     })
   })
 })

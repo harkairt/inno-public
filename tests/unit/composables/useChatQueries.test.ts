@@ -1,5 +1,39 @@
-import { describe, it, expect } from 'vitest'
-import { chatQueryKeys } from '~/composables/useChatQueries'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { defineComponent } from 'vue'
+import { mount } from '@vue/test-utils'
+import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
+import { createPinia, setActivePinia } from 'pinia'
+import { server, http } from '@/tests/msw/server'
+import { apiOk, apiError } from '@/tests/msw/http'
+import { makeSession } from '@/tests/utils/factories'
+import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { simulateWindowFocus } from '@/tests/utils/focus'
+import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
+import {
+  chatQueryKeys,
+  useChatSessions,
+  useSessionUnreadCount,
+  useWelcomeMessage,
+  resetWelcomeMessageTracking,
+} from '~/composables/useChatQueries'
+
+function mountQuery<T>(queryClient: QueryClient, setup: () => T): T {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  let result!: T
+  const Comp = defineComponent({
+    setup() {
+      result = setup()
+      return () => null
+    },
+  })
+  mount(Comp, { global: { plugins: [[VueQueryPlugin, { queryClient }], pinia] } })
+  return result
+}
+
+function timingQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+}
 
 // ---------------------------------------------------------------------------
 // Query key correctness
@@ -64,5 +98,93 @@ describe('chatQueryKeys — cache key structure', () => {
     const sessionKey = chatQueryKeys.session('id-1')
 
     expect(sessionKey.slice(0, sessionsKey.length)).toEqual(sessionsKey)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Refetch behavior — driven through the real chatService against MSW
+// ---------------------------------------------------------------------------
+
+describe('useChatSessions — refetchOnWindowFocus', () => {
+  it('refetches the session list when the window regains focus', async () => {
+    seedAuthStorage()
+    let calls = 0
+    server.use(
+      http.post('/api/AIWebAPI/GetSessionHeadersByUserId', () => {
+        calls++
+        return apiOk([makeSession()])
+      }),
+    )
+
+    // staleTime 0 → the query is immediately stale, so focus triggers a refetch.
+    const query = mountQuery(timingQueryClient(), () => useChatSessions({ staleTime: 0 }))
+
+    await vi.waitFor(() => expect(query.isSuccess.value).toBe(true))
+    expect(calls).toBe(1)
+
+    simulateWindowFocus()
+
+    await vi.waitFor(() => expect(calls).toBe(2))
+  })
+})
+
+describe('useSessionUnreadCount — refetchInterval', () => {
+  afterEach(() => {
+    useRealTimers()
+  })
+
+  it('polls the unread count on the 30s interval', async () => {
+    seedAuthStorage()
+    let calls = 0
+    server.use(
+      http.post('/api/AIWebAPI/GetSessionUnreadMessages', () => {
+        calls++
+        return apiOk(0)
+      }),
+    )
+
+    useFakeTimersSafe()
+    const query = mountQuery(timingQueryClient(), () => useSessionUnreadCount('session-1', 1))
+
+    await vi.waitFor(() => expect(query.isSuccess.value).toBe(true))
+    expect(calls).toBe(1)
+
+    await advance(30 * 1000)
+    await vi.waitFor(() => expect(calls).toBe(2))
+
+    await advance(30 * 1000)
+    await vi.waitFor(() => expect(calls).toBe(3))
+  })
+})
+
+describe('useWelcomeMessage — 500 tracking', () => {
+  it('stops re-fetching an agent whose welcome text 500s, until tracking is reset', async () => {
+    seedAuthStorage()
+    let calls = 0
+    server.use(
+      http.post('/api/AIWebAPI/welcomeText', () => {
+        calls++
+        return apiError(500)
+      }),
+    )
+
+    // First mount: server 500 → agent recorded as having no welcome message,
+    // query resolves to an empty message rather than erroring.
+    const first = mountQuery(timingQueryClient(), () => useWelcomeMessage(42))
+    await vi.waitFor(() => expect(first.isSuccess.value).toBe(true))
+    expect(first.data.value).toEqual({ message: '' })
+    expect(calls).toBe(1)
+
+    // Second mount for the same agent short-circuits — no HTTP.
+    const second = mountQuery(timingQueryClient(), () => useWelcomeMessage(42))
+    await vi.waitFor(() => expect(second.isSuccess.value).toBe(true))
+    expect(second.data.value).toEqual({ message: '' })
+    expect(calls).toBe(1)
+
+    // Resetting the tracking set makes the next mount hit the network again.
+    resetWelcomeMessageTracking()
+    const third = mountQuery(timingQueryClient(), () => useWelcomeMessage(42))
+    await vi.waitFor(() => expect(third.isSuccess.value).toBe(true))
+    expect(calls).toBe(2)
   })
 })

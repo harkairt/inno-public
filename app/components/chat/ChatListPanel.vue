@@ -202,15 +202,23 @@ const scrollContainer = ref<HTMLElement>()
 
 onMounted(() => {
   if (scrollContainer.value) {
-    const savedPosition = sessionStorage.getItem('chat-sessions-scroll-position')
-    if (savedPosition) {
-      scrollContainer.value.scrollTop = parseInt(savedPosition, 10)
+    try {
+      const savedPosition = sessionStorage.getItem('chat-sessions-scroll-position')
+      if (savedPosition) {
+        scrollContainer.value.scrollTop = parseInt(savedPosition, 10)
+      }
+    } catch {
+      // Blocked Storage — skip scroll restore.
     }
   }
 })
 
 const { y: scrollY } = useScroll(scrollContainer)
 watch(scrollY, (newY) => {
-  sessionStorage.setItem('chat-sessions-scroll-position', newY.toString())
+  try {
+    sessionStorage.setItem('chat-sessions-scroll-position', newY.toString())
+  } catch {
+    // Blocked Storage — skip scroll persistence.
+  }
 })
 </script>

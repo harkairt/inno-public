@@ -8,7 +8,7 @@ interface AISessionMessageDTO {
   isRated: boolean
   messageID: string
   messageText: string | null
-  messageType: number
+  messageType: string
   rating: number | null
   readByUsers: string[] | null
   sendDate: string
@@ -20,16 +20,20 @@ interface AISessionMessageDTO {
 }
 
 // Message type enum values (matches AIAnswerType)
+// Wire values MUST be the lowercase string enum the backend sends and the
+// Zod schema validates (AI_ANSWER_TYPE_VALUES in types/api/schemas.ts) — NOT
+// numbers. A numeric messageType fails AIAnswerTypeSchema (z.enum of strings),
+// which makes GetSessionById reject and the session detail never render.
 export const MessageType = {
-  Text: 0,
-  Command: 1,
-  DataTable: 2,
-  Options: 3,
-  URL: 4,
-  Question: 5,
-  ErrorText: 6,
-  ServerTask: 7,
-  Empty: 8,
+  Text: 'text',
+  Command: 'command',
+  DataTable: 'dataTable',
+  Options: 'options',
+  URL: 'url',
+  Question: 'question',
+  ErrorText: 'errorText',
+  ServerTask: 'serverTask',
+  Empty: 'empty',
 } as const
 
 // Message status for optimistic updates (client-side only)

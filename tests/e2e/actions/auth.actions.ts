@@ -53,13 +53,13 @@ export async function loginAsAdmin(page: Page) {
 
 /**
  * User workflow: Logout
+ *
+ * The logout control lives on the /profile page (not an inline nav button), so
+ * navigate there first, then click it. handleLogout() redirects to /login.
  */
 export async function logout(page: Page) {
-  await page
-    .getByRole(selectors.auth.logoutButton.role, {
-      name: selectors.auth.logoutButton.name,
-    })
-    .click()
+  await page.goto('/profile')
+  await page.locator(selectors.auth.logoutButton).click()
 
   // Wait for redirect to login page
   await page.waitForURL('/login')
@@ -82,14 +82,13 @@ export async function attemptLogin(page: Page, email: string, password: string) 
 
 /**
  * Helper: Check if user is logged in
+ *
+ * The authenticated desktop shell renders the AppRail; its presence is a proxy
+ * for an active session.
  */
 export async function isLoggedIn(page: Page): Promise<boolean> {
   try {
-    await page
-      .getByRole(selectors.auth.logoutButton.role, {
-        name: selectors.auth.logoutButton.name,
-      })
-      .waitFor({ timeout: 3000 })
+    await page.locator(selectors.layout.appRail).waitFor({ timeout: 3000 })
     return true
   } catch {
     return false
