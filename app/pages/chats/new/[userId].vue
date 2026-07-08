@@ -153,17 +153,6 @@ const chatStore = useChatStore()
 const userId = computed(() => route.params.userId as string)
 const sessionId = ref(generateUUID())
 
-// Register navigation callback for when server confirms the new session
-chatStore.onNewSessionConfirmed(sessionId.value, () => {
-  chatStore.clearDraft(`new-${userId.value}`)
-  chatStore.skipNextEntranceAnimation = true
-  void navigateTo(`/chats/${sessionId.value}`, { replace: true })
-})
-
-onUnmounted(() => {
-  chatStore.removeNewSessionCallback(sessionId.value)
-})
-
 const { data: users, isLoading: isLoadingUsers } = useSelectableUsers()
 
 const selectedUser = computed(() => {
@@ -208,14 +197,26 @@ const { data: sessionData } = useChatSession(sessionId.value, {
 
 const messages = computed(() => {
   const queryMessages = sessionData.value?.messages ?? []
-  const failedMessages = chatStore.getFailedMessages(sessionId.value)
-  return [...queryMessages, ...failedMessages]
+  const pending = chatStore.getUnconfirmedPendingMessages(sessionId.value, queryMessages)
+  const failed = chatStore.getFailedMessages(sessionId.value)
+  return [...queryMessages, ...pending, ...failed]
 })
 
 watch(
   () => messages.value.length > 0,
   (hasMessages) => {
     if (hasMessages) sessionQueryEnabled.value = true
+  },
+)
+
+watch(
+  () => messages.value.length,
+  (newLen, oldLen) => {
+    if (oldLen === 0 && newLen > 0) {
+      chatStore.clearDraft(`new-${userId.value}`)
+      chatStore.skipNextEntranceAnimation = true
+      void navigateTo(`/chats/${sessionId.value}`, { replace: true })
+    }
   },
 )
 

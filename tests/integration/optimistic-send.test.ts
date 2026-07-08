@@ -74,7 +74,7 @@ function testQueryClient() {
 }
 
 describe('useSendMessage — optimistic send integration', () => {
-  it('appends the server message to the session cache on success', async () => {
+  it('invalidates the session query and clears the optimistic message on success', async () => {
     seedAuthStorage({ user: makeUser({ email: ME }) })
     const fake = installFakeSignalR()
     fake.setState('connected')
@@ -90,10 +90,66 @@ describe('useSendMessage — optimistic send integration', () => {
 
     await mutation.mutateAsync(sendRequest())
 
+    // Existing-session success reconciles by invalidating the session query — the
+    // ensuing GetSessionById refetch is authoritative — rather than clobbering the
+    // cache with the lone server message.
+    expect(queryClient.getQueryState(chatQueryKeys.session('session-1'))?.isInvalidated).toBe(true)
+
+    // The optimistic message lives in the pending-message store and is cleared once
+    // the server confirms the send.
+    const chatStore = useChatStore()
+    expect(chatStore.getPendingMessages('session-1')).toHaveLength(0)
+  })
+
+  it('clears the optimistic message even when the server reply is empty', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    const fake = installFakeSignalR()
+    fake.setState('connected')
+    // Empty reply (no text): the agent acknowledged without a message body.
+    server.use(
+      http.post('/api/AIWebAPI/question/text', () =>
+        apiOk(makeRawMessage({ messageID: 'server-empty', messageText: '' })),
+      ),
+    )
+
+    const queryClient = testQueryClient()
+    queryClient.setQueryData(chatQueryKeys.session('session-1'), existingSession())
+    const mutation = mountSend(queryClient)
+
+    await mutation.mutateAsync(sendRequest())
+
+    // The old code skipped cache work on an empty reply; the new code still
+    // invalidates and clears the pending bubble so it can't linger forever.
+    expect(queryClient.getQueryState(chatQueryKeys.session('session-1'))?.isInvalidated).toBe(true)
+    const chatStore = useChatStore()
+    expect(chatStore.getPendingMessages('session-1')).toHaveLength(0)
+  })
+
+  it('clears the optimistic message on a brand-new session without duplicating the user message', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    const fake = installFakeSignalR()
+    fake.setState('connected')
+    server.use(
+      http.post('/api/AIWebAPI/question/text', () =>
+        apiOk(makeRawMessage({ messageID: 'server-msg', messageText: 'AI reply' })),
+      ),
+    )
+
+    // No pre-seeded cache → onMutate treats this as a new session.
+    const queryClient = testQueryClient()
+    const mutation = mountSend(queryClient)
+
+    await mutation.mutateAsync(sendRequest())
+
+    const chatStore = useChatStore()
+    // Pending optimistic message removed on success...
+    expect(chatStore.getPendingMessages('session-1')).toHaveLength(0)
+
+    // ...and the synthetic user message appears exactly once (no pending + synthetic dupe).
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
-    const texts = session?.messages?.map((m) => m.messageText)
-    expect(texts).toContain('hello there') // optimistic user message
-    expect(texts).toContain('AI reply') // server response appended
+    const userCopies = (session?.messages ?? []).filter((m) => m.messageText === 'hello there')
+    expect(userCopies).toHaveLength(1)
+    expect(session?.messages?.some((m) => m.messageText === 'AI reply')).toBe(true)
   })
 
   it('notifies other session members via SignalR on success', async () => {

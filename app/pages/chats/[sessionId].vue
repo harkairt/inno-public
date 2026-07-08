@@ -205,9 +205,9 @@
                 key="messages"
                 :messages="messages"
                 :welcome-message="trimmedWelcomeMessage"
-                :agent-id="session?.agentId ?? virtualAgentFromSecondMessage?.agentId"
-                :agent-name="virtualAgentFromSecondMessage?.agentName"
-                :welcome-message-date="virtualAgentFromSecondMessage?.firstMessageDate"
+                :agent-id="session?.agentId ?? virtualAgentFromSession?.agentId"
+                :agent-name="virtualAgentFromSession?.agentName"
+                :welcome-message-date="virtualAgentFromSession?.firstMessageDate"
                 :member-count="session?.members?.length ?? 2"
                 :active-options-message-id="lastUnansweredOptionsMessageId"
                 :skip-entrance-animation="skipEntranceAnimation"
@@ -319,6 +319,7 @@ import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { usePrimarySession } from '@/app/composables/usePrimarySession'
 import { AIAnswerType, AIQuestionType } from '@/types/enums'
 import type { AiQuestionRequestDTO } from '@/types/api/schemas'
+import { resolveWelcomeAgent } from '@/app/utils/welcomeAgent'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
@@ -432,11 +433,14 @@ const { isPrimarySession, otherMemberName, otherMemberId } = usePrimarySession(
   currentUserEmail,
 )
 
-// Use messages from session + failed messages from store
+// Use messages from session + pending (optimistic) + failed messages from store.
+// Pending messages are reconciled against server data by content (not id) so a message
+// echoed back by GetSessionById mid-send isn't rendered twice.
 const messages = computed(() => {
   const queryMessages = session.value?.messages ?? []
-  const failedMessages = chatStore.getFailedMessages(sessionId)
-  return [...queryMessages, ...failedMessages]
+  const pending = chatStore.getUnconfirmedPendingMessages(sessionId, queryMessages)
+  const failed = chatStore.getFailedMessages(sessionId)
+  return [...queryMessages, ...pending, ...failed]
 })
 
 // Get typing users for this session
@@ -496,43 +500,21 @@ async function handleOptionSubmitted(answer: string) {
   }
 }
 
-// Detect if second message is from a virtual agent (for welcome message)
-const virtualAgentFromSecondMessage = computed(() => {
-  const msgs = session.value?.messages
-  if (!msgs || msgs.length < 2 || !selectableUsers.value) {
-    return null
-  }
-
-  // Sort messages by sendDate to find chronologically second message
-  const sortedMsgs = [...msgs].sort(
-    (a, b) => new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime(),
-  )
-
-  const firstMsg = sortedMsgs[0]
-  const secondMsg = sortedMsgs[1]
-  if (!firstMsg || !secondMsg) return null
-
-  const senderCode = secondMsg.senderUserCode
-
-  // Find the user in selectableUsers by email (senderUserCode is email)
-  const sender = selectableUsers.value.find((u) => u.email === senderCode)
-
-  if (sender?.isVirtual) {
-    return {
-      agentId: sender.id,
-      agentName: sender.name,
-      firstMessageDate: firstMsg.sendDate,
-    }
-  }
-
-  return null
-})
+// Detect virtual agent for welcome message display (member-based → stable across GetSessionById)
+const virtualAgentFromSession = computed(() =>
+  resolveWelcomeAgent(
+    session.value?.members,
+    selectableUsers.value,
+    session.value?.messages,
+    session.value?.insertDate,
+  ),
+)
 
 // Fetch welcome message if second message is from virtual agent
 const { data: welcomeMessageData, isLoading: isWelcomeMessageLoading } = useWelcomeMessage(
-  computed(() => virtualAgentFromSecondMessage.value?.agentId ?? 0),
+  computed(() => virtualAgentFromSession.value?.agentId ?? 0),
   {
-    enabled: computed(() => !!virtualAgentFromSecondMessage.value),
+    enabled: computed(() => !!virtualAgentFromSession.value),
     sessionId: sessionId,
   },
 )
@@ -558,7 +540,7 @@ const isMessagesReady = computed(() => {
   if (isSelectableUsersLoading.value) return false
 
   // If we detected a virtual agent and welcome message is still loading, wait
-  if (virtualAgentFromSecondMessage.value && isWelcomeMessageLoading.value) return false
+  if (virtualAgentFromSession.value && isWelcomeMessageLoading.value) return false
 
   return true
 })

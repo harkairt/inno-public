@@ -17,8 +17,9 @@ import type {
   AISessionDTO,
   AISessionMessageDTO,
   GetUnreadMessagesDTO,
+  AiQuestionRequestDTO,
 } from '@/types/api/schemas'
-import { AIAnswerType } from '@/types/enums'
+import { AIAnswerType, AIQuestionType } from '@/types/enums'
 import { UnknownError } from '@/lib/errors/types'
 
 // ---------------------------------------------------------------------------
@@ -63,6 +64,9 @@ vi.mock('@/app/stores/chat', () => ({
     activeSessionId: ref(null),
     addFailedMessage: mockAddFailedMessage,
     removeAllFailedMessages: mockRemoveAllFailedMessages,
+    addPendingMessage: vi.fn(),
+    removePendingMessage: vi.fn(),
+    removeAllPendingMessages: vi.fn(),
     addTypingUser: vi.fn(),
     removeTypingUser: vi.fn(),
     onNewSessionConfirmed: vi.fn(),
@@ -137,6 +141,20 @@ function makeMessage(overrides: Partial<AISessionMessageDTO> = {}): AISessionMes
     rating: null,
     readByUsers: [],
     sessionId: 'session-1',
+    ...overrides,
+  }
+}
+
+function makeQuestionRequest(overrides: Partial<AiQuestionRequestDTO> = {}): AiQuestionRequestDTO {
+  return {
+    userCode: 'user@test.com',
+    sessionId: 'session-1',
+    agentId: 1,
+    members: ['user@test.com'],
+    question: 'Hello',
+    group: '',
+    pquestionType: AIQuestionType.Text,
+    options: [],
     ...overrides,
   }
 }
@@ -416,6 +434,81 @@ describe('useRateMessage — optimistic updates', () => {
     const msg = session?.messages?.find((m) => m.messageID === 'msg-1')
     expect(msg?.isRated).toBe(false)
     expect(msg?.rating).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// useSendMessage — new-session cache reconciliation
+// ---------------------------------------------------------------------------
+
+describe('useSendMessage — new session cache update', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('merges the server answer onto a SignalR-populated cache without clobbering', async () => {
+    const { chatService } = await import('@/lib/api/services/ChatService')
+    const { useSendMessage } = await import('~/composables/useChatMutations')
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    // Controllable service promise so we can inject the SignalR refetch mid-send.
+    let resolveService!: () => void
+    const serverAnswer = makeMessage({ messageID: 'msg-answer', messageText: 'Final answer' })
+    vi.mocked(chatService.sendQuestion).mockReturnValue(
+      new Promise((res) => {
+        resolveService = () => res(makeOkResult(serverAnswer))
+      }),
+    )
+
+    let mutation: ReturnType<typeof useSendMessage> | undefined
+    createWrapper(queryClient, () => {
+      mutation = useSendMessage()
+    })
+
+    // Cache empty at send time → onMutate treats this as a new session.
+    const mutatePromise = mutation!.mutateAsync(makeQuestionRequest())
+    await new Promise((r) => setTimeout(r, 0)) // let onMutate seed the empty synthetic session
+
+    // A SignalR ReceiveMessage triggered GetSessionById, which landed the user's message
+    // plus the backend's "working on it" placeholder before the text POST resolved.
+    const userMsg = makeMessage({ messageID: 'msg-user', messageText: 'Hello', isRated: false })
+    const workingOnItMsg = makeMessage({
+      messageID: 'msg-working',
+      messageText: 'I am gathering the information…',
+    })
+    queryClient.setQueryData<AISessionDTO>(
+      chatQueryKeys.session('session-1'),
+      makeSessionDTO({ messages: [userMsg, workingOnItMsg] }),
+    )
+
+    resolveService()
+    await mutatePromise
+
+    const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
+    const ids = session?.messages?.map((m) => m.messageID)
+    expect(ids).toContain('msg-working') // not clobbered
+    expect(ids).toContain('msg-answer') // server answer appended
+  })
+
+  it('falls back to the synthetic session when the cache is still the empty placeholder', async () => {
+    const { chatService } = await import('@/lib/api/services/ChatService')
+    const { useSendMessage } = await import('~/composables/useChatMutations')
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    const serverAnswer = makeMessage({ messageID: 'msg-answer', messageText: 'Final answer' })
+    vi.mocked(chatService.sendQuestion).mockResolvedValue(makeOkResult(serverAnswer))
+
+    let mutation: ReturnType<typeof useSendMessage> | undefined
+    createWrapper(queryClient, () => {
+      mutation = useSendMessage()
+    })
+
+    await mutation!.mutateAsync(makeQuestionRequest({ question: 'Hi there' }))
+
+    const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
+    const texts = session?.messages?.map((m) => m.messageText)
+    expect(texts).toContain('Hi there') // synthetic user message
+    expect(texts).toContain('Final answer') // server answer
   })
 })
 

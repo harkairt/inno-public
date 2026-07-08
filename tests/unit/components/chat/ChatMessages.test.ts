@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/vue'
+import { render, screen, waitFor } from '@testing-library/vue'
 import type { Component } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
+import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -215,6 +216,77 @@ describe('ChatMessages — welcome message', () => {
     // Just 1 message rendered, no extra prepended entry
     const markdownContents = screen.getAllByTestId('markdown-content')
     expect(markdownContents).toHaveLength(1)
+  })
+})
+
+describe('ChatMessages — entrance animation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('does not animate pre-existing messages when skipEntranceAnimation is true', async () => {
+    // Arriving from /chats/new/* — messages already on screen must not replay.
+    const messages = [makeMessage({ senderUserCode: 'partner@test.com', messageID: 'seeded' })]
+    await renderMessages({ messages, skipEntranceAnimation: true })
+    const wrapper = screen.getByTestId('message-seeded')
+    expect(wrapper.classList.contains('message-enter-stagger')).toBe(false)
+  })
+
+  it('animates incoming messages on initial load when not skipping', async () => {
+    const messages = [makeMessage({ senderUserCode: 'partner@test.com', messageID: 'incoming' })]
+    await renderMessages({ messages, skipEntranceAnimation: false })
+    const wrapper = screen.getByTestId('message-incoming')
+    expect(wrapper.classList.contains('message-enter-stagger')).toBe(true)
+    expect(wrapper.style.animationDelay).toBe('0ms')
+  })
+
+  it('never animates own messages, even on initial load', async () => {
+    // Own messages appear because the user acted; their optimistic temp id is later
+    // swapped for a server id, which would otherwise replay the entrance.
+    const messages = [makeMessage({ senderUserCode: 'user@test.com', messageID: 'mine' })]
+    await renderMessages({ messages, skipEntranceAnimation: false })
+    const wrapper = screen.getByTestId('message-mine')
+    expect(wrapper.classList.contains('message-enter-stagger')).toBe(false)
+  })
+
+  it('animates an incoming reply that arrives after mount, but not the own message already there', async () => {
+    // Regression: after navigating from /chats/new/* (skip=true), the AI reply must
+    // still animate while the just-sent own message stays put.
+    const own = makeMessage({ senderUserCode: 'user@test.com', messageID: 'mine' })
+    const { rerender } = await renderMessages({ messages: [own], skipEntranceAnimation: true })
+
+    const reply = makeMessage({ senderUserCode: 'partner@test.com', messageID: 'reply' })
+    await rerender({ messages: [own, reply], skipEntranceAnimation: true })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-reply').classList.contains('message-enter-stagger')).toBe(
+        true,
+      )
+    })
+    expect(screen.getByTestId('message-mine').classList.contains('message-enter-stagger')).toBe(
+      false,
+    )
+  })
+
+  it('retires the animation class after the animation completes', async () => {
+    useFakeTimersSafe()
+    try {
+      const messages = [makeMessage({ senderUserCode: 'partner@test.com', messageID: 'incoming' })]
+      await renderMessages({ messages, skipEntranceAnimation: false })
+      expect(
+        screen.getByTestId('message-incoming').classList.contains('message-enter-stagger'),
+      ).toBe(true)
+
+      await advance(8 * 50 + 300 + 100)
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('message-incoming').classList.contains('message-enter-stagger'),
+        ).toBe(false)
+      })
+    } finally {
+      useRealTimers()
+    }
   })
 })
 

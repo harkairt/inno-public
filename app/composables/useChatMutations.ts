@@ -86,20 +86,6 @@ function createTempMessageDTO(
   }
 }
 
-function appendMessageToSessionCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  sessionId: string,
-  message: AISessionMessageDTO,
-): void {
-  queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(sessionId), (old) => {
-    if (!old) return old
-    return {
-      ...old,
-      messages: [...(old.messages ?? []), message],
-    }
-  })
-}
-
 function createSyntheticSession(
   request: AiQuestionRequestDTO,
   authStore: ReturnType<typeof useAuthStore>,
@@ -140,17 +126,20 @@ interface SendMessageSuccessParams {
   context: SendMessageMutateContext | undefined
 }
 
-function handleSendMessageSuccess(params: SendMessageSuccessParams): void {
-  const { chatStore, authStore, serverMessage, request, context, queryClient } = params
+async function handleSendMessageSuccess(params: SendMessageSuccessParams): Promise<void> {
+  const { chatStore, authStore, request, context, queryClient } = params
   if (context?.virtualAgentName) {
     chatStore.removeTypingUser(request.sessionId, context.virtualAgentName)
   }
 
   notifyMembersViaSignalR(request, authStore)
 
-  // Update Vue Query cache with server response for existing sessions
-  if (!context?.isNewSession && !isEmptyResponse(serverMessage)) {
-    appendMessageToSessionCache(queryClient, request.sessionId, serverMessage)
+  if (!context?.isNewSession) {
+    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
+  }
+
+  if (context?.tempMessageId) {
+    chatStore.removePendingMessage(request.sessionId, context.tempMessageId)
   }
 }
 
@@ -187,10 +176,23 @@ async function handleNewSessionCacheUpdate(params: SendMessageSuccessParams): Pr
   }
 
   if (context?.isNewSession) {
-    queryClient.setQueryData(chatQueryKeys.session(request.sessionId), syntheticSession)
+    // Synthetic data gives an instant render; the server now has the session, so pull
+    // authoritative data (real message ids, sessionName) via GetSessionById. This no
+    // longer depends on a SignalR ReceiveMessage echo firing for the sender.
+    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), (old) => {
+      // A SignalR-triggered refetch may have already populated the cache (e.g. the
+      // backend's "working on it" message) — merge, don't clobber.
+      if (old?.messages?.length) {
+        if (isEmptyResponse(serverMessage)) return old
+        if (old.messages.some((m) => m.messageID === serverMessage.messageID)) return old
+        return { ...old, messages: [...old.messages, serverMessage] }
+      }
+      return syntheticSession
+    })
 
     await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() })
     await queryClient.refetchQueries({ queryKey: chatQueryKeys.sessions(), type: 'active' })
+    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
 
     chatStore.executeNewSessionCallback(request.sessionId)
   }
@@ -207,10 +209,6 @@ async function handleSendMessageOnMutate(
   params: SendMessageOnMutateParams,
 ): Promise<SendMessageMutateContext> {
   const { queryClient, chatStore, authStore } = params
-
-  await queryClient.cancelQueries({
-    queryKey: chatQueryKeys.session(request.sessionId),
-  })
 
   const existingSession = queryClient.getQueryData<AISessionDTO>(
     chatQueryKeys.session(request.sessionId),
@@ -234,19 +232,24 @@ async function handleSendMessageOnMutate(
     authStore,
   )
 
-  queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), (old) => {
-    if (old) {
-      return {
-        ...old,
-        messages: [...(old.messages ?? []), tempMessageDTO],
-      }
-    }
+  // Count same-content messages already in the session so a repeated message (e.g. "ok"
+  // sent twice) isn't reconciled against an older identical one. See
+  // chatStore.getUnconfirmedPendingMessages.
+  const baselineCount = (existingSession?.messages ?? []).filter(
+    (m) =>
+      m.senderUserCode === tempMessageDTO.senderUserCode &&
+      m.messageText === tempMessageDTO.messageText,
+  ).length
 
-    return {
+  chatStore.addPendingMessage(request.sessionId, tempMessageDTO, baselineCount)
+
+  if (isNewSession) {
+    await queryClient.cancelQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
+    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), {
       ...createSyntheticSession(request, authStore, userMessageTimestamp.toISOString()),
-      messages: [tempMessageDTO],
-    }
-  })
+      messages: [],
+    })
+  }
 
   return {
     previousSession,
@@ -263,20 +266,14 @@ function handleSendMessageOnError(
   context: SendMessageMutateContext | undefined,
   params: SendMessageOnMutateParams,
 ): void {
-  const { queryClient, chatStore } = params
+  const { chatStore } = params
 
   if (context?.virtualAgentName) {
     chatStore.removeTypingUser(request.sessionId, context.virtualAgentName)
   }
 
   if (context?.tempMessageId) {
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), (old) => {
-      if (!old) return old
-      return {
-        ...old,
-        messages: (old.messages ?? []).filter((m) => m.messageID !== context.tempMessageId),
-      }
-    })
+    chatStore.removePendingMessage(request.sessionId, context.tempMessageId)
 
     if (context?.tempMessageDTO) {
       chatStore.addFailedMessage(request.sessionId, {
@@ -303,7 +300,7 @@ export function useSendMessage() {
     onMutate: (request) => handleSendMessageOnMutate(request, mutateParams),
 
     onSuccess: async (serverMessage, request, context) => {
-      handleSendMessageSuccess({ ...mutateParams, serverMessage, request, context })
+      await handleSendMessageSuccess({ ...mutateParams, serverMessage, request, context })
       await handleNewSessionCacheUpdate({ ...mutateParams, serverMessage, request, context })
     },
 
@@ -395,7 +392,8 @@ export function useDeleteSession() {
         queryKey: chatQueryKeys.messages(params.sessionId),
       })
 
-      // Clean up failed messages for this session
+      // Clean up pending and failed messages for this session
+      chatStore.removeAllPendingMessages(params.sessionId)
       chatStore.removeAllFailedMessages(params.sessionId)
 
       // Invalidate unread counts

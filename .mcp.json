@@ -7,6 +7,13 @@
     "nuxt-remote": {
       "type": "http",
       "url": "https://nuxt.com/mcp"
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "chrome-devtools-mcp@latest",
+        "--browserUrl=http://127.0.0.1:9222"
+      ]
     }
   }
 }
