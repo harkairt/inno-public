@@ -19,6 +19,7 @@ import {
   responseErrorInterceptor,
   cacheResponseInterceptor,
   setAuthStore,
+  setLoginRedirectBase,
 } from '@/lib/api/interceptors/response'
 import { useAuthStore } from '@/app/stores/auth'
 import { createLogger } from '@/lib/utils/logger'
@@ -42,6 +43,9 @@ export default defineNuxtPlugin(() => {
 
   // Inject auth store into response interceptor module
   setAuthStore(authStore)
+
+  // Inject app base URL for 401 login redirects (lib code has no Nuxt context)
+  setLoginRedirectBase(useRuntimeConfig().app.baseURL)
 
   // ============================================================================
   // REQUEST INTERCEPTORS (order matters - first added = first executed)

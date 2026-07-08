@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { AxiosHeaders } from 'axios'
 import { apiClient } from '@/lib/api/client'
-import { responseErrorInterceptor, setAuthStore } from '@/lib/api/interceptors/response'
+import {
+  responseErrorInterceptor,
+  setAuthStore,
+  setLoginRedirectBase,
+} from '@/lib/api/interceptors/response'
 
 vi.mock('@/lib/api/client', () => ({
   apiClient: {
@@ -607,6 +611,77 @@ describe('Token Refresh in Response Interceptor', () => {
 
       // Should not attempt to refresh
       expect(apiClient.post).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Login Redirect on Refresh Failure', () => {
+    const originalLocation = window.location
+    let mockLocation: { href: string }
+
+    beforeEach(() => {
+      mockLocation = { href: '' }
+      Object.defineProperty(window, 'location', {
+        value: mockLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      })
+      setLoginRedirectBase('/')
+    })
+
+    function make401Error(): AxiosError {
+      return {
+        config: {
+          url: '/api/test',
+          method: 'GET',
+          headers: new AxiosHeaders(),
+        } as InternalAxiosRequestConfig,
+        response: {
+          status: 401,
+          statusText: 'Unauthorized',
+          data: {},
+          headers: {},
+          config: {} as InternalAxiosRequestConfig,
+          request: {},
+        },
+        isAxiosError: true,
+        toJSON: () => ({}),
+        name: 'AxiosError',
+        message: 'Request failed with status code 401',
+      }
+    }
+
+    it('should redirect to base-prefixed login URL when app is deployed under a subpath', async () => {
+      setLoginRedirectBase('/aichat/')
+      vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'))
+
+      await expect(responseErrorInterceptor(make401Error())).rejects.toThrow()
+
+      expect(mockLocation.href).toBe('/aichat/login')
+    })
+
+    it('should normalize a base URL without trailing slash', async () => {
+      setLoginRedirectBase('/aichat')
+      vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'))
+
+      await expect(responseErrorInterceptor(make401Error())).rejects.toThrow()
+
+      expect(mockLocation.href).toBe('/aichat/login')
+    })
+
+    it('should redirect to /login with default base', async () => {
+      vi.mocked(apiClient.post).mockRejectedValue(new Error('Refresh failed'))
+
+      await expect(responseErrorInterceptor(make401Error())).rejects.toThrow()
+
+      expect(mockLocation.href).toBe('/login')
     })
   })
 

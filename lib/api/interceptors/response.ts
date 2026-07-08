@@ -53,6 +53,12 @@ interface QueuedRequest {
 let isRefreshing = false
 let failedQueue: QueuedRequest[] = []
 let authStoreInstance: AuthStore | null = null
+let loginRedirectBase = '/'
+
+// Set app base URL for login redirects (called from plugin; Nuxt context unavailable here)
+export function setLoginRedirectBase(baseURL: string): void {
+  loginRedirectBase = baseURL.endsWith('/') ? baseURL : `${baseURL}/`
+}
 
 // Set auth store instance (called from plugin)
 export function setAuthStore(authStore: AuthStore): void {
@@ -250,7 +256,9 @@ function handleTokenRefreshFailure(refreshError: unknown): Promise<never> {
 
 function redirectToLogin(): void {
   if (typeof window !== 'undefined') {
-    window.location.href = `${import.meta.env.BASE_URL}login`
+    // Do not use import.meta.env.BASE_URL here: Nuxt prod client builds set it to "./",
+    // which the browser resolves relative to the current path (e.g. /aichat/chats/login)
+    window.location.href = `${loginRedirectBase}login`
   }
 }
 
