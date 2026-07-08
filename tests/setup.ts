@@ -54,7 +54,9 @@ beforeEach(async () => {
 // Global test utilities
 global.console = {
   ...console,
-  // Silence some console warnings during tests
+  // Silence console noise during tests
+  debug: vi.fn(),
+  info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
 }

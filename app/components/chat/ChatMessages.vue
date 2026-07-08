@@ -152,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, type CSSProperties } from 'vue'
+import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { parseOptionsPayload } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
@@ -229,35 +229,6 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore()
 
-// Staggered entrance animation for initial load
-const STAGGER_COUNT = 8
-const STAGGER_STEP_MS = 50
-const ANIMATION_DURATION_MS = 300
-
-const isInitialRender = ref(!props.skipEntranceAnimation)
-
-onMounted(() => {
-  setTimeout(
-    () => {
-      isInitialRender.value = false
-    },
-    STAGGER_COUNT * STAGGER_STEP_MS + ANIMATION_DURATION_MS + 100,
-  )
-})
-
-const messageEnterDelays = computed<Map<string, string>>(() => {
-  if (!isInitialRender.value) return new Map()
-  const msgs = allMessages.value
-  const count = msgs.length
-  const from = Math.max(0, count - STAGGER_COUNT)
-  const delays = new Map<string, string>()
-  for (let i = from; i < count; i++) {
-    const fromEnd = count - 1 - i
-    delays.set(msgs[i]!.messageID, `${fromEnd * STAGGER_STEP_MS}ms`)
-  }
-  return delays
-})
-
 // Helper to determine if a message is from the current user
 const isUserMessage = (message: ExtendedMessage) => {
   return message.senderUserCode === authStore.user?.email
@@ -308,6 +279,62 @@ const allMessages = computed(() => {
   }
   return messages
 })
+
+// Entrance animation: animate incoming messages the first time they appear (initial
+// load AND later arrivals like AI replies), not just the first paint. Own messages
+// never animate — they appear because the user acted, and their optimistic temp id is
+// swapped for a server id on reconciliation, which would otherwise replay the entrance.
+// Messages already seen — or pre-existing on navigation (skipEntranceAnimation) — appear instantly.
+const STAGGER_COUNT = 8
+const STAGGER_STEP_MS = 50
+const ANIMATION_DURATION_MS = 300
+
+const seenMessageIds = ref(new Set<string>())
+const messageEnterDelays = ref(new Map<string, string>())
+
+function animateNewMessages(msgs: ExtendedMessage[]) {
+  const fresh = msgs.filter(
+    (m) =>
+      !isUserMessage(m) &&
+      !seenMessageIds.value.has(m.messageID) &&
+      !messageEnterDelays.value.has(m.messageID),
+  )
+  if (fresh.length === 0) return
+
+  const from = Math.max(0, fresh.length - STAGGER_COUNT)
+  fresh.forEach((m, i) => {
+    const fromEnd = fresh.length - 1 - i
+    const delay = i >= from ? fromEnd * STAGGER_STEP_MS : 0
+    messageEnterDelays.value.set(m.messageID, `${delay}ms`)
+  })
+
+  const ids = fresh.map((m) => m.messageID)
+  const maxDelay = Math.min(fresh.length, STAGGER_COUNT) * STAGGER_STEP_MS
+  // Retire the animation once done so re-renders don't re-trigger it.
+  setTimeout(
+    () => {
+      ids.forEach((id) => {
+        messageEnterDelays.value.delete(id)
+        seenMessageIds.value.add(id)
+      })
+    },
+    maxDelay + ANIMATION_DURATION_MS + 100,
+  )
+}
+
+onMounted(() => {
+  if (props.skipEntranceAnimation) {
+    // Arrived from /chats/new/* — these messages were already on screen; don't replay.
+    allMessages.value.forEach((m) => seenMessageIds.value.add(m.messageID))
+  } else {
+    animateNewMessages(allMessages.value)
+  }
+})
+
+watch(
+  () => allMessages.value.map((m) => m.messageID).join(','),
+  () => animateNewMessages(allMessages.value),
+)
 
 // Group messages by date
 const messageGroups = computed(() => {

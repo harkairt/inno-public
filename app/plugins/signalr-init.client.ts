@@ -20,9 +20,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       return
     }
 
-    // ReceiveMessage - invalidate queries to trigger refetch
+    // ReceiveMessage - invalidate queries to trigger refetch.
+    // Only sessionId is needed to refetch; agentId is informational, so don't gate the
+    // refetch on its type (a backend type drift must not silently drop the event).
     signalr.onEvent('ReceiveMessage', (sessionId: unknown, agentId: unknown) => {
-      if (typeof sessionId !== 'string' || typeof agentId !== 'number') {
+      if (typeof sessionId !== 'string' || !sessionId) {
         if (import.meta.dev) logger.warn('Invalid ReceiveMessage payload:', { sessionId, agentId })
         return
       }

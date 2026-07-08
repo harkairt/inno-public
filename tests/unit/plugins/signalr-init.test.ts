@@ -85,6 +85,59 @@ describe('signalr-init plugin', () => {
     expect(invalidateSpy).not.toHaveBeenCalled()
   })
 
+  // Regression guard for the commit's actual fix: a valid sessionId must still
+  // trigger the refetch even when the backend drifts agentId off `number`. The
+  // old guard (`typeof agentId !== 'number'`) silently dropped these events.
+  it('still invalidates when sessionId is valid but agentId is not a number', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token' })
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await runPlugin(queryClient)
+    await advance(500)
+
+    // agentId arrives as a string (type drift) — sessionId is the only field the
+    // refetch needs, so the event must NOT be dropped.
+    fake.emitFromServer('ReceiveMessage', 'sess-1', 'agent-as-string')
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.session('sess-1') })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.unread(), exact: true })
+  })
+
+  it('still invalidates when agentId is missing (undefined) but sessionId is valid', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token' })
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await runPlugin(queryClient)
+    await advance(500)
+
+    fake.emitFromServer('ReceiveMessage', 'sess-1')
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.session('sess-1') })
+  })
+
+  // The new `!sessionId` guard rejects an empty string. The old type-only guard
+  // (`typeof sessionId !== 'string'`) let '' through and invalidated a garbage key.
+  it('drops a ReceiveMessage with an empty-string sessionId', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token' })
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await runPlugin(queryClient)
+    await advance(500)
+
+    fake.emitFromServer('ReceiveMessage', '', 5)
+
+    expect(invalidateSpy).not.toHaveBeenCalled()
+  })
+
   it('registers the ReceiveMessage listener only once (dedupe guard)', async () => {
     seedAuthStorage({ accessToken: 'seeded-access-token' })
     const fake = installFakeSignalR()

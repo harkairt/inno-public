@@ -84,6 +84,154 @@ describe('Chat Store — failed messages', () => {
   })
 })
 
+function makeMessage(id: string, messageText: string, senderUserCode = 'user') {
+  return {
+    messageID: id,
+    messageText,
+    messageType: AIAnswerType.Text,
+    isRated: false,
+    rating: null,
+    readByUsers: null,
+    sendDate: '2024-01-01T00:00:00Z',
+    senderName: 'User',
+    senderUserCode,
+    sessionId: 'session-1',
+    dataTable: null,
+    options: null,
+  }
+}
+
+describe('Chat Store — pending messages', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('shows a pending message while the server has no matching message', () => {
+    const store = useChatStore()
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'hello'))
+
+    const visible = store.getUnconfirmedPendingMessages('session-1', [])
+    expect(visible).toHaveLength(1)
+    expect(visible[0]?.messageID).toBe('temp-1')
+  })
+
+  it('hides a pending message once its server copy arrives (no double render)', () => {
+    const store = useChatStore()
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'hello'))
+
+    // GetSessionById echoes the message back with a real (different) id.
+    const server = [makeMessage('server-1', 'hello')]
+    expect(store.getUnconfirmedPendingMessages('session-1', server)).toHaveLength(0)
+  })
+
+  it('keeps a repeated message visible when an identical one predates it', () => {
+    const store = useChatStore()
+    // Session already contains one "ok"; user sends "ok" again (baseline = 1).
+    store.addPendingMessage('session-1', makeMessage('temp-2', 'ok'), 1)
+
+    // Server still only has the original "ok" — the new one is not persisted yet.
+    const server = [makeMessage('server-1', 'ok')]
+    const visible = store.getUnconfirmedPendingMessages('session-1', server)
+    expect(visible).toHaveLength(1)
+    expect(visible[0]?.messageID).toBe('temp-2')
+
+    // Once the second "ok" is persisted, the pending copy is hidden.
+    server.push(makeMessage('server-2', 'ok'))
+    expect(store.getUnconfirmedPendingMessages('session-1', server)).toHaveLength(0)
+  })
+
+  it('reconciles two rapid identical sends one-to-one as copies arrive', () => {
+    const store = useChatStore()
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'hi'), 0)
+    store.addPendingMessage('session-1', makeMessage('temp-2', 'hi'), 0)
+
+    // First copy persisted: oldest pending confirmed, second still shown.
+    const oneArrived = store.getUnconfirmedPendingMessages('session-1', [
+      makeMessage('server-1', 'hi'),
+    ])
+    expect(oneArrived).toHaveLength(1)
+    expect(oneArrived[0]?.messageID).toBe('temp-2')
+
+    // Both copies persisted: nothing pending remains.
+    const bothArrived = store.getUnconfirmedPendingMessages('session-1', [
+      makeMessage('server-1', 'hi'),
+      makeMessage('server-2', 'hi'),
+    ])
+    expect(bothArrived).toHaveLength(0)
+  })
+
+  it('does not confirm a pending message when an identical-text copy is from another sender', () => {
+    const store = useChatStore()
+    // I send "ok"; the only server "ok" so far is someone else's message.
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'ok', 'me@example.com'), 0)
+
+    const server = [makeMessage('server-1', 'ok', 'other@example.com')]
+    const visible = store.getUnconfirmedPendingMessages('session-1', server)
+
+    // Content identity is sender + text, so the other user's "ok" must not
+    // swallow my still-unconfirmed one.
+    expect(visible).toHaveLength(1)
+    expect(visible[0]?.messageID).toBe('temp-1')
+  })
+
+  it('keeps a pending message visible when the server thread has fewer copies than the baseline', () => {
+    const store = useChatStore()
+    // Session had two "ok" from me at send time (baseline 2); a concurrent delete
+    // then shrank the server thread to one. arrivedSinceSend = 1 - 2 = -1.
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'ok'), 2)
+
+    const server = [makeMessage('server-1', 'ok')]
+    const visible = store.getUnconfirmedPendingMessages('session-1', server)
+
+    // Negative arrival must clamp to zero confirmed, not underflow into hiding it.
+    expect(visible).toHaveLength(1)
+    expect(visible[0]?.messageID).toBe('temp-1')
+  })
+
+  it('confirms at most the number of pending copies even when the server has more', () => {
+    const store = useChatStore()
+    // One pending "hi" (baseline 0), but the server already shows two "hi" from me
+    // (e.g. another device echoed one). Confirmed count must cap at the 1 pending.
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'hi'), 0)
+
+    const server = [makeMessage('server-1', 'hi'), makeMessage('server-2', 'hi')]
+    const visible = store.getUnconfirmedPendingMessages('session-1', server)
+
+    expect(visible).toHaveLength(0)
+  })
+
+  it('scopes pending reconciliation to the requested session only', () => {
+    const store = useChatStore()
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'hi'), 0)
+    store.addPendingMessage('session-2', makeMessage('temp-2', 'hi'), 0)
+
+    // A server copy for session-2 must not confirm session-1's pending message.
+    const visible = store.getUnconfirmedPendingMessages('session-1', [])
+    expect(visible).toHaveLength(1)
+    expect(visible[0]?.messageID).toBe('temp-1')
+  })
+
+  it('removes a specific pending message by id', () => {
+    const store = useChatStore()
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'a'))
+    store.addPendingMessage('session-1', makeMessage('temp-2', 'b'))
+    store.removePendingMessage('session-1', 'temp-1')
+
+    const remaining = store.getPendingMessages('session-1')
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0]?.messageID).toBe('temp-2')
+  })
+
+  it('removes all pending messages for a session on demand', () => {
+    const store = useChatStore()
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'a'))
+    store.addPendingMessage('session-1', makeMessage('temp-2', 'b'))
+    store.removeAllPendingMessages('session-1')
+
+    expect(store.getPendingMessages('session-1')).toHaveLength(0)
+  })
+})
+
 describe('Chat Store — draft messages', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -184,6 +332,7 @@ describe('Chat Store — resetUserData', () => {
     store.setActiveSession('session-1')
     store.saveDraft('session-1', 'draft')
     store.addFailedMessage('session-1', makeFailedMessage('msg-1'))
+    store.addPendingMessage('session-1', makeMessage('temp-1', 'pending'))
     store.addTypingUser('session-1', 'Alice')
     store.setError('some error')
 
@@ -192,6 +341,7 @@ describe('Chat Store — resetUserData', () => {
     expect(store.activeSessionId).toBeNull()
     expect(store.getDraft('session-1')).toBe('')
     expect(store.getFailedMessages('session-1')).toHaveLength(0)
+    expect(store.getPendingMessages('session-1')).toHaveLength(0)
     expect(store.getTypingUsers('session-1')).toHaveLength(0)
     expect(store.error).toBeNull()
   })

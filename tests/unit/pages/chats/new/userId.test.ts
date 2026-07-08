@@ -5,10 +5,10 @@
  * MSW (/api/user/get-selectable-users); real Pinia stores throughout.
  *
  * The "session creation" flow here is client-side: the page mints a UUID for
- * the not-yet-created session and registers a chatStore.onNewSessionConfirmed
- * callback. When the server later confirms (via SignalR in production), the
- * callback navigates to /chats/<sessionId>. We drive that confirmation directly
- * through the real store (executeNewSessionCallback) and assert the navigation.
+ * the not-yet-created session. The first message send lands an optimistic pending
+ * message, which flips the message list from empty to non-empty; a watcher then
+ * navigates to /chats/<sessionId>. We drive that by adding a pending message
+ * through the real chatStore and assert the navigation.
  *
  * generateUUID is mocked so the minted sessionId is known to the test.
  */
@@ -18,7 +18,7 @@ import type { Component } from 'vue'
 import { renderWithProviders } from '@/tests/utils/render'
 import { server, http } from '@/tests/msw/server'
 import { apiOk } from '@/tests/msw/http'
-import { makeUser } from '@/tests/utils/factories'
+import { makeUser, makeMessage } from '@/tests/utils/factories'
 import { seedAuthStorage } from '@/tests/utils/authSeed'
 import { useChatStore } from '@/app/stores/chat'
 import NewChatPage from '@/app/pages/chats/new/[userId].vue'
@@ -86,7 +86,7 @@ describe('chats/new/[userId] page', () => {
     expect(await screen.findByText('Agent Smith')).toBeTruthy()
   })
 
-  it('navigates to the created session when the server confirms the new session', async () => {
+  it('navigates to the created session once the first message is sent', async () => {
     seedAuthStorage({ user: makeUser({ email: ME }) })
     serveSelectableUsers([
       makeUser({ id: USER_ID, name: 'Agent Smith', email: 'agent@example.com', isVirtual: true }),
@@ -94,18 +94,86 @@ describe('chats/new/[userId] page', () => {
 
     renderPage()
 
-    // Wait for the page to resolve the user (callback registration happens in setup).
+    // Wait for the page to resolve the user (the message-list watcher is now armed).
     await screen.findByText('Agent Smith')
 
-    // Simulate the server confirming the new session (SignalR path in prod).
+    // Simulate the first message being sent: an optimistic pending message lands,
+    // flipping the message list from empty to non-empty and triggering navigation.
     const chatStore = useChatStore()
-    chatStore.executeNewSessionCallback(SESSION_UUID)
+    chatStore.addPendingMessage(
+      SESSION_UUID,
+      makeMessage({ sessionId: SESSION_UUID, messageText: 'first message', senderUserCode: ME }),
+    )
 
     await waitFor(() =>
       expect(vi.mocked(navigateTo)).toHaveBeenCalledWith(`/chats/${SESSION_UUID}`, {
         replace: true,
       }),
     )
+  })
+
+  it('clears the draft and sets the skip-animation flag when navigating on first message', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    serveSelectableUsers([
+      makeUser({ id: USER_ID, name: 'Agent Smith', email: 'agent@example.com', isVirtual: true }),
+    ])
+
+    renderPage()
+    await screen.findByText('Agent Smith')
+
+    // Acquire the page's store (renderWithProviders installs a fresh Pinia) and
+    // seed a draft under the new-chat key so we can assert it gets cleared.
+    const chatStore = useChatStore()
+    chatStore.saveDraft(`new-${USER_ID}`, 'half-typed message')
+
+    chatStore.addPendingMessage(
+      SESSION_UUID,
+      makeMessage({ sessionId: SESSION_UUID, messageText: 'first message', senderUserCode: ME }),
+    )
+
+    await waitFor(() =>
+      expect(vi.mocked(navigateTo)).toHaveBeenCalledWith(`/chats/${SESSION_UUID}`, {
+        replace: true,
+      }),
+    )
+    // Side effects the ChatSession landing page relies on.
+    expect(chatStore.getDraft(`new-${USER_ID}`)).toBe('')
+    expect(chatStore.skipNextEntranceAnimation).toBe(true)
+  })
+
+  it('navigates exactly once — a second message does not re-navigate', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    serveSelectableUsers([
+      makeUser({ id: USER_ID, name: 'Agent Smith', email: 'agent@example.com', isVirtual: true }),
+    ])
+
+    renderPage()
+    await screen.findByText('Agent Smith')
+
+    // Acquire the page's store after render (fresh Pinia per renderWithProviders).
+    const chatStore = useChatStore()
+    // First message: 0 → 1, navigation fires.
+    chatStore.addPendingMessage(
+      SESSION_UUID,
+      makeMessage({ sessionId: SESSION_UUID, messageText: 'first', senderUserCode: ME }),
+    )
+    await waitFor(() =>
+      expect(vi.mocked(navigateTo)).toHaveBeenCalledWith(`/chats/${SESSION_UUID}`, {
+        replace: true,
+      }),
+    )
+
+    // Second message: 1 → 2. The `oldLen === 0` guard must suppress a re-navigation.
+    chatStore.addPendingMessage(
+      SESSION_UUID,
+      makeMessage({ sessionId: SESSION_UUID, messageText: 'second', senderUserCode: ME }),
+    )
+    await Promise.resolve()
+
+    const navToSession = vi
+      .mocked(navigateTo)
+      .mock.calls.filter(([target]) => target === `/chats/${SESSION_UUID}`)
+    expect(navToSession).toHaveLength(1)
   })
 
   it('redirects to /chats when the userId does not match any selectable user', async () => {
