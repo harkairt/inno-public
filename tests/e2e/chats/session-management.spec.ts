@@ -139,6 +139,77 @@ test.describe('Session Management', () => {
     })
   })
 
+  test.describe('Session Deletion', () => {
+    // Mocked sessions all have a virtual "other member", so none is a primary
+    // session and every row's SessionItemMenu shows the Delete option.
+    // DeleteSessionById is mocked by mockAllApis (mutation-success envelope).
+    const targetSessionId = 'session-456'
+
+    /** Open the SessionItemMenu dropdown for a session row in the list panel. */
+    async function openSessionMenu(page: import('@playwright/test').Page, sessionId: string) {
+      const sessionItem = page.locator(selectors.chats.sessionItem(sessionId))
+      await expect(sessionItem).toBeVisible()
+
+      // The menu button sits in a hover-revealed sibling inside the same row.
+      const row = sessionItem.locator('..')
+      await row.hover()
+      await row.getByRole('button', { name: 'Session options' }).click()
+    }
+
+    test('should delete a session from the item menu after confirming', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
+      // Spy on the real backend path so mock drift / silent no-ops fail loud.
+      const deleteCalls: string[] = []
+      page.on('request', (r) => {
+        if (r.url().includes('/api/AIWebAPI/DeleteSessionById')) deleteCalls.push(r.url())
+      })
+
+      await page.goto('/chats')
+      await openSessionMenu(page, targetSessionId)
+
+      await page.getByRole('menuitem', { name: 'Delete' }).click()
+
+      // Confirm modal (English UI strings under Playwright).
+      const dialog = page.getByRole('dialog')
+      await expect(dialog).toBeVisible()
+      await expect(
+        dialog.getByText(
+          'Are you sure you want to delete this session? This action cannot be undone.',
+        ),
+      ).toBeVisible()
+
+      await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
+
+      // Session disappears from the list panel and the mutation hit the wire.
+      await expect(page.locator(selectors.chats.sessionItem(targetSessionId))).toBeHidden()
+      await expect.poll(() => deleteCalls.length).toBe(1)
+    })
+
+    test('should keep the session when the delete is cancelled', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
+      const deleteCalls: string[] = []
+      page.on('request', (r) => {
+        if (r.url().includes('/api/AIWebAPI/DeleteSessionById')) deleteCalls.push(r.url())
+      })
+
+      await page.goto('/chats')
+      await openSessionMenu(page, targetSessionId)
+
+      await page.getByRole('menuitem', { name: 'Delete' }).click()
+
+      const dialog = page.getByRole('dialog')
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+      // Modal closes, session stays, and no delete request was fired.
+      await expect(dialog).toBeHidden()
+      await expect(page.locator(selectors.chats.sessionItem(targetSessionId))).toBeVisible()
+      expect(deleteCalls).toHaveLength(0)
+    })
+  })
+
   test.describe('Session List', () => {
     test('should show sessions in the chat list panel', async ({
       mockedAuthenticatedPage: page,

@@ -119,6 +119,11 @@ export default defineNuxtConfig({
       compilerOptions: {
         strictNullChecks: true,
       },
+      // Match the editor's Vue-Official extension (which enables strictTemplates by
+      // default) so `nuxi typecheck` catches template type errors too — no CLI/editor drift.
+      vueCompilerOptions: {
+        strictTemplates: true,
+      },
     },
   },
 

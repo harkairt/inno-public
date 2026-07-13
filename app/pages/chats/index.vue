@@ -18,14 +18,19 @@
             {{ t('emptyPage.startConversation') }}
           </h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AgentTile
+            <div
               v-for="(agent, index) in virtualAgents"
               :key="agent.id"
-              :agent="agent"
-              :style="{ animationDelay: `${index * 100}ms` }"
               class="animate-fade-in-up"
-              @click="navigateTo(`/chats/new/${agent.id}`)"
-            />
+              :style="{ animationDelay: `${index * 100}ms` }"
+              @click="
+                () => {
+                  navigateTo(`/chats/new/${agent.id}`)
+                }
+              "
+            >
+              <AgentTile :agent="agent" />
+            </div>
           </div>
         </section>
 
@@ -38,15 +43,22 @@
             {{ t('emptyPage.unreadMessages') }}
           </h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <UnreadChatCard
+            <div
               v-for="(chat, index) in unreadChats"
               :key="chat.sessionId"
-              :session="chat"
-              :selectable-users="users ?? []"
-              :style="{ animationDelay: `${(virtualAgents.length + index) * 100}ms` }"
               class="animate-fade-in-up"
-              @click="navigateTo(`/chats/${chat.sessionId}`)"
-            />
+              :style="{ animationDelay: `${(virtualAgents.length + index) * 100}ms` }"
+              @click="
+                () => {
+                  navigateTo(`/chats/${chat.sessionId}`)
+                }
+              "
+            >
+              <UnreadChatCard
+                :session="chat"
+                :selectable-users="users ?? []"
+              />
+            </div>
           </div>
         </section>
 

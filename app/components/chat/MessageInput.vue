@@ -43,7 +43,10 @@
         <!-- Message Input -->
         <div class="flex items-end gap-2">
           <!-- Input Area -->
-          <div class="flex-1">
+          <div
+            class="flex-1"
+            @keydown="handleKeyDown"
+          >
             <UTextarea
               ref="textareaRef"
               v-model="messageText"
@@ -54,39 +57,42 @@
               autoresize
               size="lg"
               class="w-full"
-              :disabled="isTranscribing"
+              :disabled="disabled || isTranscribing"
               data-testid="message-input"
               :ui="{ root: 'relative flex items-center', base: 'placeholder:text-dimmed/40' }"
-              @keydown="handleKeyDown"
             />
           </div>
 
           <!-- Voice Recording Button -->
-          <UButton
+          <div
             v-if="isTranscriptionEnabled && !props.disableVoice"
-            :icon="voiceButtonIcon"
-            :color="isRecording ? 'error' : 'neutral'"
-            :variant="isRecording ? 'solid' : 'ghost'"
-            :class="['shrink-0 transition-all', isRecording && 'animate-pulse']"
-            :loading="isTranscribing"
-            :disabled="isTranscribing"
-            size="lg"
-            :aria-label="
-              isRecording
-                ? t('chat.messageInput.stopRecording')
-                : t('chat.messageInput.startRecording')
-            "
-            data-testid="voice-record-button"
-            @click="toggleRecording"
+            class="shrink-0"
             @pointerdown="onMicPointerDown"
             @pointerup="onMicPointerUp"
             @pointerleave="onMicPointerUp"
-          />
+          >
+            <UButton
+              :icon="voiceButtonIcon"
+              :color="isRecording ? 'error' : 'neutral'"
+              :variant="isRecording ? 'solid' : 'ghost'"
+              :class="['transition-all', isRecording && 'animate-pulse']"
+              :loading="isTranscribing"
+              :disabled="disabled || isTranscribing"
+              size="lg"
+              :aria-label="
+                isRecording
+                  ? t('chat.messageInput.stopRecording')
+                  : t('chat.messageInput.startRecording')
+              "
+              data-testid="voice-record-button"
+              @click="toggleRecording"
+            />
+          </div>
 
           <!-- Send Button -->
           <UButton
             type="submit"
-            :disabled="!canSend || isRecording"
+            :disabled="disabled || !canSend || isRecording"
             icon="i-heroicons-paper-airplane-20-solid"
             size="lg"
             color="primary"
@@ -134,6 +140,7 @@ interface Props {
   isNewConversation?: boolean | undefined // true = "How can I help?", false = "Reply...", undefined = messages not loaded yet
   disableSignalR?: boolean // Disable SignalR typing indicators (for public mode)
   disableVoice?: boolean // Disable voice recording button (for public mode)
+  disabled?: boolean // Disable all input (e.g. while a public send is pending)
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -145,6 +152,7 @@ const props = withDefaults(defineProps<Props>(), {
   isNewConversation: undefined,
   disableSignalR: false,
   disableVoice: false,
+  disabled: false,
 })
 
 // Filter to only virtual agents
@@ -333,7 +341,7 @@ const errorMessage = computed(() => {
 
 // Handle form submit
 async function handleSubmit() {
-  if (!canSend.value) return
+  if (props.disabled || !canSend.value) return
 
   // Clear typing indicator immediately on send (only if SignalR enabled)
   if (!props.disableSignalR) {

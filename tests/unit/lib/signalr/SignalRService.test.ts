@@ -328,6 +328,124 @@ describe('SignalRService.getState mapping and forceReconnect', () => {
   })
 })
 
+describe('SignalRService timeout / keep-alive defaults', () => {
+  it('applies the default server timeout and keep-alive interval when config omits them', async () => {
+    const service = SignalRService.getInstance(config)
+    await service.connect('t')
+
+    expect(lastConnection().serverTimeoutInMilliseconds).toBe(30_000)
+    expect(lastConnection().keepAliveIntervalInMilliseconds).toBe(15_000)
+  })
+})
+
+describe('SignalRService lifecycle default errors', () => {
+  it('defaults lastError when onreconnecting fires without an error object', async () => {
+    const service = SignalRService.getInstance(config)
+    await service.connect('t')
+    const conn = lastConnection()
+
+    expect(() => conn.lifecycle.reconnecting!(undefined)).not.toThrow()
+    expect(service.getConnectionInfo().lastError).toBe('Reconnection failed')
+  })
+
+  it('defaults lastError and emits closed when onclose fires without an error object', async () => {
+    const service = SignalRService.getInstance(config)
+    const closed: unknown[] = []
+    service.on('closed', (e) => closed.push(e))
+    await service.connect('t')
+
+    lastConnection().lifecycle.close!(undefined)
+
+    expect(service.getConnectionInfo().lastError).toBe('Connection closed')
+    expect(closed).toEqual([undefined])
+  })
+})
+
+describe('SignalRService default connection timeout', () => {
+  it('rejects at the default 15s when connectionTimeoutMs is omitted', async () => {
+    useFakeTimersSafe()
+    const configNoTimeout: SignalRConfig = {
+      hubUrl: '/chatHub',
+      automaticReconnect: true,
+      reconnectDelays: [0],
+    }
+    const service = SignalRService.getInstance(configNoTimeout)
+    sr.state.startImpl = () => new Promise<void>(() => {}) // never resolves
+
+    const failure = service.connect('t').catch((e: unknown) => e)
+    await advance(14_999)
+    const stillPending = await Promise.race([failure, Promise.resolve('PENDING')])
+    expect(stillPending).toBe('PENDING')
+
+    await advance(1)
+    const error = await failure
+    expect((error as Error).message).toMatch(/after 15000ms/)
+    useRealTimers()
+  })
+})
+
+describe('SignalRService connect timeout edge cases', () => {
+  it('rejects with the timeout error (not a TypeError) when disconnected mid-connect, and emits failed', async () => {
+    useFakeTimersSafe()
+    const service = SignalRService.getInstance(config)
+    const states: string[] = []
+    service.on('stateChange', (s) => states.push(s as string))
+    sr.state.startImpl = () => new Promise<void>(() => {}) // never resolves
+
+    const failure = service.connect('t').catch((e: unknown) => e)
+    // Disconnect while the connect is still pending — this nulls this.connection,
+    // so the timeout branch must guard connection?.stop() (else it throws a TypeError).
+    await service.disconnect()
+    await advance(15_000)
+    const error = await failure
+
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toMatch(/timed out/)
+    expect(states).toContain('failed')
+    useRealTimers()
+  })
+})
+
+describe('SignalRService connectionId reporting', () => {
+  it('is undefined before connect (no throw) and the real id after', async () => {
+    const service = SignalRService.getInstance(config)
+    expect(service.getConnectionInfo().connectionId).toBeUndefined()
+
+    await service.connect('t')
+    expect(service.getConnectionInfo().connectionId).toBe('fake-conn-id')
+  })
+})
+
+describe('SignalRService handler registration', () => {
+  it('fires two handlers registered for the same event before connect', async () => {
+    const service = SignalRService.getInstance(config)
+    const a: unknown[][] = []
+    const b: unknown[][] = []
+    service.on('ReceiveMessage', (...args) => a.push(args))
+    service.on('ReceiveMessage', (...args) => b.push(args))
+    await service.connect('t')
+
+    lastConnection().emit('ReceiveMessage', 'z', 2)
+    expect(a).toEqual([['z', 2]])
+    expect(b).toEqual([['z', 2]])
+  })
+
+  it('registers only non-internal events on the underlying connection', async () => {
+    const service = SignalRService.getInstance(config)
+    service.on('stateChange', () => {})
+    service.on('reconnected', () => {})
+    service.on('closed', () => {})
+    service.on('ReceiveMessage', () => {})
+    await service.connect('t')
+
+    const registeredEvents = lastConnection().on.mock.calls.map((c: unknown[]) => c[0])
+    expect(registeredEvents).toContain('ReceiveMessage')
+    expect(registeredEvents).not.toContain('stateChange')
+    expect(registeredEvents).not.toContain('reconnected')
+    expect(registeredEvents).not.toContain('closed')
+  })
+})
+
 describe('SignalRService accessTokenFactory captures the connect-time token', () => {
   // Characterization of current behavior: accessTokenFactory (SignalRService.ts
   // ~line 56) closes over the `accessToken` argument passed to connect(). It holds

@@ -14,7 +14,14 @@ import { describe, it, expect } from 'vitest'
 import type { AxiosError } from 'axios'
 import { z } from 'zod'
 import { normalizeApiError } from '@/lib/errors/normalize'
-import { ValidationError, NetworkError, TimeoutError, UnknownError } from '@/lib/errors/types'
+import {
+  ValidationError,
+  NetworkError,
+  TimeoutError,
+  UnknownError,
+  ForbiddenError,
+  ServerError,
+} from '@/lib/errors/types'
 import { ErrorCode } from '@/types/enums'
 
 /** Minimal axios-shaped error with the flag the type guard checks. */
@@ -209,5 +216,121 @@ describe('normalizeApiError — non-Error inputs', () => {
     expect(result).toBeInstanceOf(UnknownError)
     expect(result.message).toBe('An unknown error occurred')
     expect(result.details).toBe(42)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// isNetworkLikeError — the name-based branch in isolation (normalize.ts L43)
+// The existing TypeError('failed to fetch') case ALSO matches via the message
+// heuristic, so it can't prove the `error.name` checks matter. These use
+// non-network messages so only the name decides the classification.
+// ---------------------------------------------------------------------------
+
+describe('normalizeApiError — network classification by error name', () => {
+  it('classifies an error named NetworkError (non-network message) as NetworkError', () => {
+    const err = new Error('boom')
+    err.name = 'NetworkError'
+    expect(normalizeApiError(err)).toBeInstanceOf(NetworkError)
+  })
+
+  it('classifies a TypeError with a non-network message as NetworkError', () => {
+    // typeof-mismatch failures surface as TypeError; message here matches none
+    // of the fetch/network/ECONN* heuristics, so only error.name === 'TypeError'
+    // can route it to NetworkError.
+    expect(normalizeApiError(new TypeError('boom'))).toBeInstanceOf(NetworkError)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// No-response axios branch — ERR_NETWORK vs missing-request in isolation (L148)
+// Both operands and the fallback all yield a NetworkError, so the message
+// prefix ("Network error:" vs "Request failed:") is the discriminator.
+// ---------------------------------------------------------------------------
+
+describe('normalizeApiError — no-response network branch', () => {
+  it('treats ERR_NETWORK as a network error even when a request object exists', () => {
+    const result = normalizeApiError(makeAxios({ code: 'ERR_NETWORK', message: 'x', request: {} }))
+    expect(result).toBeInstanceOf(NetworkError)
+    expect(result.message).toContain('Network error')
+  })
+
+  it('treats a missing request (no code) as a network error', () => {
+    const result = normalizeApiError(makeAxios({ message: 'y' }))
+    expect(result).toBeInstanceOf(NetworkError)
+    expect(result.message).toContain('Network error')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Validation-error detection guards (L165 / L194 / L204)
+// ---------------------------------------------------------------------------
+
+describe('normalizeApiError — 400 validation detection', () => {
+  it('does not treat a 400 without an errors object as a ValidationError', () => {
+    const result = normalizeApiError(axiosWithResponse(400, { detail: 'nope' }))
+    expect(result).not.toBeInstanceOf(ValidationError)
+    expect(result.message).toBe('Bad request')
+  })
+
+  it('ignores a 400 whose errors field is not an object', () => {
+    const result = normalizeApiError(axiosWithResponse(400, { errors: 'oops' }))
+    expect(result).not.toBeInstanceOf(ValidationError)
+    expect(result.message).toBe('Bad request')
+  })
+
+  it('does not extract validation errors from a non-400 response that carries an errors object', () => {
+    // The `status === 400 && …` guard must gate on the status: a 500 body that
+    // happens to contain an `errors` object is a server error, not a
+    // ValidationError. Kills the `status === 400 || data` / always-true mutants.
+    const result = normalizeApiError(axiosWithResponse(500, { errors: { field: ['x'] } }))
+    expect(result).not.toBeInstanceOf(ValidationError)
+    expect(result).toBeInstanceOf(ServerError)
+  })
+
+  it('handles a 400 with a plain string body as an ApiError message', () => {
+    // The `typeof data === 'object'` guard must run before `'errors' in data`;
+    // dropping it would apply the `in` operator to a primitive and throw.
+    const result = normalizeApiError(axiosWithResponse(400, 'plain text error'))
+    expect(result).not.toBeInstanceOf(ValidationError)
+    expect(result.message).toBe('plain text error')
+  })
+
+  it('falls back to Bad request for a 400 with an empty errors object', () => {
+    // Boundary for `validationErrors.length > 0`: zero extracted errors must
+    // NOT produce a ValidationError.
+    const result = normalizeApiError(axiosWithResponse(400, { errors: {} }))
+    expect(result).not.toBeInstanceOf(ValidationError)
+    expect(result.message).toBe('Bad request')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Status-code switch (handleStatusCode, L213–239). Assert the AppError SUBTYPE
+// per status: a removed `case` falls through to the default (a generic
+// ApiError), which is not an instance of these subclasses.
+// ---------------------------------------------------------------------------
+
+describe('normalizeApiError — bare status-code mapping', () => {
+  it.each([
+    [403, ForbiddenError],
+    [408, TimeoutError],
+    [502, ServerError],
+    [503, ServerError],
+    [504, TimeoutError],
+  ])('maps a bare %i response to the right AppError subtype', (status, Ctor) => {
+    expect(normalizeApiError(axiosWithResponse(status, null))).toBeInstanceOf(Ctor)
+  })
+
+  it('maps a bare 429 to a rate-limit ApiError', () => {
+    const result = normalizeApiError(axiosWithResponse(429, null))
+    expect(result.statusCode).toBe(429)
+    expect(result.message).toBe('Too many requests')
+  })
+
+  it('distinguishes 502 from 503 by message', () => {
+    // Both are ServerError, so an emptied `case 502:` falls through to 503 and
+    // stays a ServerError — only the message separates them.
+    expect(normalizeApiError(axiosWithResponse(502, null)).message).toBe('Bad gateway')
+    expect(normalizeApiError(axiosWithResponse(503, null)).message).toBe('Service unavailable')
   })
 })

@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
   # PR GATE — hermetic, fully route-mocked, chromium only. No secrets, no backend.
-  # playwright.config.ts's webServer builds + previews the SPA locally (TEST_BASE_URL
-  # is absent → isRealBackend=false → webServer runs). Fast + deterministic.
+  # A mocked --project is selected, so playwright.config.ts starts the local webServer
+  # (build + preview the SPA) regardless of TEST_BASE_URL. Fast + deterministic.
   e2e-mocked:
     name: E2E mocked (chromium, PR gate)
     timeout-minutes: 15
@@ -110,8 +110,9 @@ jobs:
 
   # REAL-BACKEND SMOKE — @real-tagged subset vs the deployed TEST_BASE_URL. Secrets-
   # gated; kept off the PR gate (flakiness quarantine). Runs on push to develop, the
-  # nightly cron, and manual dispatch. TEST_BASE_URL in .env.test → isRealBackend=true
-  # → no local webServer; the real-backend project targets the deployment.
+  # nightly cron, and manual dispatch. --project=real-backend is the sole selected
+  # project, so playwright.config.ts skips the local webServer and targets the
+  # deployment; TEST_BASE_URL (written to .env.test below) registers that project.
   e2e-real:
     name: E2E real backend (@real smoke)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/develop'

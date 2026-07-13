@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/app/stores/auth'
+import { useChatStore } from '@/app/stores/chat'
+import { installFakeSignalR } from '@/tests/utils/fakeSignalR'
+import { makeUser } from '@/tests/utils/factories'
+import { AuthenticationMode } from '@/types/enums'
 import type { Result } from 'neverthrow'
 import type { RefreshTokenResponseDTO } from '@/types/api/schemas'
 import type { AppError } from '@/lib/errors/types'
@@ -8,6 +12,7 @@ import type { AppError } from '@/lib/errors/types'
 vi.mock('@/lib/api/services/AuthService', () => ({
   authService: {
     refreshToken: vi.fn(),
+    login: vi.fn(),
   },
 }))
 
@@ -378,6 +383,15 @@ describe('setTokens Method', () => {
     expect(authStore.refreshToken).toBe('valid-refresh')
   })
 
+  it('should set null for whitespace-only refresh token', async () => {
+    const authStore = useAuthStore()
+
+    await authStore.setTokens('valid-access', '   ')
+
+    expect(authStore.accessToken).toBe('valid-access')
+    expect(authStore.refreshToken).toBeNull()
+  })
+
   it('should set null for empty string refresh token', async () => {
     const authStore = useAuthStore()
 
@@ -417,5 +431,56 @@ describe('setTokens Method', () => {
     const parsedData = JSON.parse(savedData!) as Record<string, unknown>
     expect(parsedData.accessToken).toBe('persisted-access')
     expect(parsedData.refreshToken).toBe('persisted-refresh')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// SignalR + chat-store side effects of login / clearAuth / logout
+//
+// This file (unlike auth.test.ts) does NOT mock useSignalR, the chat store, or
+// the query client, so the real wiring runs: login connects SignalR, clearAuth
+// resets the chat store, logout disconnects. The SignalR singleton is swapped
+// for the duck-typed fake so no real connection is attempted.
+// ---------------------------------------------------------------------------
+
+describe('Auth Store — SignalR + chat side effects', () => {
+  const ME = 'me@example.com'
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockLocalStorage.clear()
+  })
+
+  it('connects SignalR on login, resets the chat store on clearAuth, disconnects on logout', async () => {
+    const { authService } = await import('@/lib/api/services/AuthService')
+    const fake = installFakeSignalR()
+
+    vi.mocked(authService.login).mockResolvedValue({
+      isErr: () => false,
+      value: {
+        data: { user: makeUser({ email: ME }), accessToken: 'tok', refreshToken: 'ref' },
+      },
+    } as Awaited<ReturnType<typeof authService.login>>)
+
+    const store = useAuthStore()
+    await store.login({ email: ME, password: 'pw', mode: AuthenticationMode.Basic })
+
+    // performLogin's SignalR connect ran against the fake singleton.
+    expect(fake.getState()).toBe('connected')
+
+    // Seed chat-store state, then clearAuth must wipe it via resetUserData().
+    const chat = useChatStore()
+    chat.setActiveSession('session-1')
+    chat.saveDraft('session-1', 'draft text')
+    expect(chat.activeSessionId).toBe('session-1')
+
+    store.clearAuth()
+    expect(chat.activeSessionId).toBeNull()
+    expect(chat.getDraft('session-1')).toBe('')
+
+    // logout disconnects SignalR.
+    await store.logout()
+    expect(fake.getState()).toBe('disconnected')
   })
 })

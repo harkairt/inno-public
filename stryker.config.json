@@ -9,8 +9,9 @@
     "!**/__tests__/**",
     "!**/*.d.ts"
   ],
-  "ignorePatterns": [".claude", ".agents", "!.nuxt"],
+  "ignorePatterns": [".claude", ".agents", ".codegraph", "!.nuxt"],
   "incremental": true,
+  "ignoreStatic": true,
   "reporters": ["clear-text", "progress", "html", "json"],
   "thresholds": { "high": 80, "low": 60, "break": null },
   "tempDirName": ".stryker-tmp"

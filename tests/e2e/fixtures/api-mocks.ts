@@ -11,8 +11,12 @@
 
 import type { Page, Route } from '@playwright/test'
 import { mockUsers, mockAllUsers } from '../mocks/data/users'
-import { mockSessionHeaders, mockUnreadCounts } from '../mocks/data/sessions'
-import { mockConversation } from '../mocks/data/messages'
+import {
+  mockSessionHeaders,
+  mockUnreadCounts,
+  createMockSessionHeader,
+} from '../mocks/data/sessions'
+import { mockConversation, createMockMessage } from '../mocks/data/messages'
 
 // ============================================================================
 // ENVELOPE HELPERS
@@ -314,6 +318,18 @@ async function installChatMocks(page: Page) {
     }
   })
 
+  // Mock delete session (POST /api/AIWebAPI/DeleteSessionById). ChatService
+  // validates the payload with validateMutationSuccess: the data field must be
+  // the JSON-stringified backend success message (same shape as mutationOk() in
+  // tests/msw/http.ts) or the mutation errors and the UI keeps the session.
+  await page.route('**/api/AIWebAPI/DeleteSessionById', async (route) => {
+    if (route.request().method() === 'POST') {
+      await fulfillOk(route, JSON.stringify({ message: 'kész.' }))
+    } else {
+      await route.continue()
+    }
+  })
+
   // Mock public-chat bootstrap (POST /api/AIWebAPI/startPublicChat). Public mode
   // fetches the agent's UserDTO via usePublicChatAgent to render PublicChatHeader.
   // Returns { user, agent } per AIPublicChatStartDTOSchema. mockUsers.virtualAgent
@@ -381,6 +397,74 @@ async function installConfigMock(page: Page, config: Record<string, unknown> = M
 async function installLogSink(page: Page) {
   await page.route('**/api/Log/log', async (route) => {
     await fulfillOk(route, null)
+  })
+}
+
+// ============================================================================
+// NEW-SESSION ROUND-TRIP MOCK
+// ============================================================================
+
+/** Schema-valid agent reply message for a session (stable, non-colliding id). */
+function agentReplyMessage(sessionId: string, replyText: string) {
+  return createMockMessage({
+    messageID: `${sessionId}-reply`,
+    messageText: replyText,
+    senderName: 'AI Assistant',
+    senderUserCode: 'ai@virtual.agent',
+    readByUsers: [],
+    sessionId,
+  })
+}
+
+/**
+ * Mock the "first message creates a session" round-trip. Individual override —
+ * call AFTER mockAllApis (LIFO) so it shadows two happy-path routes:
+ *
+ *  - POST /api/AIWebAPI/question/text → records { sessionId → question } from
+ *    the request body and responds with a schema-valid agent reply (replyText).
+ *    The mockAllApis default ({ messageID, success }) fails AISessionMessageDTO
+ *    validation, so the send mutation errors — fine for input-clearing specs,
+ *    wrong for round-trip specs that assert the reply renders.
+ *  - POST /api/AIWebAPI/GetSessionById → for a recorded sessionId, returns a
+ *    synthetic session containing the user's question + the agent reply (the
+ *    app refetches the new session right after the send resolves). Unknown ids
+ *    fall back to the previously registered happy-path route.
+ */
+export async function mockNewSessionRoundTrip(
+  page: Page,
+  replyText = 'This is the mocked AI reply.',
+): Promise<void> {
+  const askedQuestions = new Map<string, string>()
+
+  await page.route('**/api/AIWebAPI/question/text', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fallback()
+      return
+    }
+    const body = (route.request().postDataJSON() ?? {}) as {
+      sessionId?: string
+      question?: string
+    }
+    const sessionId = body.sessionId ?? ''
+    askedQuestions.set(sessionId, body.question ?? '')
+    await fulfillOk(route, agentReplyMessage(sessionId, replyText))
+  })
+
+  await page.route('**/api/AIWebAPI/GetSessionById', async (route) => {
+    const { sessionId } = (route.request().postDataJSON() ?? {}) as { sessionId?: string }
+    const question = sessionId ? askedQuestions.get(sessionId) : undefined
+    if (sessionId === undefined || question === undefined) {
+      await route.fallback()
+      return
+    }
+
+    await fulfillOk(route, {
+      ...createMockSessionHeader({ sessionId, sessionName: question }),
+      messages: [
+        createMockMessage({ messageID: `${sessionId}-user`, messageText: question, sessionId }),
+        agentReplyMessage(sessionId, replyText),
+      ],
+    })
   })
 }
 

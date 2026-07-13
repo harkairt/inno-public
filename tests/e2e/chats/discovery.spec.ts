@@ -9,7 +9,7 @@ import { navigateToChats } from '../actions/navigation.actions'
 
 test.describe('Chat Discovery Page', () => {
   test.describe('Virtual Agents Section', () => {
-    test('should display virtual agents on landing page', async ({
+    test('should display virtual agents on landing page @mobile', async ({
       mockedAuthenticatedPage: page,
     }) => {
       await navigateToChats(page)
@@ -116,7 +116,9 @@ test.describe('Chat Discovery Page', () => {
       await expect(header).toBeVisible()
     })
 
-    test('should be responsive and adjust layout', async ({ mockedAuthenticatedPage: page }) => {
+    test('should be responsive and adjust layout @mobile', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
       await navigateToChats(page)
 
       // Test at mobile viewport

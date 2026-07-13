@@ -84,14 +84,18 @@
         @click="isActive && selectSingle(CUSTOM_SENTINEL)"
       >
         <template v-if="selectedSingle === CUSTOM_SENTINEL">
-          <UInput
-            v-model="plainText"
-            :placeholder="t('chat.options.plainTextPlaceholder')"
-            :disabled="!isActive"
-            variant="none"
+          <div
             class="w-full"
             @click.stop
-          />
+          >
+            <UInput
+              v-model="plainText"
+              :placeholder="t('chat.options.plainTextPlaceholder')"
+              :disabled="!isActive"
+              variant="none"
+              class="w-full"
+            />
+          </div>
         </template>
         <span
           v-else

@@ -158,6 +158,15 @@ describe('validateSession', () => {
       expect(result.isErr()).toBe(true)
     })
 
+    // A wrong-typed messageCount surfaces as invalid_type; formatSessionInvalidType
+    // renders the "must be of type {expected}" fallback. (The `received === 'nan'`
+    // branch is unreachable with this zod version — NaN reports received "NaN" —
+    // so it is left untested as an equivalent mutant.)
+    it('reports a type mismatch for a string messageCount', () => {
+      const error = validateSession(validSession({ messageCount: 'five' }))._unsafeUnwrapErr()
+      expect(error.getFieldErrors('messageCount')[0]).toBe('messageCount must be of type number')
+    })
+
     it('rejects negative messageCount', () => {
       const result = validateSession(validSession({ messageCount: -1 }))
 
@@ -219,7 +228,10 @@ describe('validateSession', () => {
 
       expect(result.isErr()).toBe(true)
       const error = result._unsafeUnwrapErr()
-      expect(error.message).toContain('Session validation failed')
+      // The field name appears only in the detailed branch of the
+      // `validationErrors.length > 0` message ternary (the generic branch is
+      // just 'Session validation failed'), so this pins that branch.
+      expect(error.message).toContain('sessionId')
       expect(error.validationErrors.length).toBeGreaterThanOrEqual(2)
     })
 
