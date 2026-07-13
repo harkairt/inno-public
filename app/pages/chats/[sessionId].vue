@@ -18,7 +18,11 @@
           size="sm"
           :aria-label="t('errors.backToChats')"
           data-testid="back-to-chats"
-          @click="navigateTo('/chats')"
+          @click="
+            () => {
+              navigateTo('/chats')
+            }
+          "
         />
 
         <div
@@ -34,10 +38,10 @@
               class="text-xl font-semibold text-foreground truncate"
               data-testid="session-title"
             >
-              {{ isPrimarySession ? otherMemberName : session.sessionName }}
+              {{ headerTitle }}
             </h1>
             <button
-              v-if="!isPrimarySession"
+              v-if="canEditTitle"
               type="button"
               class="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-[hsl(var(--accent))] rounded-md flex-shrink-0"
               :aria-label="t('chat.sessionMenu.editName')"
@@ -105,7 +109,11 @@
           size="sm"
           :aria-label="t('chat.createNewSession')"
           data-testid="create-new-session-button"
-          @click="navigateTo(`/chats/new/${otherMemberId}`)"
+          @click="
+            () => {
+              navigateTo(`/chats/new/${otherMemberId}`)
+            }
+          "
         />
       </div>
 
@@ -147,14 +155,22 @@
                 <UButton
                   size="xs"
                   variant="outline"
-                  @click="refetch()"
+                  @click="
+                    () => {
+                      refetch()
+                    }
+                  "
                 >
                   {{ t('errors.tryAgain') }}
                 </UButton>
                 <UButton
                   size="xs"
                   variant="outline"
-                  @click="navigateTo('/chats')"
+                  @click="
+                    () => {
+                      navigateTo('/chats')
+                    }
+                  "
                 >
                   {{ t('errors.backToChats') }}
                 </UButton>
@@ -257,7 +273,11 @@
               <UButton
                 size="xs"
                 variant="outline"
-                @click="navigateTo('/chats')"
+                @click="
+                  () => {
+                    navigateTo('/chats')
+                  }
+                "
               >
                 {{ t('errors.backToChats') }}
               </UButton>
@@ -288,7 +308,11 @@
                 <UButton
                   size="xs"
                   variant="outline"
-                  @click="navigateTo('/chats')"
+                  @click="
+                    () => {
+                      navigateTo('/chats')
+                    }
+                  "
                 >
                   {{ t('errors.backToChats') }}
                 </UButton>
@@ -445,6 +469,19 @@ const messages = computed(() => {
 
 // Get typing users for this session
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
+
+// Header title: server-assigned name, or the user's first message for a freshly
+// created session the server hasn't named yet (mirrors the optimistic sidebar entry).
+const headerTitle = computed(() => {
+  if (isPrimarySession.value) return otherMemberName.value
+  if (session.value?.sessionName) return session.value.sessionName
+  const email = authStore.user?.email
+  return messages.value.find((m) => m.senderUserCode === email)?.messageText ?? ''
+})
+
+// Renaming is only offered once the server has named the session — not for primary
+// sessions, and not while the header shows the temporary optimistic title.
+const canEditTitle = computed(() => !isPrimarySession.value && !!session.value?.sessionName)
 
 // Compute selectable target agents from session members (only virtual agents)
 const selectableTargetAgents = computed(() => {

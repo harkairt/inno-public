@@ -15,14 +15,14 @@ test.describe('Chat Navigation', () => {
       await expect(page.locator(selectors.layout.chatListPanel)).toBeVisible()
     })
 
-    test('should list sessions in the panel', async ({ mockedAuthenticatedPage: page }) => {
+    test('should list sessions in the panel @mobile', async ({ mockedAuthenticatedPage: page }) => {
       await page.goto('/chats')
 
       // Mocked backend returns session headers → session items render as links.
       await expect(page.locator(selectors.chats.sessionItems).first()).toBeVisible()
     })
 
-    test('should use bottom tab bar (not the rail) on mobile', async ({
+    test('should use bottom tab bar (not the rail) on mobile @mobile', async ({
       mockedAuthenticatedPage: page,
     }) => {
       // Mobile: navigation moves to the bottom tab bar; the desktop rail is gone.
@@ -106,7 +106,9 @@ test.describe('Chat Navigation', () => {
   })
 
   test.describe('Responsive Layout', () => {
-    test('should adapt to different viewport sizes', async ({ mockedAuthenticatedPage: page }) => {
+    test('should adapt to different viewport sizes @mobile', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
       // Desktop: rail + panel
       await page.setViewportSize({ width: 1920, height: 1080 })
       await page.goto('/chats')

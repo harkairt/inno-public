@@ -21,7 +21,8 @@
  */
 
 import type { Page } from '@playwright/test'
-import { test, expect, mockAllApis } from './fixtures'
+import { test, expect, mockAllApis, mockNewSessionRoundTrip } from './fixtures'
+import { selectors } from './selectors'
 
 // Full config copied verbatim from api-mocks.ts MOCK_CONFIG, flipped to public
 // mode (publicMode/publicAgent/publicLoginEmail/publicLoginPassword changed).
@@ -116,5 +117,48 @@ test.describe('Public mode', () => {
     // /chats/* routes (including /chats/public/*) via <NuxtPage>, so the sidebar
     // is present here too. The public layout is proven instead by PublicChatHeader
     // (role "banner" + agent name), which only app/layouts/public.vue renders.
+  })
+
+  test('messaging round-trip: first message creates the session and renders the mocked reply @mobile', async ({
+    page,
+  }) => {
+    // Spy on the real backend send path so mock drift fails loud.
+    const questionCalls: string[] = []
+    page.on('request', (r) => {
+      if (r.url().includes('/api/AIWebAPI/question/text')) questionCalls.push(r.url())
+    })
+
+    await mockAllApis(page)
+    await overridePublicConfig(page)
+    await mockNewSessionRoundTrip(page, 'Mocked public AI reply.')
+
+    await page.goto('/chats/public/new/100')
+    await expect(page).toHaveURL(/\/chats\/public\/new\/100/, { timeout: 15_000 })
+
+    // Boot is complete once the mocked welcome message renders — the welcomeText
+    // query only runs after the async auto-login authenticated the store.
+    await expect(page.getByText('Welcome! How can I assist you today?')).toBeVisible({
+      timeout: 15_000,
+    })
+
+    await page.locator(selectors.chat.messageInput).fill('Hello from the public chat')
+    await page.locator(selectors.chat.sendButton).click()
+
+    // Server confirmation navigates to the created public session route.
+    // The created-session GUID contains only [0-9a-f-]; the literal "new"
+    // segment can never match this pattern, so no lookahead is needed.
+    await page.waitForURL(/\/chats\/public\/[0-9a-f-]+/i, { timeout: 15_000 })
+
+    // Both sides of the round-trip render: the user's message and the AI reply.
+    // Scope to the messages container — the question also becomes the session
+    // name in the (still rendered) sidebar.
+    const messages = page.locator(selectors.chat.messagesContainer)
+    await expect(messages.getByText('Hello from the public chat').first()).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(messages.getByText('Mocked public AI reply.').first()).toBeVisible({
+      timeout: 15_000,
+    })
+    expect(questionCalls).toHaveLength(1)
   })
 })

@@ -199,6 +199,56 @@ describe('chats/[sessionId] page', () => {
     await waitFor(() => expect(within(container).getByText('live update')).toBeTruthy())
   })
 
+  it('shows the user message as the header title (not editable) when the session is unnamed', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    installFakeSignalR()
+    // Freshly created session: server has not named it yet (sessionName: '').
+    server.use(
+      http.post(GET_SESSION_BY_ID, () =>
+        apiOk({
+          ...makeSession({ sessionId: SESSION_ID, members: [ME, OTHER], sessionName: '' }),
+          messages: [
+            makeRawMessage({
+              messageID: 'm1',
+              messageText: 'What is the weather today?',
+              senderUserCode: ME,
+            }),
+          ],
+        }),
+      ),
+    )
+
+    renderPage()
+
+    const title = await screen.findByTestId('session-title')
+    expect(title.textContent).toContain('What is the weather today?')
+    // No rename affordance while the title is the temporary optimistic message.
+    expect(screen.queryByTestId('edit-title-button')).toBeNull()
+  })
+
+  it('shows the server session name in the header with an edit button once named', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    installFakeSignalR()
+    server.use(
+      http.post(GET_SESSION_BY_ID, () =>
+        apiOk({
+          ...makeSession({
+            sessionId: SESSION_ID,
+            members: [ME, OTHER],
+            sessionName: 'Weather chat',
+          }),
+          messages: [makeRawMessage({ messageID: 'm1', messageText: 'hi', senderUserCode: ME })],
+        }),
+      ),
+    )
+
+    renderPage()
+
+    const title = await screen.findByTestId('session-title')
+    expect(title.textContent).toContain('Weather chat')
+    await waitFor(() => expect(screen.getByTestId('edit-title-button')).toBeTruthy())
+  })
+
   it('shows and hides the typing indicator driven by chatStore typing users', async () => {
     seedAuthStorage({ user: makeUser({ email: ME }) })
     installFakeSignalR()

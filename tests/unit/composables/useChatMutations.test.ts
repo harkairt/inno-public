@@ -513,6 +513,147 @@ describe('useSendMessage — new session cache update', () => {
 })
 
 // ---------------------------------------------------------------------------
+// useSendMessage — optimistic sidebar header (new session)
+// ---------------------------------------------------------------------------
+
+describe('useSendMessage — optimistic sidebar header', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // Hangs the service so we can inspect the cache after onMutate but before the reply.
+  function pendingSendMutation(queryClient: QueryClient) {
+    return async () => {
+      const { chatService } = await import('@/lib/api/services/ChatService')
+      const { useSendMessage } = await import('~/composables/useChatMutations')
+
+      let resolveService!: () => void
+      const serverAnswer = makeMessage({ messageID: 'msg-answer' })
+      vi.mocked(chatService.sendQuestion).mockReturnValue(
+        new Promise((res) => {
+          resolveService = () => res(makeOkResult(serverAnswer))
+        }),
+      )
+
+      let mutation: ReturnType<typeof useSendMessage> | undefined
+      createWrapper(queryClient, () => {
+        mutation = useSendMessage()
+      })
+      return { mutation: mutation!, resolveService }
+    }
+  }
+
+  it('inserts a header immediately on send for a new session', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { mutation, resolveService } = await pendingSendMutation(queryClient)()
+
+    const before = Date.now()
+    const mutatePromise = mutation.mutateAsync(makeQuestionRequest({ question: 'Hello there' }))
+    await new Promise((r) => setTimeout(r, 0)) // let onMutate run
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    const header = sessions?.find((s) => s.sessionId === 'session-1')
+    expect(header).toBeDefined()
+    expect(header?.sessionName).toBe('Hello there')
+    expect(Date.parse(header!.insertDate)).toBeGreaterThanOrEqual(before)
+
+    resolveService()
+    await mutatePromise
+  })
+
+  it('truncates the temp title to 60 characters', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { mutation, resolveService } = await pendingSendMutation(queryClient)()
+
+    const longQuestion = 'a'.repeat(120)
+    const mutatePromise = mutation.mutateAsync(makeQuestionRequest({ question: longQuestion }))
+    await new Promise((r) => setTimeout(r, 0))
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    expect(sessions?.[0]?.sessionName).toBe('a'.repeat(60))
+
+    resolveService()
+    await mutatePromise
+  })
+
+  it('inserts the header into an empty (undefined) sessions cache', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { mutation, resolveService } = await pendingSendMutation(queryClient)()
+
+    expect(queryClient.getQueryData(chatQueryKeys.sessions())).toBeUndefined()
+
+    const mutatePromise = mutation.mutateAsync(makeQuestionRequest())
+    await new Promise((r) => setTimeout(r, 0))
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    expect(sessions).toHaveLength(1)
+
+    resolveService()
+    await mutatePromise
+  })
+
+  it('does not duplicate a header already present for the session', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { mutation, resolveService } = await pendingSendMutation(queryClient)()
+
+    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), [
+      makeSessionHeader({ sessionId: 'session-1', sessionName: 'Existing' }),
+    ])
+
+    const mutatePromise = mutation.mutateAsync(makeQuestionRequest())
+    await new Promise((r) => setTimeout(r, 0))
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    expect(sessions?.filter((s) => s.sessionId === 'session-1')).toHaveLength(1)
+    expect(sessions?.[0]?.sessionName).toBe('Existing') // untouched
+
+    resolveService()
+    await mutatePromise
+  })
+
+  it('leaves the sessions cache untouched for an existing session', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { mutation, resolveService } = await pendingSendMutation(queryClient)()
+
+    // Pre-seed the individual session so onMutate computes isNewSession = false.
+    queryClient.setQueryData(chatQueryKeys.session('session-1'), makeSessionDTO())
+    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), [
+      makeSessionHeader({ sessionId: 'session-2' }),
+    ])
+
+    const mutatePromise = mutation.mutateAsync(makeQuestionRequest())
+    await new Promise((r) => setTimeout(r, 0))
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    expect(sessions).toHaveLength(1)
+    expect(sessions?.[0]?.sessionId).toBe('session-2')
+
+    resolveService()
+    await mutatePromise
+  })
+
+  it('keeps the optimistic header when the send fails', async () => {
+    const { chatService } = await import('@/lib/api/services/ChatService')
+    const { useSendMessage } = await import('~/composables/useChatMutations')
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    vi.mocked(chatService.sendQuestion).mockResolvedValue(makeErrResult('Network error: Failed'))
+
+    let mutation: ReturnType<typeof useSendMessage> | undefined
+    createWrapper(queryClient, () => {
+      mutation = useSendMessage()
+    })
+
+    await mutation!.mutateAsync(makeQuestionRequest({ question: 'Stays visible' })).catch(() => {
+      /* expected to throw */
+    })
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    expect(sessions?.find((s) => s.sessionId === 'session-1')?.sessionName).toBe('Stays visible')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // useMarkMessagesRead
 // ---------------------------------------------------------------------------
 

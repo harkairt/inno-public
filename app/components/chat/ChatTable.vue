@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, h, resolveComponent, useTemplateRef } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { SortingState } from '@tanstack/table-core'
 import type { TableData, CellValue } from '@/lib/validation/table'
 import { typeRules, type TypeRule } from '@/lib/table-types'
 
@@ -69,7 +70,7 @@ const PAGE_SIZE = 20
 const currentPage = ref(1)
 const globalFilter = ref('')
 
-const sorting = ref([])
+const sorting = ref<SortingState>([])
 
 const containerRef = useTemplateRef<HTMLDivElement>('containerRef')
 const containerMinWidth = ref(0)

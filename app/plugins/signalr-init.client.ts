@@ -44,39 +44,50 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     if (import.meta.dev) logger.debug('Chat event listeners registered')
   }
 
-  // Auto-connect if user is already authenticated (page refresh scenario)
-  if (authStore.isAuthenticated && authStore.accessToken) {
-    if (import.meta.dev) logger.debug('User authenticated on app load, initializing connection...')
+  const signalr = useSignalR()
+  const queryClient = nuxtApp.$queryClient as QueryClient
 
-    // Small delay to ensure all stores and plugins are fully initialized
-    setTimeout(() => {
-      void (async () => {
-        try {
-          const signalr = useSignalR()
-          const queryClient = nuxtApp.$queryClient as QueryClient
+  // Register chat listeners whenever the hub becomes connected — whether from the
+  // page-load auto-connect below or a later post-login connect (fresh SPA login,
+  // public/iframe auto-login). The `listenersRegistered` guard keeps this idempotent.
+  watch(
+    () => signalr.isConnected.value,
+    (connected) => {
+      if (connected) {
+        setupChatEventListeners(signalr, queryClient)
+      }
+    },
+    { immediate: true },
+  )
 
-          await signalr.connect(authStore.accessToken ?? undefined)
+  // Connect whenever auth becomes present — covers the page-refresh scenario (auth
+  // already restored at setup, via `immediate`) AND fresh in-app login / public-mode
+  // auto-login, where auth flips true only after this plugin has run.
+  watch(
+    () => authStore.isAuthenticated && !!authStore.accessToken,
+    (authed) => {
+      if (!authed) {
+        if (import.meta.dev) logger.debug('No authenticated user, skipping auto-connect')
+        return
+      }
 
-          if (signalr.isConnected.value) {
-            setupChatEventListeners(signalr, queryClient)
+      if (import.meta.dev) logger.debug('User authenticated, initializing connection...')
+
+      // Small delay to ensure all stores and plugins are fully initialized
+      setTimeout(() => {
+        void (async () => {
+          try {
+            await signalr.connect(authStore.accessToken ?? undefined)
+            if (signalr.isConnected.value) {
+              setupChatEventListeners(signalr, queryClient)
+            }
+            if (import.meta.dev) logger.debug('Auto-connected on app initialization')
+          } catch (error) {
+            if (import.meta.dev) logger.error('Failed to auto-connect:', error)
           }
-
-          watch(
-            () => signalr.isConnected.value,
-            (connected) => {
-              if (connected) {
-                setupChatEventListeners(signalr, queryClient)
-              }
-            },
-          )
-
-          if (import.meta.dev) logger.debug('Auto-connected on app initialization')
-        } catch (error) {
-          if (import.meta.dev) logger.error('Failed to auto-connect on app load:', error)
-        }
-      })()
-    }, 500)
-  } else {
-    if (import.meta.dev) logger.debug('No authenticated user on app load, skipping auto-connect')
-  }
+        })()
+      }, 500)
+    },
+    { immediate: true },
+  )
 })

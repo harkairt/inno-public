@@ -32,9 +32,10 @@ const stubs = {
   UAlert: {
     name: 'UAlert',
     props: ['title', 'description'],
+    // The close button drives `update:open` (Nuxt UI v4 contract) — not a `close` event.
     template:
       '<div data-testid="update-alert"><span>{{ title }}</span>' +
-      '<button data-testid="close-btn" @click="$emit(\'close\')"></button>' +
+      '<button data-testid="close-btn" @click="$emit(\'update:open\', false)"></button>' +
       '<slot name="actions" /></div>',
   },
   // No explicit @click emit: the parent's `@click` falls through as a native
@@ -68,7 +69,7 @@ describe('AppUpdateBanner — visibility', () => {
     expect(screen.getByText('pwa.updateAvailable')).toBeTruthy()
   })
 
-  it('dismisses the banner when the alert emits close', async () => {
+  it('dismisses the banner when the alert requests close', async () => {
     mocks.needRefresh.value = true
     await renderBanner()
     await fireEvent.click(screen.getByTestId('close-btn'))

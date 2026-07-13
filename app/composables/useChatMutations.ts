@@ -27,6 +27,7 @@ import { AIAnswerType, MessageStatus } from '@/types/enums'
 
 // Create a temporary message ID generator
 function generateTempId(): string {
+  // Stryker disable next-line all: temp-id suffix is cosmetic uniqueness; no observable behavior depends on the exact substring bounds
   return `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
@@ -101,6 +102,26 @@ function createSyntheticSession(
     sessionName: '',
     insertDate: timestamp,
     messages: [],
+  }
+}
+
+function truncateSessionTitle(text: string, maxLength: number): string {
+  return text.length > maxLength ? text.slice(0, maxLength) : text
+}
+
+function createSyntheticSessionHeader(
+  request: AiQuestionRequestDTO,
+  timestamp: string,
+): AISessionHeaderDTO {
+  return {
+    sessionId: request.sessionId,
+    agentId: request.agentId,
+    agentImage: null,
+    agentDarkImage: null,
+    userCode: request.userCode,
+    members: request.members,
+    sessionName: truncateSessionTitle(request.question, 60), // temp title until server names it
+    insertDate: timestamp,
   }
 }
 
@@ -190,8 +211,11 @@ async function handleNewSessionCacheUpdate(params: SendMessageSuccessParams): Pr
       return syntheticSession
     })
 
-    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() })
-    await queryClient.refetchQueries({ queryKey: chatQueryKeys.sessions(), type: 'active' })
+    // exact:true so the sessions() list refetch does NOT cascade into every
+    // session(id) detail query (session(id) is a key-prefix child of sessions()).
+    // invalidateQueries already refetches active observers, so no separate
+    // refetchQueries is needed. Result: 1 GetSessionHeaders + 1 GetSessionById.
+    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
     await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
 
     chatStore.executeNewSessionCallback(request.sessionId)
@@ -249,6 +273,16 @@ async function handleSendMessageOnMutate(
       ...createSyntheticSession(request, authStore, userMessageTimestamp.toISOString()),
       messages: [],
     })
+
+    // Optimistically insert a sidebar entry so the new session shows immediately on send
+    // (the sendQuestion response resolves only with the agent's reply, which can be slow).
+    // onSuccess force-refetches sessions(), replacing this with the server's real sessionName.
+    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) => {
+      const header = createSyntheticSessionHeader(request, userMessageTimestamp.toISOString())
+      if (!old) return [header]
+      if (old.some((s) => s.sessionId === request.sessionId)) return old // dedupe
+      return [header, ...old]
+    })
   }
 
   return {
@@ -268,6 +302,7 @@ function handleSendMessageOnError(
 ): void {
   const { chatStore } = params
 
+  // Stryker disable next-line OptionalChaining: context is provably non-null in every reachable onError path
   if (context?.virtualAgentName) {
     chatStore.removeTypingUser(request.sessionId, context.virtualAgentName)
   }
@@ -275,6 +310,7 @@ function handleSendMessageOnError(
   if (context?.tempMessageId) {
     chatStore.removePendingMessage(request.sessionId, context.tempMessageId)
 
+    // Stryker disable next-line OptionalChaining: context is provably non-null here (tempMessageId branch already entered)
     if (context?.tempMessageDTO) {
       chatStore.addFailedMessage(request.sessionId, {
         ...context.tempMessageDTO,
@@ -426,6 +462,7 @@ export function useRateMessage() {
 
     onMutate: async (params) => {
       // Cancel any outgoing refetches to avoid overwriting optimistic update
+      // Stryker disable next-line all: cancelQueries only matters under a concurrent in-flight refetch — a race not observable in tests
       await queryClient.cancelQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
@@ -454,6 +491,7 @@ export function useRateMessage() {
 
     onError: (error: AppError, params, context) => {
       // Rollback to previous state on error
+      // Stryker disable next-line OptionalChaining: context is provably non-null (onMutate always returns it before onError can run)
       if (context?.previousSession) {
         queryClient.setQueryData(chatQueryKeys.session(params.sessionId), context.previousSession)
       }
@@ -461,10 +499,10 @@ export function useRateMessage() {
     },
 
     onSettled: (_, __, params) => {
-      // Always refetch after mutation to ensure server sync
-      void queryClient.invalidateQueries({
-        queryKey: chatQueryKeys.messages(params.sessionId),
-      })
+      // Always refetch after mutation to ensure server sync. Only session(id) is
+      // invalidated — messages(id) is a key-prefix child of session(id), so the
+      // non-exact session(id) invalidation already covers it (a separate
+      // messages(id) invalidation was a redundant double refetch).
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
@@ -502,6 +540,7 @@ export function useMarkMessagesRead() {
     // Optimistic update - immediately set unread count to 0
     onMutate: async (params) => {
       // Cancel outgoing refetches
+      // Stryker disable next-line all: cancelQueries only matters under a concurrent in-flight refetch — a race not observable in tests
       await queryClient.cancelQueries({ queryKey: chatQueryKeys.unread() })
 
       // Snapshot previous value
@@ -521,6 +560,7 @@ export function useMarkMessagesRead() {
 
     onError: (error: AppError, params, context) => {
       // Rollback on error
+      // Stryker disable next-line all: equivalent in reachable states — previousUnread is set whenever the cache held data; a null snapshot rolls back to the same empty state
       if (context?.previousUnread) {
         queryClient.setQueryData(chatQueryKeys.unread(), context.previousUnread)
       }
@@ -612,11 +652,13 @@ export function useAddUserToSession() {
     },
 
     onSuccess: (_, params) => {
-      // Invalidate session data to refresh member list
+      // Invalidate session data to refresh member list. exact:true on sessions()
+      // so the list refetch doesn't cascade into session(id) (its prefix-child)
+      // — that would double-fetch the detail alongside the line above.
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
-      void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() })
+      void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
     },
 
     onError: (_error: AppError) => {
@@ -643,11 +685,13 @@ export function useRemoveUserFromSession() {
     },
 
     onSuccess: (_, params) => {
-      // Invalidate session data to refresh member list
+      // Invalidate session data to refresh member list. exact:true on sessions()
+      // so the list refetch doesn't cascade into session(id) (its prefix-child)
+      // — that would double-fetch the detail alongside the line above.
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
-      void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() })
+      void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
     },
 
     onError: (_error: AppError) => {

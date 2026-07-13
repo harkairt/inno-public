@@ -127,7 +127,7 @@ const email = ref(rememberedEmail ?? config.public.devLoginEmail ?? '')
 const password = ref('')
 const showPassword = ref(false)
 // Pre-check "Remember Me" if email was remembered
-const rememberMe = ref(!!rememberedEmail)
+const rememberMe = ref<boolean | 'indeterminate'>(!!rememberedEmail)
 const loginError = ref<string | null>(null)
 
 const authStore = useAuthStore()

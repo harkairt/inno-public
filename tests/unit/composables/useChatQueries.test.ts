@@ -9,13 +9,22 @@ import { makeSession } from '@/tests/utils/factories'
 import { seedAuthStorage } from '@/tests/utils/authSeed'
 import { simulateWindowFocus } from '@/tests/utils/focus'
 import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
+import { trackPostCalls } from '@/tests/utils/requestCounter'
 import {
   chatQueryKeys,
+  useChatSession,
   useChatSessions,
   useSessionUnreadCount,
   useWelcomeMessage,
   resetWelcomeMessageTracking,
 } from '~/composables/useChatQueries'
+
+const GET_SESSION_BY_ID = '/api/AIWebAPI/GetSessionById'
+
+/** Full-session GetSessionById reply for the given session id. */
+function sessionReply(sessionId: string) {
+  return apiOk({ ...makeSession({ sessionId }), messages: [] })
+}
 
 function mountQuery<T>(queryClient: QueryClient, setup: () => T): T {
   const pinia = createPinia()
@@ -33,6 +42,19 @@ function mountQuery<T>(queryClient: QueryClient, setup: () => T): T {
 
 function timingQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+}
+
+/** Mount an observer and return the wrapper so the test can unmount/remount. */
+function mountObserver(queryClient: QueryClient, setup: () => unknown) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  const Comp = defineComponent({
+    setup() {
+      setup()
+      return () => null
+    },
+  })
+  return mount(Comp, { global: { plugins: [[VueQueryPlugin, { queryClient }], pinia] } })
 }
 
 // ---------------------------------------------------------------------------
@@ -186,5 +208,71 @@ describe('useWelcomeMessage — 500 tracking', () => {
     const third = mountQuery(timingQueryClient(), () => useWelcomeMessage(42))
     await vi.waitFor(() => expect(third.isSuccess.value).toBe(true))
     expect(calls).toBe(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Invalidation cascade — the key-prefix footgun and its cure (Test C)
+// ---------------------------------------------------------------------------
+
+describe('useChatSession — sessions() invalidation cascade', () => {
+  it('non-exact sessions() invalidation refetches session(id); exact:true spares it', async () => {
+    seedAuthStorage()
+    const counter = trackPostCalls(GET_SESSION_BY_ID, () => sessionReply('id-1'))
+
+    const queryClient = timingQueryClient()
+    mountObserver(queryClient, () => useChatSession('id-1'))
+    // Initial fetch by the active detail observer.
+    await vi.waitFor(() => expect(counter.count).toBe(1))
+
+    // Non-exact: sessions() = ['chat','sessions'] is a prefix of
+    // session('id-1') = ['chat','sessions','id-1'], so the detail query is
+    // dragged into the refetch even though only the list was invalidated.
+    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() })
+    expect(counter.count).toBe(2)
+
+    // exact:true matches ONLY a literal ['chat','sessions'] observer — the
+    // detail query is left untouched. This is the cure applied in useChatMutations.
+    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
+    expect(counter.count).toBe(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// staleTime window guard (Test D) — pins refetchOnMount:true + staleTime 10s.
+// Guards against "fixing" duplication by dropping staleTime to 0 /
+// refetchOnMount:'always', which would reintroduce refetch-on-every-mount.
+// ---------------------------------------------------------------------------
+
+describe('useChatSession — staleTime window', () => {
+  afterEach(() => {
+    useRealTimers()
+  })
+
+  it('remount within 10s reuses the cache; remount after 10s refetches', async () => {
+    seedAuthStorage()
+    const counter = trackPostCalls(GET_SESSION_BY_ID, () => sessionReply('id-1'))
+
+    useFakeTimersSafe()
+    // Do NOT pass a staleTime option — the composable's real 10s must apply
+    // (the test QueryClient default is 0, which would defeat the guard).
+    const queryClient = timingQueryClient()
+
+    const first = mountObserver(queryClient, () => useChatSession('id-1'))
+    await vi.waitFor(() => expect(counter.count).toBe(1))
+
+    // Unmount + remount inside the 10s window: data is still fresh, so
+    // refetchOnMount:true is a no-op — no second fetch.
+    first.unmount()
+    const second = mountObserver(queryClient, () => useChatSession('id-1'))
+    await advance(0)
+    expect(counter.count).toBe(1)
+
+    // Cross the staleTime boundary, then remount: now the data is stale and
+    // refetchOnMount fires.
+    second.unmount()
+    await advance(10_001)
+    mountObserver(queryClient, () => useChatSession('id-1'))
+    await vi.waitFor(() => expect(counter.count).toBe(2))
   })
 })

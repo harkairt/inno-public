@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { installFakeSignalR } from '@/tests/utils/fakeSignalR'
 import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { makeUser } from '@/tests/utils/factories'
 import { createTestQueryClient } from '@/tests/utils/render'
 import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
 import { chatQueryKeys } from '@/app/composables/useChatQueries'
@@ -52,6 +53,37 @@ describe('signalr-init plugin', () => {
     await advance(500)
 
     expect(fake.connect).not.toHaveBeenCalled()
+  })
+
+  // Regression for the fresh-in-app-login hole: the plugin runs once at app load
+  // while unauthenticated (login page has no persisted token). Auth flips true only
+  // AFTER the plugin ran, so the old one-shot `if (isAuthenticated)` gate never wired
+  // the ReceiveMessage listener. The auth watch must connect + register listeners
+  // when auth becomes present post-init.
+  it('wires ReceiveMessage when the user logs in after the plugin already ran (fresh login)', async () => {
+    // Unauthenticated at plugin init — no seeded storage.
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await runPlugin(queryClient)
+    await advance(500)
+    expect(fake.connect).not.toHaveBeenCalled()
+
+    // User logs in: auth store flips to authenticated after the plugin has run.
+    const authStore = useAuthStore()
+    authStore.user = makeUser()
+    authStore.accessToken = 'fresh-login-token'
+    await nextTick() // let the auth watcher fire
+    await advance(500) // delayed connect + listener registration
+
+    expect(fake.connect).toHaveBeenCalledWith('fresh-login-token')
+
+    fake.emitFromServer('ReceiveMessage', 'sess-1', 5)
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.session('sess-1') })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.unread(), exact: true })
   })
 
   it('invalidates the session and unread queries on ReceiveMessage', async () => {

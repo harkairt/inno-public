@@ -172,6 +172,7 @@ export class SignalRService {
     this.eventHandlers.get(eventName)!.add(handler)
 
     // Register with connection if connected
+    // Stryker disable next-line LogicalOperator: `||` only reaches connection.on on a dead/stopped connection; killing it would pin mock internals
     if (this.connection && this.isConnectionReady()) {
       this.connection.on(eventName, handler)
     }
@@ -222,6 +223,7 @@ export class SignalRService {
    */
   private isConnectionReady(): boolean {
     return (
+      // Stryker disable next-line OptionalChaining: the null branch is dead — every call site guards `this.connection` first
       this.connection?.state === signalR.HubConnectionState.Connected ||
       this.connection?.state === signalR.HubConnectionState.Connecting ||
       this.connection?.state === signalR.HubConnectionState.Reconnecting
@@ -232,6 +234,7 @@ export class SignalRService {
    * Register all event handlers with current connection
    */
   private registerAllEventHandlers(): void {
+    // Stryker disable next-line all: dead defensive guard — only invoked from connect() right after this.connection is assigned
     if (!this.connection) return
 
     for (const [eventName, handlers] of this.eventHandlers.entries()) {

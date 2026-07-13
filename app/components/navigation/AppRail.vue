@@ -31,7 +31,11 @@
               :aria-current="isActive(item.to) ? 'page' : undefined"
               :aria-label="item.label"
               :data-testid="`rail-${item.key}`"
-              @click="navigateTo(item.to)"
+              @click="
+                () => {
+                  navigateTo(item.to)
+                }
+              "
             />
           </UChip>
           <UButton
@@ -44,7 +48,11 @@
             :aria-current="isActive(item.to) ? 'page' : undefined"
             :aria-label="item.label"
             :data-testid="`rail-${item.key}`"
-            @click="navigateTo(item.to)"
+            @click="
+              () => {
+                navigateTo(item.to)
+              }
+            "
           />
         </UTooltip>
       </template>

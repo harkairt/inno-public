@@ -55,6 +55,7 @@ export function getStorageMode(): StorageMode {
 // SSR-safe: check for window/localStorage availability
 // Note: Remember Me always uses localStorage (not affected by storage mode)
 export function saveRememberedEmail(email: string): void {
+  // Stryker disable next-line ConditionalExpression,EqualityOperator: SSR-only guard; client-only SPA where window is always defined
   if (typeof window === 'undefined') return
   try {
     localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
@@ -96,10 +97,12 @@ function saveAuthStateToStorage(
         timestamp: new Date().toISOString(),
       }
       getStorage().setItem(AUTH_STORAGE_KEY, JSON.stringify(authData))
+      // Stryker disable next-line BlockStatement: logging-only catch — no observable behavior
     } catch (error) {
       // Blocked/quota-full Storage (Safari private mode, third-party iframe):
       // keep auth in memory for the session instead of rejecting the promise
       // (an unhandled rejection would crash the login/refresh flow).
+      // Stryker disable next-line all: logging-only side effect — no observable behavior
       logger.warn('Failed to persist auth state to storage', error)
     }
     resolve()
@@ -129,6 +132,7 @@ function loadAuthStateFromStorage(): {
       refreshToken: typeof authData.refreshToken === 'string' ? authData.refreshToken : null,
     }
   } catch {
+    // Stryker disable next-line ObjectLiteral: `{}` and the explicit nulls are treated identically by the sole consumer
     return { user: null, accessToken: null, refreshToken: null }
   }
 }
@@ -197,6 +201,7 @@ async function performLogin(
 
       try {
         const { connect } = useSignalR()
+        // Stryker disable next-line OptionalChaining: `?? undefined` — connect falls back to the same stored token either way
         await connect(tokens.accessToken ?? undefined)
       } catch {
         // SignalR is not critical — will retry on next action

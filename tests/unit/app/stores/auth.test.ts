@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore, getRememberedEmail, clearRememberedEmail } from '~/stores/auth'
 import { makeUser } from '@/tests/utils/factories'
-import { AuthenticationMode } from '@/types/enums'
+import { seedRememberedEmail } from '@/tests/utils/authSeed'
+import { AuthenticationMode, ErrorCode } from '@/types/enums'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -187,6 +188,17 @@ describe('Auth Store — logout', () => {
     expect(store.refreshToken).toBeNull()
     expect(store.isAuthenticated).toBe(false)
   })
+
+  it('is loading while logout is in flight and resets it to false afterwards', async () => {
+    const store = useAuthStore()
+    store.user = makeUser()
+
+    const p = store.logout()
+    // performLogout flips isLoading true synchronously, before awaiting disconnect.
+    expect(store.isLoading).toBe(true)
+    await p
+    expect(store.isLoading).toBe(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -211,6 +223,13 @@ describe('Auth Store — clearAuth', () => {
     expect(store.user).toBeNull()
     expect(store.accessToken).toBeNull()
     expect(store.refreshToken).toBeNull()
+  })
+
+  it('resets isLoading to false', () => {
+    const store = useAuthStore()
+    store.isLoading = true
+    store.clearAuth()
+    expect(store.isLoading).toBe(false)
   })
 })
 
@@ -253,5 +272,157 @@ describe('Auth Store — computed getters', () => {
     store.user = null
 
     expect(store.userDisplayName).toBe('Unknown User')
+  })
+
+  it('isAdmin and isAgent are false when there is no user (no throw on null)', () => {
+    const store = useAuthStore()
+    store.user = null
+
+    expect(store.isAdmin).toBe(false)
+    expect(store.isAgent).toBe(false)
+  })
+
+  it('avatars fall back to the default paths when there is no user', () => {
+    const store = useAuthStore()
+    store.user = null
+
+    expect(store.userAvatar).toBe('/images/default-avatar.png')
+    expect(store.userDarkAvatar).toBe('/images/default-avatar-dark.png')
+  })
+
+  it('avatars use the user image paths when present', () => {
+    const store = useAuthStore()
+    store.user = makeUser({ image: '/img/a.png', darkImage: '/img/a-dark.png' })
+
+    expect(store.userAvatar).toBe('/img/a.png')
+    expect(store.userDarkAvatar).toBe('/img/a-dark.png')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// remembered email
+// ---------------------------------------------------------------------------
+
+describe('Auth Store — remembered email', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockStorage.clear()
+  })
+
+  it('reads a remembered email and clears it back to null', () => {
+    seedRememberedEmail('a@b.c')
+    expect(getRememberedEmail()).toBe('a@b.c')
+
+    clearRememberedEmail()
+    expect(getRememberedEmail()).toBeNull()
+    expect(mockStorage.getItem('innochat-remembered-email')).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// storage hydration type guards
+// ---------------------------------------------------------------------------
+
+describe('Auth Store — storage hydration type guards', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockStorage.clear()
+  })
+
+  it('ignores a non-string accessToken and does not hydrate as authenticated', () => {
+    mockStorage.setItem(
+      'innochat-auth',
+      JSON.stringify({ user: makeUser(), accessToken: 12345, refreshToken: 'r' }),
+    )
+
+    const store = useAuthStore()
+
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.accessToken).toBeNull()
+  })
+
+  it('hydrates the access token but nulls a non-string refresh token', () => {
+    mockStorage.setItem(
+      'innochat-auth',
+      JSON.stringify({ user: makeUser(), accessToken: 'a', refreshToken: 999 }),
+    )
+
+    const store = useAuthStore()
+
+    expect(store.isAuthenticated).toBe(true)
+    expect(store.accessToken).toBe('a')
+    expect(store.refreshToken).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// login edge cases
+// ---------------------------------------------------------------------------
+
+describe('Auth Store — login edge cases', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    mockStorage.clear()
+  })
+
+  it('is loading while login is in flight', async () => {
+    const { authService } = await import('@/lib/api/services/AuthService')
+    let resolveLogin!: (v: unknown) => void
+    vi.mocked(authService.login).mockReturnValue(
+      new Promise((res) => {
+        resolveLogin = res
+      }) as ReturnType<typeof authService.login>,
+    )
+
+    const store = useAuthStore()
+    const p = store.login({ email: 'a@b.com', password: 'pw', mode: AuthenticationMode.Basic })
+    expect(store.isLoading).toBe(true)
+
+    resolveLogin({
+      isErr: () => false,
+      value: { data: { user: makeUser(), accessToken: 't', refreshToken: 'r' } },
+    })
+    await p
+    expect(store.isLoading).toBe(false)
+  })
+
+  it('returns a validation error when the password is not a string', async () => {
+    const { authService } = await import('@/lib/api/services/AuthService')
+
+    const store = useAuthStore()
+    const result = await store.login({
+      email: 'a@b.com',
+      password: undefined as unknown as string,
+      mode: AuthenticationMode.Basic,
+    })
+
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error.code).toBe(ErrorCode.VALIDATION_ERROR)
+    // The guard short-circuits before the service is ever called.
+    expect(authService.login).not.toHaveBeenCalled()
+  })
+
+  it('returns UNAUTHORIZED and writes no state when the response has no user', async () => {
+    const { authService } = await import('@/lib/api/services/AuthService')
+    vi.mocked(authService.login).mockResolvedValue({
+      isErr: () => false,
+      value: { data: { accessToken: 't', refreshToken: 'r' } },
+    } as Awaited<ReturnType<typeof authService.login>>)
+
+    const store = useAuthStore()
+    const result = await store.login({
+      email: 'a@b.com',
+      password: 'pw',
+      mode: AuthenticationMode.Basic,
+    })
+
+    expect(result.isErr()).toBe(true)
+    if (result.isErr()) expect(result.error.code).toBe(ErrorCode.UNAUTHORIZED)
+    expect(store.user).toBeNull()
+    expect(store.accessToken).toBeNull()
+    expect(mockStorage.getItem('innochat-auth')).toBeNull()
   })
 })

@@ -38,12 +38,11 @@ const displayMessage = computed(() => {
   <div class="flex items-center px-3 py-2">
     <UTooltip
       :text="displayMessage"
-      :popper="{ placement: collapsed ? 'right' : 'top' }"
+      :content="{ side: collapsed ? 'right' : 'top' }"
     >
       <UIcon
         :name="statusIcon"
         :class="[statusColorClass, isConnecting || isReconnecting ? 'animate-spin' : '']"
-        dynamic
         size="16"
         :aria-label="displayMessage"
       />

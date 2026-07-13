@@ -17,13 +17,13 @@
           variant="solid"
           :title="t('pwa.updateAvailable')"
           :description="t('pwa.updateDescription')"
-          :close-button="{ icon: 'i-heroicons-x-mark-20-solid', color: 'white', variant: 'link' }"
+          :close="{ icon: 'i-heroicons-x-mark-20-solid', color: 'neutral', variant: 'link' }"
           :ui="{
             root: 'rounded-none',
             title: 'font-medium',
             description: 'text-sm opacity-90',
           }"
-          @close="dismiss"
+          @update:open="dismiss"
         >
           <template #actions>
             <UButton

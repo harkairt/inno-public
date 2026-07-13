@@ -13,7 +13,11 @@
           size="sm"
           :aria-label="t('errors.backToChats')"
           data-testid="back-to-chats"
-          @click="navigateTo('/chats')"
+          @click="
+            () => {
+              navigateTo('/chats')
+            }
+          "
         />
 
         <div
@@ -113,7 +117,11 @@
                 <UButton
                   size="xs"
                   variant="outline"
-                  @click="navigateTo('/chats')"
+                  @click="
+                    () => {
+                      navigateTo('/chats')
+                    }
+                  "
                 >
                   {{ t('errors.backToChats') }}
                 </UButton>
