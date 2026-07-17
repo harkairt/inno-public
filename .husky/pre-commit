@@ -1,1 +1,10 @@
 npx lint-staged
+
+if git diff --cached --name-only | grep -qE '^(package\.json|package-lock\.json)$'; then
+  echo "→ package manifest changed, verifying lockfile is in sync (npm ci --dry-run)…"
+  if ! npm ci --dry-run >/dev/null 2>&1; then
+    echo "✖ package-lock.json is out of sync with package.json — 'npm ci' would fail in CI."
+    echo "  Fix: run 'npm install', then 'git add package-lock.json' and commit again."
+    exit 1
+  fi
+fi
