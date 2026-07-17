@@ -6,7 +6,10 @@
     />
     <div class="relative flex-1 min-w-0 overflow-hidden">
       <RouterView v-slot="{ Component, route }">
-        <Transition :name="slideDirection === 'none' ? '' : `slide-${slideDirection}`">
+        <Transition
+          :name="slideDirection === 'none' ? '' : `slide-${slideDirection}`"
+          :mode="slideDirection === 'none' ? 'out-in' : undefined"
+        >
           <div
             :key="route.path"
             class="h-full bg-[hsl(var(--background))]"

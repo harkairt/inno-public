@@ -21,6 +21,7 @@ import {
   UnknownError,
   ForbiddenError,
   ServerError,
+  createValidationError,
 } from '@/lib/errors/types'
 import { ErrorCode } from '@/types/enums'
 
@@ -332,5 +333,44 @@ describe('normalizeApiError — bare status-code mapping', () => {
     // stays a ServerError — only the message separates them.
     expect(normalizeApiError(axiosWithResponse(502, null)).message).toBe('Bad gateway')
     expect(normalizeApiError(axiosWithResponse(503, null)).message).toBe('Service unavailable')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// AppError passthrough (idempotency). The response interceptor rejects with an
+// already-normalized AppError; a service catch then re-runs normalizeApiError on
+// it. Without the passthrough, an AppError (statusCode, not status) falls through
+// to UnknownError and loses its statusCode — which silently disables the >=500
+// welcome-message memoization guard. These pin the passthrough.
+// ---------------------------------------------------------------------------
+
+describe('normalizeApiError — AppError passthrough (idempotency)', () => {
+  it('returns the same ServerError instance, statusCode and subclass intact', () => {
+    const original = new ServerError('Internal server error')
+    const result = normalizeApiError(original)
+    expect(result).toBe(original)
+    expect(result).toBeInstanceOf(ServerError)
+    expect(result.statusCode).toBe(500)
+    expect(result.code).toBe(ErrorCode.SERVER_ERROR)
+  })
+
+  it('preserves a ValidationError payload unchanged', () => {
+    const original = createValidationError([{ field: 'email', message: 'is required' }])
+    const result = normalizeApiError(original)
+    expect(result).toBe(original)
+    expect(result).toBeInstanceOf(ValidationError)
+    expect((result as ValidationError).validationErrors).toEqual([
+      { field: 'email', message: 'is required' },
+    ])
+  })
+
+  it('double-normalizing an axios 500 is a no-op after the first pass', () => {
+    const first = normalizeApiError(axiosWithResponse(500, null))
+    expect(first).toBeInstanceOf(ServerError)
+    expect(first.statusCode).toBe(500)
+
+    const second = normalizeApiError(first)
+    expect(second).toBe(first)
+    expect(second.statusCode).toBe(500)
   })
 })

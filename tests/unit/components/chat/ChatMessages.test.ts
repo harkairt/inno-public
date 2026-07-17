@@ -240,13 +240,30 @@ describe('ChatMessages — entrance animation', () => {
     expect(wrapper.style.animationDelay).toBe('0ms')
   })
 
-  it('never animates own messages, even on initial load', async () => {
-    // Own messages appear because the user acted; their optimistic temp id is later
-    // swapped for a server id, which would otherwise replay the entrance.
+  it('animates own messages on initial load', async () => {
+    // On mount, own messages stagger in with the rest so a revisited session's
+    // history animates coherently regardless of sender.
     const messages = [makeMessage({ senderUserCode: 'user@test.com', messageID: 'mine' })]
     await renderMessages({ messages, skipEntranceAnimation: false })
     const wrapper = screen.getByTestId('message-mine')
-    expect(wrapper.classList.contains('message-enter-stagger')).toBe(false)
+    expect(wrapper.classList.contains('message-enter-stagger')).toBe(true)
+  })
+
+  it('does not animate an own message that arrives after mount', async () => {
+    // Post-mount own messages appear instantly: the user acted, and their optimistic
+    // temp id is later swapped for a server id, which would otherwise replay the entrance.
+    const first = makeMessage({ senderUserCode: 'partner@test.com', messageID: 'first' })
+    const { rerender } = await renderMessages({ messages: [first], skipEntranceAnimation: false })
+
+    const mine = makeMessage({ senderUserCode: 'user@test.com', messageID: 'mine' })
+    await rerender({ messages: [first, mine], skipEntranceAnimation: false })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-mine')).toBeTruthy()
+    })
+    expect(screen.getByTestId('message-mine').classList.contains('message-enter-stagger')).toBe(
+      false,
+    )
   })
 
   it('animates an incoming reply that arrives after mount, but not the own message already there', async () => {

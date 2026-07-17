@@ -5,8 +5,10 @@ import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
 import { createPinia, setActivePinia } from 'pinia'
 import { server, http } from '@/tests/msw/server'
 import { apiOk, apiError } from '@/tests/msw/http'
-import { makeSession } from '@/tests/utils/factories'
+import { makeSession, makeRawMessage } from '@/tests/utils/factories'
 import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { configureApiInterceptors } from '@/lib/api/interceptors/setup'
+import { useAuthStore } from '@/app/stores/auth'
 import { simulateWindowFocus } from '@/tests/utils/focus'
 import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
 import { trackPostCalls } from '@/tests/utils/requestCounter'
@@ -209,6 +211,37 @@ describe('useWelcomeMessage — 500 tracking', () => {
     await vi.waitFor(() => expect(third.isSuccess.value).toBe(true))
     expect(calls).toBe(2)
   })
+
+  // The test above runs a BARE apiClient (no interceptors), so the service catch
+  // receives a raw AxiosError and the guard works. Production arms the response
+  // interceptor, which rejects with an already-normalized AppError; a non-idempotent
+  // normalizeApiError would collapse it to UnknownError (statusCode undefined), the
+  // >=500 guard would never fire, and every remount would refetch + retry. This drives
+  // the ARMED chain to pin that the guard still fires end-to-end.
+  it('memoizes the 500 through the armed interceptor chain (no refetch on remount)', async () => {
+    seedAuthStorage()
+    setActivePinia(createPinia())
+    configureApiInterceptors({ authStore: useAuthStore(), redirectToLogin: vi.fn() })
+
+    let calls = 0
+    server.use(
+      http.post('/api/AIWebAPI/welcomeText', () => {
+        calls++
+        return apiError(500)
+      }),
+    )
+
+    const first = mountQuery(timingQueryClient(), () => useWelcomeMessage(77))
+    await vi.waitFor(() => expect(first.isSuccess.value).toBe(true))
+    expect(first.data.value).toEqual({ message: '' })
+    expect(calls).toBe(1)
+
+    // Same agent on remount short-circuits — zero network requests.
+    const second = mountQuery(timingQueryClient(), () => useWelcomeMessage(77))
+    await vi.waitFor(() => expect(second.isSuccess.value).toBe(true))
+    expect(second.data.value).toEqual({ message: '' })
+    expect(calls).toBe(1)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -274,5 +307,87 @@ describe('useChatSession — staleTime window', () => {
     await advance(10_001)
     mountObserver(queryClient, () => useChatSession('id-1'))
     await vi.waitFor(() => expect(counter.count).toBe(2))
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Stale-while-revalidate on revisit — pins the user-visible SWR contract that
+// Test D (network-call counts only) does not cover: on remounting a >staleTime
+// session, cached data is served SYNCHRONOUSLY (no shimmer) while a background
+// refetch runs and eventually replaces it with fresh server data.
+// ---------------------------------------------------------------------------
+
+describe('useChatSession — stale-while-revalidate on revisit', () => {
+  afterEach(() => {
+    useRealTimers()
+  })
+
+  it('serves cached messages instantly on remount, then swaps in the background refetch', async () => {
+    seedAuthStorage()
+
+    // session-a's 2nd+ fetch appends 'fresh v2' so the background refetch is provable.
+    const fetches: Record<string, number> = { 'session-a': 0, 'session-b': 0 }
+    server.use(
+      http.post(GET_SESSION_BY_ID, async ({ request }) => {
+        const { sessionId } = (await request.json()) as { sessionId: string }
+        fetches[sessionId] = (fetches[sessionId] ?? 0) + 1
+
+        if (sessionId === 'session-a') {
+          const messages =
+            fetches[sessionId] === 1
+              ? [makeRawMessage({ messageText: 'alpha v1' })]
+              : [
+                  makeRawMessage({ messageText: 'alpha v1' }),
+                  makeRawMessage({ messageText: 'fresh v2' }),
+                ]
+          return apiOk({ ...makeSession({ sessionId }), messages })
+        }
+
+        return apiOk({
+          ...makeSession({ sessionId }),
+          messages: [makeRawMessage({ messageText: 'bravo' })],
+        })
+      }),
+    )
+
+    useFakeTimersSafe()
+    // No staleTime override — the composable's real 10s must apply.
+    const queryClient = timingQueryClient()
+
+    const texts = (q: ReturnType<typeof useChatSession>) =>
+      (q.data.value?.messages ?? []).map((m) => m.messageText)
+
+    let qa: ReturnType<typeof useChatSession>
+    const firstA = mountObserver(queryClient, () => {
+      qa = useChatSession('session-a')
+    })
+    await vi.waitFor(() => expect(qa!.isSuccess.value).toBe(true))
+    expect(texts(qa!)).toEqual(['alpha v1'])
+    expect(fetches['session-a']).toBe(1)
+    firstA.unmount()
+
+    let qb: ReturnType<typeof useChatSession>
+    const firstB = mountObserver(queryClient, () => {
+      qb = useChatSession('session-b')
+    })
+    await vi.waitFor(() => expect(qb!.isSuccess.value).toBe(true))
+    firstB.unmount()
+
+    // Cross staleTime but stay within the 2min gcTime, so A remains cached.
+    await advance(10_001)
+
+    // Synchronously after remount, cached v1 must be served as real data
+    // (non-placeholder, non-loading) — the page's isMessagesReady gate would
+    // render it, not a shimmer.
+    let qa2: ReturnType<typeof useChatSession>
+    mountObserver(queryClient, () => {
+      qa2 = useChatSession('session-a')
+    })
+    expect(texts(qa2!)).toContain('alpha v1')
+    expect(qa2!.isPlaceholderData.value).toBe(false)
+    expect(qa2!.isLoading.value).toBe(false)
+
+    await vi.waitFor(() => expect(fetches['session-a']).toBe(2))
+    await vi.waitFor(() => expect(texts(qa2!)).toContain('fresh v2'))
   })
 })

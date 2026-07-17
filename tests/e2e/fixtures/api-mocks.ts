@@ -28,7 +28,7 @@ import { mockConversation, createMockMessage } from '../mocks/data/messages'
 // — do NOT route it through these.
 
 /** 200 (or init.status) + { data, success:null, warning:null, error:null }. */
-async function fulfillOk(route: Route, data: unknown, init?: { status?: number }) {
+export async function fulfillOk(route: Route, data: unknown, init?: { status?: number }) {
   await route.fulfill({
     status: init?.status ?? 200,
     contentType: 'application/json',

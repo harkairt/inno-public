@@ -201,6 +201,7 @@
               <div
                 v-if="!isMessagesReady"
                 key="shimmer"
+                data-testid="messages-shimmer"
                 class="space-y-3 animate-[fade-in_0.4s_ease_both]"
               >
                 <div class="flex justify-end">
@@ -566,9 +567,12 @@ const trimmedWelcomeMessage = computed(() => {
   return msg
 })
 
-// Determine if all data needed for messages is ready (prevents layout jump)
-// We wait for selectableUsers to load so we can check if welcome message is needed,
-// and if it is, we also wait for the welcome message to load
+// Determine if all data needed for messages is ready (prevents layout jump).
+// The welcome-message gate is scoped to an EMPTY thread only: on revisit the
+// cached messages must render immediately (stale-while-revalidate), so the
+// welcome query — which may pend/retry/error independently — must not hold them.
+// We still gate a brand-new session (no messages yet) so it doesn't flash empty
+// before the welcome text arrives.
 const isMessagesReady = computed(() => {
   // Placeholder data has messages: [] — don't render messages yet
   if (isPlaceholderData.value) return false
@@ -576,8 +580,9 @@ const isMessagesReady = computed(() => {
   // Must have selectableUsers loaded to determine if we need welcome message
   if (isSelectableUsersLoading.value) return false
 
-  // If we detected a virtual agent and welcome message is still loading, wait
-  if (virtualAgentFromSession.value && isWelcomeMessageLoading.value) return false
+  // Empty thread with a pending welcome: wait so we don't flash an empty thread
+  if (virtualAgentFromSession.value && isWelcomeMessageLoading.value && messages.value.length === 0)
+    return false
 
   return true
 })
