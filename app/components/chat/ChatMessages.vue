@@ -281,9 +281,11 @@ const allMessages = computed(() => {
 })
 
 // Entrance animation: animate incoming messages the first time they appear (initial
-// load AND later arrivals like AI replies), not just the first paint. Own messages
-// never animate — they appear because the user acted, and their optimistic temp id is
-// swapped for a server id on reconciliation, which would otherwise replay the entrance.
+// load AND later arrivals like AI replies), not just the first paint. On mount, own
+// messages animate too, so a revisited session's history staggers in coherently. After
+// mount, own messages are excluded — a just-sent message appears instantly because the
+// user acted, and its optimistic temp id is swapped for a server id on reconciliation,
+// which would otherwise replay the entrance.
 // Messages already seen — or pre-existing on navigation (skipEntranceAnimation) — appear instantly.
 const STAGGER_COUNT = 8
 const STAGGER_STEP_MS = 50
@@ -292,10 +294,10 @@ const ANIMATION_DURATION_MS = 300
 const seenMessageIds = ref(new Set<string>())
 const messageEnterDelays = ref(new Map<string, string>())
 
-function animateNewMessages(msgs: ExtendedMessage[]) {
+function animateNewMessages(msgs: ExtendedMessage[], includeOwn = false) {
   const fresh = msgs.filter(
     (m) =>
-      !isUserMessage(m) &&
+      (includeOwn || !isUserMessage(m)) &&
       !seenMessageIds.value.has(m.messageID) &&
       !messageEnterDelays.value.has(m.messageID),
   )
@@ -327,7 +329,7 @@ onMounted(() => {
     // Arrived from /chats/new/* — these messages were already on screen; don't replay.
     allMessages.value.forEach((m) => seenMessageIds.value.add(m.messageID))
   } else {
-    animateNewMessages(allMessages.value)
+    animateNewMessages(allMessages.value, true)
   }
 })
 

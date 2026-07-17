@@ -11,6 +11,7 @@
  * ladder).
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { delay } from 'msw'
 import { screen, fireEvent, waitFor, within } from '@testing-library/vue'
 import type { Component } from 'vue'
 import { renderWithProviders } from '@/tests/utils/render'
@@ -247,6 +248,38 @@ describe('chats/[sessionId] page', () => {
     const title = await screen.findByTestId('session-title')
     expect(title.textContent).toContain('Weather chat')
     await waitFor(() => expect(screen.getByTestId('edit-title-button')).toBeTruthy())
+  })
+
+  it('renders a non-empty thread without a shimmer while the welcome query is still pending', async () => {
+    // Default get-selectable-users returns non-virtual users, so the welcome query
+    // never arms. Override with a virtual agent as the OTHER member so it DOES arm,
+    // then hang welcomeText forever: the render gate must still show the cached
+    // thread (decoupled from the unrelated welcome query).
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    installFakeSignalR()
+    server.use(
+      http.get('/api/user/get-selectable-users', () =>
+        apiOk([makeUser({ email: OTHER, isVirtual: true }), makeUser({ email: ME })]),
+      ),
+      http.post(GET_SESSION_BY_ID, () =>
+        apiOk({
+          ...makeSession({ sessionId: SESSION_ID, members: [ME, OTHER] }),
+          messages: [
+            makeRawMessage({ messageID: 'm1', messageText: 'cached hello', senderUserCode: OTHER }),
+          ],
+        }),
+      ),
+      http.post('/api/AIWebAPI/welcomeText', async () => {
+        await delay('infinite')
+        return apiOk({ message: 'never resolves' })
+      }),
+    )
+
+    renderPage()
+
+    const container = await screen.findByTestId('messages-container')
+    await waitFor(() => expect(within(container).getByText('cached hello')).toBeTruthy())
+    expect(screen.queryByTestId('messages-shimmer')).toBeNull()
   })
 
   it('shows and hides the typing indicator driven by chatStore typing users', async () => {

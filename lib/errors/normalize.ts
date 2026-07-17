@@ -18,6 +18,7 @@ import {
   TokenExpiredError,
   createValidationError,
   createApiError,
+  isAppError,
 } from './types'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -60,6 +61,10 @@ function isNetworkLikeError(error: Error): boolean {
  */
 export function normalizeApiError(error: unknown): AppError {
   if (import.meta.dev) logger.warn('Normalizing error:', error)
+
+  // Idempotent: the interceptor rejects with an AppError that a service catch
+  // re-normalizes; passing it through preserves subclass identity and statusCode.
+  if (isAppError(error)) return error
 
   // Axios error (most common for HTTP requests)
   if (isAxiosError(error)) {

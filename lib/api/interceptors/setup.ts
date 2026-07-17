@@ -92,7 +92,10 @@ export function configureApiInterceptors(deps: {
   apiClient.interceptors.response.use(responseInterceptor, responseErrorInterceptor)
 
   // 2. Cache response interceptor (caches successful responses)
-  apiClient.interceptors.response.use(cacheResponseInterceptor, responseErrorInterceptor)
+  // Error path must only propagate: responseErrorInterceptor already ran on the raw
+  // AxiosError in the pair above and rejected with a normalized AppError. Re-running
+  // it here would double-track/report and crash on the AppError's absent .config.
+  apiClient.interceptors.response.use(cacheResponseInterceptor, (error) => Promise.reject(error))
 
   interceptorsConfigured = true
 
