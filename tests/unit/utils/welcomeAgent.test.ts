@@ -32,7 +32,10 @@ describe('resolveWelcomeAgent', () => {
     // Agent identity is identical across the cache replacement...
     expect(authoritative?.agentId).toBe(placeholder?.agentId)
     expect(authoritative?.agentName).toBe(placeholder?.agentName)
-    // ...both non-null, so the welcome stays prepended in both cache states.
+    // ...and both are non-null: this resolver answers "is this a 1:1 agent chat?",
+    // nothing more. Whether the greeting is actually shown is decided by the page
+    // (only for a freshly created conversation) — deliberately not here, so a cache
+    // swap can never flip the agent identity mid-thread.
     expect(placeholder).not.toBeNull()
     expect(authoritative).not.toBeNull()
   })

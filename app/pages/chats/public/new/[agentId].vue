@@ -97,7 +97,11 @@ const agentName = computed(() => publicChatData.value?.agent?.name)
 // Fetch welcome message for the agent
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
+  // The session doesn't exist server-side yet, so the backend still gets an empty id.
   sessionId: '',
+  // Scope the cache to this conversation: remounting the page mints a fresh UUID, so
+  // every new conversation re-fetches the greeting instead of reusing the previous one.
+  cacheScope: sessionId,
 })
 
 // Trim quotes from welcome message
