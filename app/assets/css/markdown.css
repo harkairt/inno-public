@@ -1,6 +1,7 @@
 @import 'katex/dist/katex.min.css';
 
-/* Markdown rendering styles for chat messages - Warm & Refined palette */
+/* Markdown rendering styles for chat messages — InnoChat Elemtár palette.
+   Minden szín a main.css CSS-változóiból jön — itt nincs beégetett érték. */
 
 /*
  * Since we're using Tailwind CSS v4 + @tailwindcss/typography,
@@ -78,7 +79,7 @@
   text-decoration: line-through;
 }
 
-/* Links - primary teal color */
+/* Links - primary (petróleum) color */
 .markdown-content a {
   color: hsl(var(--primary));
   text-decoration: underline;
@@ -153,10 +154,10 @@
   color: inherit;
 }
 
-/* Shiki syntax highlighting overrides */
+/* Shiki syntax highlighting overrides — tokenből, nem beégetve */
 .markdown-content pre.shiki {
-  background-color: hsl(220 12% 11%) !important;
-  border-color: hsl(220 10% 20%);
+  background-color: hsl(var(--code-block-bg)) !important;
+  border-color: hsl(var(--code-block-border));
 }
 
 .markdown-content pre.shiki code {
@@ -206,12 +207,17 @@
   }
 }
 
-/* Viewer.js toolbar — custom download button */
+/* Viewer.js toolbar — custom download button.
+   Maszk + currentColor: az ikon színe CSS-ből jön, nincs beégetett fehér. */
 .viewer-download {
-  /* Match viewer toolbar button sizing (20px icon area) */
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E")
+  color: #fff; /* a viewer.js toolbar mindig sötét overlay — fix fehér ikon */
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E")
     no-repeat center center;
-  background-size: 20px 20px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E")
+    no-repeat center center;
+  -webkit-mask-size: 20px 20px;
+  mask-size: 20px 20px;
 }
 
 /* Horizontal rules */
@@ -289,8 +295,8 @@
 .chart-loading-spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #adbac7;
+  border: 2px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
   border-radius: 50%;
   animation: chart-spin 0.6s linear infinite;
 }

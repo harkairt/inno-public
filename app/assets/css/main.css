@@ -6,125 +6,167 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  /* Typography - Warm & Refined */
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: 'Outfit', var(--font-sans);
+/* ============================================================
+   InnoChat Elemtár design — a "InnoChat Elemtár - standalone"
+   HTML-ből kinyert tokenek alapján.
 
-  /* Subtle, warm shadows */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.04);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.06), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+   Forrás-paletta (Elemtár):
+     --bg:#F6F5F1  --surface:#fff  --surface2:#F0EFEA
+     --ink:#16201F --ink2:#586360  --ink3:#8E9793
+     --line:#E7E5DE --line2:#EFEEE8
+     --brand:#0E5C5C --brand2:#0A4747 --brandsoft:#E1EFEC
+     --amber:#B07A1E --ambersoft:#F5ECD8
+     accent: #F2C14E (arany) · #C4443A (piros) · #4CAF7D (zöld)
+   Betűk: Figtree (szöveg), Bricolage Grotesque (címek, 600–700)
+   A fontokat a nuxt.config.ts app.head.link Google Fonts stylesheet-je
+   tölti — CSS-ből nincs @import (kerülendő a dupla letöltés).
+   ============================================================ */
+
+@theme inline {
+  /* Tipográfia — Elemtár: Figtree szöveg, Bricolage Grotesque címek */
+  --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
+  --font-display: 'Bricolage Grotesque', var(--font-sans);
+
+  /* Lágy, meleg árnyékok (Elemtár: rgba(20,30,29,…) alapú) */
+  --shadow-xs: 0 1px 2px 0 rgb(20 30 29 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(20 30 29 / 0.04), 0 1px 3px -1px rgb(20 30 29 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(20 30 29 / 0.06), 0 2px 4px -2px rgb(20 30 29 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(20 30 29 / 0.07), 0 4px 6px -4px rgb(20 30 29 / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(20 30 29 / 0.08), 0 8px 10px -6px rgb(20 30 29 / 0.05);
 }
 
 /* ============================================
-   LIGHT MODE - Warm & Refined Palette
+   LIGHT MODE — Elemtár paletta
    ============================================ */
 :root {
-  /* Config-driven message styling (fallbacks — palette-derived warm tones) */
-  --config-own-message-bg: hsl(35 15% 92% / 0.8);
-  --config-own-message-font-size: 14px;
+  /* Config-vezérelt üzenet-stílus (fallback — Elemtár buborékok) */
+  /* saját üzenet: brand (petróleum) halvány változata */
+  --config-own-message-bg: hsl(167 30% 91%);            /* #E1EFEC brandsoft */
+  --config-own-message-font-size: 15px;
   --config-own-message-font-style: normal;
   --config-own-message-font-weight: normal;
 
-  --config-partner-message-bg: hsl(189 30% 92% / 0.6);
-  --config-partner-message-font-size: 14px;
+  /* partner üzenet: fehér kártya vékony vonallal */
+  --config-partner-message-bg: hsl(0 0% 100%);          /* #fff surface */
+  --config-partner-message-font-size: 15px;
   --config-partner-message-font-style: normal;
   --config-partner-message-font-weight: normal;
 
-  --config-message-border-width: 0px;
-  --config-message-border-color: transparent;
+  --config-message-border-width: 1px;
+  --config-message-border-color: hsl(47 16% 89%);       /* #E7E5DE line */
   --config-message-border-style: solid;
-  --config-message-border-radius: 0.75rem;
+  --config-message-border-radius: 1.125rem;             /* 18px — Elemtár buborék */
 
-  --config-main-color: hsl(189 100% 23%);
-  --config-background-color: hsl(40 20% 99%);
+  --config-main-color: hsl(180 74% 21%);                /* #0E5C5C brand */
+  --config-background-color: hsl(48 22% 95%);           /* #F6F5F1 bg */
 
-  /* Force Nuxt UI primary to deep teal (#005f73) */
-  --ui-primary: oklch(0.4 0.09 210);
+  /* Nuxt UI primary → Elemtár petróleum (#0E5C5C) */
+  --ui-primary: oklch(0.42 0.07 190);
 
-  /* Warmer backgrounds with subtle cream undertone */
-  --background: 40 20% 99%;
-  --foreground: 220 15% 15%;
+  /* Meleg törtfehér háttér (#F6F5F1) */
+  --background: 48 22% 95%;
+  --foreground: 174 19% 11%;                            /* #16201F ink */
 
-  /* Cards with subtle warmth */
-  --card: 40 15% 98%;
-  --card-foreground: 220 15% 15%;
+  /* Kártyák / felületek: tiszta fehér (#fff surface) */
+  --card: 0 0% 100%;
+  --card-foreground: 174 19% 11%;
 
-  /* Popovers */
-  --popover: 40 15% 99%;
-  --popover-foreground: 220 15% 15%;
+  /* Popoverek */
+  --popover: 0 0% 100%;
+  --popover-foreground: 174 19% 11%;
 
-  /* Deep teal - modern, refined */
-  --primary: 189 100% 23%;
+  /* Petróleum brand (#0E5C5C) */
+  --primary: 180 74% 21%;
   --primary-foreground: 0 0% 100%;
 
-  /* Warm neutrals */
-  --secondary: 35 15% 95%;
-  --secondary-foreground: 220 10% 25%;
-  --muted: 35 10% 93%;
-  --muted-foreground: 220 8% 46%;
+  /* Meleg semlegesek (#F0EFEA surface2) */
+  --secondary: 50 17% 93%;
+  --secondary-foreground: 164 6% 37%;                   /* #586360 ink2 */
+  --muted: 50 17% 93%;
+  --muted-foreground: 164 6% 37%;
 
-  /* Accent - subtle warm highlight */
-  --accent: 35 12% 94%;
-  --accent-foreground: 220 12% 20%;
+  /* Accent: brandsoft (#E1EFEC) — aktív elem háttere az Elemtárban */
+  --accent: 167 30% 91%;
+  --accent-foreground: 180 74% 21%;
 
-  /* Status colors - refined */
-  --destructive: 0 72% 51%;
+  /* Státusz színek — Elemtár piros (#C4443A) */
+  --destructive: 4 54% 50%;
   --destructive-foreground: 0 0% 100%;
 
-  /* Softer borders and inputs */
-  --border: 35 10% 88%;
-  --input: 35 10% 90%;
-  --ring: 189 100% 23%;
+  /* Vonalak, inputok (#E7E5DE line) */
+  --border: 47 16% 89%;
+  --input: 47 16% 89%;
+  --ring: 180 74% 21%;
 
-  /* Refined radius - soft but professional */
-  --radius: 0.625rem;
+  /* Elemtár kiegészítő tokenek */
+  --brand-2: 180 75% 16%;                               /* #0A4747 hover */
+  --brand-soft: 167 30% 91%;                            /* #E1EFEC */
+  --amber: 38 71% 40%;                                  /* #B07A1E */
+  --amber-soft: 41 59% 90%;                             /* #F5ECD8 */
+  --success: 150 39% 49%;                               /* #4CAF7D online-zöld */
+  --gold: 42 86% 63%;                                   /* #F2C14E logó-arany */
+  --surface-2: 50 17% 93%;                              /* #F0EFEA */
+  --line-2: 51 18% 92%;                                 /* #EFEEE8 */
+  --ink-3: 153 4% 57%;                                  /* #8E9793 halvány szöveg */
+
+  /* Kódblokk (Shiki) — sötét petróleumos tónus világos módban is */
+  --code-block-bg: 180 12% 10%;
+  --code-block-border: 180 8% 20%;
+
+  /* Lekerekítés — az Elemtár 9–13px-et használ gombokra/kártyákra */
+  --radius: 0.75rem;
 }
 
 /* ============================================
-   DARK MODE - Warm Dark Palette
+   DARK MODE — Elemtár palettából származtatva
+   (az Elemtár maga csak világos — a sötét mód
+   a petróleum/meleg tónusokat viszi tovább)
    ============================================ */
 .dark {
-  /* Force Nuxt UI primary to light teal */
-  --ui-primary: oklch(0.73 0.08 210);
+  --ui-primary: oklch(0.75 0.07 185);
 
-  /* Warm dark backgrounds */
-  --background: 220 15% 8%;
-  --foreground: 40 10% 95%;
+  /* Mély petróleumos-szénszürke háttér */
+  --background: 180 12% 8%;
+  --foreground: 48 15% 93%;
 
-  /* Cards */
-  --card: 220 12% 11%;
-  --card-foreground: 40 10% 95%;
+  --card: 180 10% 11%;
+  --card-foreground: 48 15% 93%;
 
-  /* Popovers */
-  --popover: 220 12% 10%;
-  --popover-foreground: 40 10% 95%;
+  --popover: 180 10% 10%;
+  --popover-foreground: 48 15% 93%;
 
-  /* Light teal for dark mode */
-  --primary: 189 50% 65%;
-  --primary-foreground: 220 15% 8%;
+  /* Világos petróleum / zsálya (#8FBFB8 közeli) */
+  --primary: 171 27% 66%;
+  --primary-foreground: 180 12% 8%;
 
-  /* Warm dark neutrals */
-  --secondary: 220 10% 16%;
-  --secondary-foreground: 40 10% 90%;
-  --muted: 220 10% 18%;
-  --muted-foreground: 220 8% 60%;
+  --secondary: 180 8% 16%;
+  --secondary-foreground: 48 12% 88%;
+  --muted: 180 8% 18%;
+  --muted-foreground: 160 5% 62%;
 
-  /* Accent */
-  --accent: 220 10% 16%;
-  --accent-foreground: 40 10% 90%;
+  --accent: 178 20% 20%;
+  --accent-foreground: 171 27% 72%;
 
-  /* Status colors - adjusted for dark */
-  --destructive: 0 62% 45%;
+  --destructive: 4 54% 45%;
   --destructive-foreground: 0 0% 100%;
 
-  /* Borders and inputs */
-  --border: 220 10% 20%;
-  --input: 220 10% 18%;
-  --ring: 189 50% 65%;
+  --border: 180 8% 20%;
+  --input: 180 8% 18%;
+  --ring: 171 27% 66%;
+
+  --brand-2: 171 27% 72%;
+  --brand-soft: 178 20% 20%;
+  --amber: 38 60% 55%;
+  --amber-soft: 40 30% 20%;
+  --success: 150 39% 49%;
+  --gold: 42 86% 63%;
+  --surface-2: 180 8% 16%;
+  --line-2: 180 8% 17%;
+  --ink-3: 160 5% 55%;
+
+  /* Kódblokk — sötét módban kicsit világosabb a háttérnél */
+  --code-block-bg: 180 10% 13%;
+  --code-block-border: 180 8% 22%;
 }
 
 @layer base {
@@ -147,16 +189,24 @@
 
   body {
     @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
-    line-height: 1.6;
+    line-height: 1.55; /* Elemtár buborék line-height */
   }
 
-  /* Soften focus ring on inputs (Nuxt UI defaults to ring-2 = 2px) */
+  /* Linkek — Elemtár: brand, hover brand2 */
+  a {
+    color: hsl(var(--primary));
+  }
+  a:hover {
+    color: hsl(var(--brand-2));
+  }
+
+  /* Fókuszgyűrű lágyítása */
   input:focus-visible,
   textarea:focus-visible {
     @apply ring-1!;
   }
 
-  /* Display font for headings */
+  /* Címek — Elemtár: Bricolage Grotesque 600–700, negatív betűköz */
   h1,
   h2,
   h3,
@@ -164,27 +214,50 @@
   h5,
   h6 {
     font-family: var(--font-display);
-    font-weight: 200;
+    font-weight: 700;
     letter-spacing: -0.02em;
     line-height: 1.25;
   }
+  h1 {
+    letter-spacing: -0.025em;
+  }
 
-  /* Mobile keyboard handling - ensure content is visible when keyboard appears */
+  /* Mobil billentyűzet kezelés */
   html,
   body {
     height: 100%;
     overflow: hidden;
   }
 
-  /* Use dvh for dynamic viewport height that responds to mobile keyboard */
   #__nuxt {
     height: 100dvh;
     overflow: hidden;
   }
+
+  /* Görgetősáv — Elemtár: 11px, kerekített, halvány meleg szürke */
+  ::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(48 11% 82%); /* #D6D4CC */
+    border-radius: 20px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(180 6% 30%);
+    border-radius: 20px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* ============================================
-   PAGE TRANSITIONS
+   PAGE TRANSITIONS + Elemtár animációk
    ============================================ */
 .fade-enter-active,
 .fade-leave-active {
@@ -212,18 +285,52 @@
   }
 }
 
+/* Elemtár keyframe-ek */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slideL {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ============================================
-   UTILITY CLASSES - Warm & Refined
+   UTILITY CLASSES — Elemtár komponens-stílusok
    ============================================ */
 @layer utilities {
-  /* Display font utility */
+  /* Cím-font utility */
   .font-display {
     font-family: var(--font-display);
-    font-weight: 200;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 
-  /* Refined hover states */
+  /* Finom emelkedő hover */
   .hover-lift {
     @apply transition-all duration-200;
   }
@@ -232,51 +339,118 @@
     box-shadow: var(--shadow-md);
   }
 
-  /* Warm card styling */
+  /* Fehér kártya vékony vonallal — Elemtár kártya-stílus */
   .card-warm {
-    @apply bg-[hsl(var(--card))] rounded-xl;
-    box-shadow: var(--shadow-sm);
+    @apply bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))];
+    box-shadow: var(--shadow-xs);
   }
 
-  /* Message bubble styles — palette-derived */
+  /* Üzenetbuborékok — Elemtár:
+     saját:   brand háttér, fehér szöveg, 18/6/18/18 sarkok
+     kapott:  fehér kártya, line keret, 6/18/18/18 sarkok */
   .bubble-sent {
-    @apply bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--foreground))] rounded-2xl rounded-br-md;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-radius: 18px 6px 18px 18px;
+    padding: 13px 16px;
+    font-size: 15px;
+    line-height: 1.55;
   }
 
   .bubble-received {
-    @apply bg-[hsl(var(--muted))] text-[hsl(var(--foreground))] rounded-2xl rounded-bl-md border border-[hsl(var(--border)/0.5)];
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px 18px 18px 18px;
+    padding: 13px 16px;
+    font-size: 15px;
+    line-height: 1.6;
+    box-shadow: 0 1px 2px rgb(20 30 29 / 0.04);
   }
 
-  /* Refined sidebar item - minimal aesthetic */
+  /* Oldalsáv-elem — Elemtár: aktív = brandsoft háttér, 14px rádiusz */
   .sidebar-item {
-    @apply relative pl-4 py-2 transition-all duration-200 cursor-pointer;
-  }
-
-  .sidebar-item::before {
-    content: '';
-    @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full transition-all duration-200;
-    background: transparent;
+    @apply relative px-3 py-2.5 transition-colors duration-150 cursor-pointer;
+    border-radius: 14px;
   }
 
   .sidebar-item:hover {
-    background: hsl(var(--accent));
-  }
-
-  .sidebar-item:hover::before {
-    background: hsl(var(--muted-foreground) / 0.3);
+    background: hsl(var(--secondary));
   }
 
   .sidebar-item-active {
-    background: hsl(var(--accent));
+    background: hsl(var(--brand-soft));
   }
 
-  .sidebar-item-active::before {
-    background: hsl(var(--primary)) !important;
+  .sidebar-item-active:hover {
+    background: hsl(var(--brand-soft));
   }
 
-  /* Unread indicator - minimal dot */
+  /* Olvasatlan jelző — Elemtár: piros számláló-badge */
   .unread-dot {
     @apply w-2 h-2 rounded-full shrink-0;
     background: hsl(var(--destructive));
+  }
+
+  .unread-badge {
+    @apply inline-flex items-center justify-center shrink-0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: hsl(var(--destructive));
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    border: 2px solid hsl(var(--card));
+  }
+
+  /* Online státusz-pötty — Elemtár zöld */
+  .status-online {
+    background: hsl(var(--success));
+    border: 2px solid hsl(var(--card));
+    border-radius: 9999px;
+  }
+
+  /* AI-avatár gyűrű — Elemtár: 2px brandsoft glow, szögletesebb rádiusz */
+  .avatar-ai {
+    border-radius: 13px;
+    box-shadow: 0 0 0 2px hsl(var(--brand-soft));
+  }
+
+  /* Választó chip / gomb — Elemtár: aktív = brand keret + brandsoft háttér */
+  .chip {
+    @apply inline-flex items-center gap-1.5 cursor-pointer transition-colors;
+    height: 30px;
+    padding: 0 11px;
+    border-radius: 9px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--card));
+    color: hsl(var(--secondary-foreground));
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .chip-active {
+    border-color: hsl(var(--primary));
+    background: hsl(var(--brand-soft));
+    color: hsl(var(--primary));
+  }
+
+  /* Státusz-pill-ek — Elemtár táblázat-badge-ek */
+  .pill-ok {
+    color: #2e9a63;
+    background: #e6f4ec;
+    @apply inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-xl;
+  }
+  .pill-wait {
+    color: hsl(var(--amber));
+    background: hsl(var(--amber-soft));
+    @apply inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-xl;
+  }
+  .pill-err {
+    color: #c4443a;
+    background: #fceeec;
+    @apply inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-xl;
   }
 }
