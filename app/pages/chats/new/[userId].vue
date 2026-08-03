@@ -178,7 +178,11 @@ const agentId = computed(() => selectedUser.value?.id ?? 1)
 
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!selectedUser.value && selectedUser.value.isVirtual === true),
+  // The session doesn't exist server-side yet, so the backend still gets an empty id.
   sessionId: '',
+  // Scope the cache to this conversation: remounting the page mints a fresh UUID, so
+  // every new conversation re-fetches the greeting instead of reusing the previous one.
+  cacheScope: sessionId,
 })
 
 const trimmedWelcomeMessage = computed(() => {
@@ -223,6 +227,8 @@ watch(
     if (oldLen === 0 && newLen > 0) {
       chatStore.clearDraft(`new-${userId.value}`)
       chatStore.skipNextEntranceAnimation = true
+      // Let the session page keep showing the agent greeting for this handoff only.
+      chatStore.nextSessionIsFreshlyCreated = true
       void navigateTo(`/chats/${sessionId.value}`, { replace: true })
     }
   },

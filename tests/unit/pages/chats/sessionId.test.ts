@@ -13,12 +13,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { delay } from 'msw'
 import { screen, fireEvent, waitFor, within } from '@testing-library/vue'
-import type { Component } from 'vue'
+import { defineComponent, h, type Component } from 'vue'
 import { renderWithProviders } from '@/tests/utils/render'
 import { server, http } from '@/tests/msw/server'
 import { apiOk, apiError } from '@/tests/msw/http'
 import { makeSession, makeRawMessage, makeUser } from '@/tests/utils/factories'
 import { seedAuthStorage } from '@/tests/utils/authSeed'
+import { trackPostCalls } from '@/tests/utils/requestCounter'
 import { installFakeSignalR } from '@/tests/utils/fakeSignalR'
 import { chatQueryKeys } from '@/app/composables/useChatQueries'
 import { useChatStore } from '@/app/stores/chat'
@@ -43,6 +44,8 @@ const SESSION_ID = 'session-1'
 
 const GET_SESSION_BY_ID = '/api/AIWebAPI/GetSessionById'
 const SEND_TEXT = '/api/AIWebAPI/question/text'
+const WELCOME_TEXT = '/api/AIWebAPI/welcomeText'
+const GREETING = 'Greetings from the agent'
 
 beforeEach(() => {
   vi.stubGlobal('useSeoMeta', vi.fn())
@@ -92,6 +95,43 @@ function renderPage() {
   return renderWithProviders(ChatSessionPage as Component, {
     global: { stubs, components: { ChatMessages: ChatMessages as Component } },
   })
+}
+
+/**
+ * Render the page as a child so a parent setup can seed store state first.
+ * renderWithProviders creates and activates its own Pinia inside the call, so
+ * there is no window to set store state before the page's own setup runs.
+ */
+function renderFreshlyCreatedPage() {
+  const Wrapper = defineComponent({
+    setup() {
+      // What /chats/new/[userId] does immediately before navigating here.
+      useChatStore().nextSessionIsFreshlyCreated = true
+      return () => h(ChatSessionPage as Component)
+    },
+  })
+  return renderWithProviders(Wrapper, {
+    global: { stubs, components: { ChatMessages: ChatMessages as Component } },
+  })
+}
+
+/**
+ * A 1:1 session whose OTHER member is a virtual agent — the shape that arms the
+ * welcome path. The default get-selectable-users returns non-virtual users, so
+ * this override is what makes `resolveWelcomeAgent` return non-null.
+ */
+function serveVirtualAgentSession(messageText: string) {
+  server.use(
+    http.get('/api/user/get-selectable-users', () =>
+      apiOk([makeUser({ email: OTHER, isVirtual: true }), makeUser({ email: ME })]),
+    ),
+    http.post(GET_SESSION_BY_ID, () =>
+      apiOk({
+        ...makeSession({ sessionId: SESSION_ID, members: [ME, OTHER] }),
+        messages: [makeRawMessage({ messageID: 'm1', messageText, senderUserCode: OTHER })],
+      }),
+    ),
+  )
 }
 
 /** Session-by-id handler returning the supplied (mutable) message list. */
@@ -252,34 +292,73 @@ describe('chats/[sessionId] page', () => {
 
   it('renders a non-empty thread without a shimmer while the welcome query is still pending', async () => {
     // Default get-selectable-users returns non-virtual users, so the welcome query
-    // never arms. Override with a virtual agent as the OTHER member so it DOES arm,
-    // then hang welcomeText forever: the render gate must still show the cached
-    // thread (decoupled from the unrelated welcome query).
+    // never arms. Override with a virtual agent as the OTHER member AND mark the
+    // session freshly created so it DOES arm, then hang welcomeText forever: the
+    // render gate must still show the cached thread (decoupled from the unrelated
+    // welcome query). Without the freshly-created flag this guard would be vacuous,
+    // because the query would never fire at all.
     seedAuthStorage({ user: makeUser({ email: ME }) })
     installFakeSignalR()
+    serveVirtualAgentSession('cached hello')
     server.use(
-      http.get('/api/user/get-selectable-users', () =>
-        apiOk([makeUser({ email: OTHER, isVirtual: true }), makeUser({ email: ME })]),
-      ),
-      http.post(GET_SESSION_BY_ID, () =>
-        apiOk({
-          ...makeSession({ sessionId: SESSION_ID, members: [ME, OTHER] }),
-          messages: [
-            makeRawMessage({ messageID: 'm1', messageText: 'cached hello', senderUserCode: OTHER }),
-          ],
-        }),
-      ),
-      http.post('/api/AIWebAPI/welcomeText', async () => {
+      http.post(WELCOME_TEXT, async () => {
         await delay('infinite')
         return apiOk({ message: 'never resolves' })
       }),
     )
 
-    renderPage()
+    renderFreshlyCreatedPage()
 
     const container = await screen.findByTestId('messages-container')
     await waitFor(() => expect(within(container).getByText('cached hello')).toBeTruthy())
     expect(screen.queryByTestId('messages-shimmer')).toBeNull()
+  })
+
+  it('does not fetch or show the agent greeting for an existing conversation', async () => {
+    // The user's report: opening any older conversation fired welcomeText and put the
+    // greeting at the top of the thread. Membership alone must not arm the greeting.
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    installFakeSignalR()
+    serveVirtualAgentSession('older message')
+    const welcome = trackPostCalls(WELCOME_TEXT, () => apiOk({ message: GREETING }))
+
+    renderPage()
+
+    const container = await screen.findByTestId('messages-container')
+    await waitFor(() => expect(within(container).getByText('older message')).toBeTruthy())
+
+    expect(screen.queryByText(GREETING)).toBeNull()
+    expect(welcome.count).toBe(0)
+  })
+
+  it('keeps the agent greeting for the conversation the user just created', async () => {
+    // The new-chat page navigates here the moment the first message lands, so this
+    // thread is already non-empty — emptiness alone could not distinguish it.
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    installFakeSignalR()
+    serveVirtualAgentSession('my first message')
+    const welcome = trackPostCalls(WELCOME_TEXT, () => apiOk({ message: GREETING }))
+
+    renderFreshlyCreatedPage()
+
+    const container = await screen.findByTestId('messages-container')
+    await waitFor(() => expect(within(container).getByText(GREETING)).toBeTruthy())
+    expect(within(container).getByText('my first message')).toBeTruthy()
+    expect(welcome.count).toBe(1)
+  })
+
+  it('consumes the freshly-created flag so the next visit gets no greeting', async () => {
+    seedAuthStorage({ user: makeUser({ email: ME }) })
+    installFakeSignalR()
+    serveVirtualAgentSession('my first message')
+    server.use(http.post(WELCOME_TEXT, () => apiOk({ message: GREETING })))
+
+    renderFreshlyCreatedPage()
+    await screen.findByTestId('messages-container')
+
+    // One-shot: the page resets it at setup, so a later mount is an existing
+    // conversation even within the same tab.
+    expect(useChatStore().nextSessionIsFreshlyCreated).toBe(false)
   })
 
   it('shows and hides the typing indicator driven by chatStore typing users', async () => {

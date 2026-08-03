@@ -101,8 +101,17 @@ describe('chatQueryKeys — cache key structure', () => {
     ])
   })
 
-  it('welcome key is scoped with agentId', () => {
-    expect(chatQueryKeys.welcome(42)).toEqual(['chat', 'welcome', 42])
+  it('welcome key is scoped with agentId and conversation scope', () => {
+    expect(chatQueryKeys.welcome(42, '')).toEqual(['chat', 'welcome', 42, ''])
+    expect(chatQueryKeys.welcome(42, 'session-1')).toEqual(['chat', 'welcome', 42, 'session-1'])
+  })
+
+  it('same agent in two conversations produces different welcome keys', () => {
+    // Guards the fix for "welcomeText only fires on the first conversation": the greeting
+    // is cached per conversation, so a second chat with the same agent is a cache miss.
+    expect(chatQueryKeys.welcome(42, 'session-1')).not.toEqual(
+      chatQueryKeys.welcome(42, 'session-2'),
+    )
   })
 
   it('search key includes query string', () => {
@@ -178,6 +187,86 @@ describe('useSessionUnreadCount — refetchInterval', () => {
 
     await advance(30 * 1000)
     await vi.waitFor(() => expect(calls).toBe(3))
+  })
+})
+
+describe('useWelcomeMessage — per-conversation fetching', () => {
+  const WELCOME = '/api/AIWebAPI/welcomeText'
+
+  it('re-fetches for a second conversation with the same agent', async () => {
+    seedAuthStorage()
+    let calls = 0
+    server.use(
+      http.post(WELCOME, () => {
+        calls++
+        return apiOk({ message: 'Hello' })
+      }),
+    )
+
+    // ONE shared cache across both mounts — that is what used to swallow the second
+    // request: the key was agent-only and staleTime is 10 minutes.
+    const queryClient = timingQueryClient()
+
+    const first = mountQuery(queryClient, () =>
+      useWelcomeMessage(7, { sessionId: '', cacheScope: 'conversation-1' }),
+    )
+    await vi.waitFor(() => expect(first.isSuccess.value).toBe(true))
+    expect(calls).toBe(1)
+
+    const second = mountQuery(queryClient, () =>
+      useWelcomeMessage(7, { sessionId: '', cacheScope: 'conversation-2' }),
+    )
+    await vi.waitFor(() => expect(second.isSuccess.value).toBe(true))
+    expect(calls).toBe(2)
+  })
+
+  it('does not re-fetch within the same conversation', async () => {
+    // The new-chat page hands off to /chats/<id> with the same scope and agent, so the
+    // greeting must survive the handoff without a duplicate request.
+    seedAuthStorage()
+    let calls = 0
+    server.use(
+      http.post(WELCOME, () => {
+        calls++
+        return apiOk({ message: 'Hello' })
+      }),
+    )
+
+    const queryClient = timingQueryClient()
+
+    const first = mountQuery(queryClient, () =>
+      useWelcomeMessage(7, { sessionId: '', cacheScope: 'session-abc' }),
+    )
+    await vi.waitFor(() => expect(first.isSuccess.value).toBe(true))
+    expect(calls).toBe(1)
+
+    const handoff = mountQuery(queryClient, () =>
+      useWelcomeMessage(7, { sessionId: 'session-abc', cacheScope: 'session-abc' }),
+    )
+    await vi.waitFor(() => expect(handoff.isSuccess.value).toBe(true))
+    expect(calls).toBe(1)
+  })
+
+  it('defaults the cache scope to sessionId when cacheScope is omitted', async () => {
+    // Existing-session pages pass only sessionId; they stay per-session for free.
+    seedAuthStorage()
+    let calls = 0
+    server.use(
+      http.post(WELCOME, () => {
+        calls++
+        return apiOk({ message: 'Hello' })
+      }),
+    )
+
+    const queryClient = timingQueryClient()
+
+    const a = mountQuery(queryClient, () => useWelcomeMessage(9, { sessionId: 'sess-a' }))
+    await vi.waitFor(() => expect(a.isSuccess.value).toBe(true))
+
+    const b = mountQuery(queryClient, () => useWelcomeMessage(9, { sessionId: 'sess-b' }))
+    await vi.waitFor(() => expect(b.isSuccess.value).toBe(true))
+
+    expect(calls).toBe(2)
   })
 })
 

@@ -102,7 +102,11 @@ const { data: publicChatData } = usePublicChatAgent(agentId, {
 // Get agent name from public chat data
 const agentName = computed(() => publicChatData.value?.agent?.name)
 
-// Fetch welcome message for the agent
+// Fetch welcome message for the agent.
+// DELIBERATE divergence from the private /chats/<id> page, which shows the greeting only
+// for a freshly created conversation: public mode is a single-agent kiosk where every
+// iframe load is effectively a new visitor, so the greeting always belongs here. Do not
+// "align" this with the private branch without changing that product decision.
 const { data: welcomeMsg } = useWelcomeMessage(agentId, {
   enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
   sessionId,

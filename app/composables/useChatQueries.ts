@@ -20,7 +20,10 @@ export const chatQueryKeys = {
   message: (messageId: string) => [...chatQueryKeys.all, 'message', messageId] as const,
   unread: () => [...chatQueryKeys.all, 'unread'] as const,
   sessionUnread: (sessionId: string) => [...chatQueryKeys.all, 'sessionUnread', sessionId] as const,
-  welcome: (agentId: number) => [...chatQueryKeys.all, 'welcome', agentId] as const,
+  // `scope` is the conversation instance the greeting belongs to, so starting a new
+  // conversation with the same agent is a cache miss instead of a 10-minute-fresh hit.
+  welcome: (agentId: number, scope: string) =>
+    [...chatQueryKeys.all, 'welcome', agentId, scope] as const,
   search: (query: string) => [...chatQueryKeys.all, 'search', query] as const,
 }
 
@@ -179,21 +182,34 @@ export function resetWelcomeMessageTracking(): void {
 
 /**
  * Welcome message query composable
- * Fetches welcome message for a specific agent
+ * Fetches the welcome message for a specific agent, cached per conversation: starting a
+ * new conversation with the same agent issues a fresh `welcomeText` request rather than
+ * reusing another conversation's greeting. Remounts *within* one conversation still hit
+ * the cache, so the new-chat → session handoff doesn't duplicate the request.
  */
 export function useWelcomeMessage(
   agentId: MaybeRefOrGetter<number>,
   options?: {
     enabled?: MaybeRefOrGetter<boolean>
+    /** Sent to the backend in the request body. Empty for a session that doesn't exist yet. */
     sessionId?: string
+    /**
+     * Discriminates the cache entry — one greeting per conversation instance.
+     * Pages for a not-yet-created session pass their client-generated UUID here while
+     * still sending an empty `sessionId` to the backend, so the request body is unchanged.
+     * Defaults to `sessionId`, which keeps existing-session pages per-session for free.
+     */
+    cacheScope?: MaybeRefOrGetter<string>
     staleTime?: number
   },
 ) {
   const authStore = useAuthStore()
 
-  // eslint-disable-next-line @tanstack/query/exhaustive-deps -- sessionId is optional context, not a cache discriminator
+  const cacheScope = computed(() => toValue(options?.cacheScope) ?? options?.sessionId ?? '')
+
+  // eslint-disable-next-line @tanstack/query/exhaustive-deps -- the body-only sessionId and authStore.user.email are fetch inputs, not cache discriminators; cacheScope is what scopes the entry
   return useQuery({
-    queryKey: computed(() => chatQueryKeys.welcome(toValue(agentId))),
+    queryKey: computed(() => chatQueryKeys.welcome(toValue(agentId), cacheScope.value)),
     queryFn: async (): Promise<AIWelcomeMessageDTO> => {
       if (!authStore.user) {
         throw new Error('User not authenticated')

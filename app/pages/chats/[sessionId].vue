@@ -366,6 +366,12 @@ const chatStore = useChatStore()
 const skipEntranceAnimation = chatStore.skipNextEntranceAnimation
 chatStore.skipNextEntranceAnimation = false
 
+// Consume one-shot flag: true only for the mount that directly follows creating this
+// conversation on /chats/new/*. Any later visit is an existing conversation, and the
+// agent greeting must not be fetched or shown there.
+const isFreshlyCreatedSession = chatStore.nextSessionIsFreshlyCreated
+chatStore.nextSessionIsFreshlyCreated = false
+
 // Navigation visibility for mobile detection
 const { isMobile } = useNavigationVisibility()
 
@@ -548,17 +554,22 @@ const virtualAgentFromSession = computed(() =>
   ),
 )
 
-// Fetch welcome message if second message is from virtual agent
+// Fetch the agent greeting only for a conversation the user just created. An existing
+// conversation must not trigger a welcomeText request at all.
 const { data: welcomeMessageData, isLoading: isWelcomeMessageLoading } = useWelcomeMessage(
   computed(() => virtualAgentFromSession.value?.agentId ?? 0),
   {
-    enabled: computed(() => !!virtualAgentFromSession.value),
+    enabled: computed(() => !!virtualAgentFromSession.value && isFreshlyCreatedSession),
     sessionId: sessionId,
   },
 )
 
 // Trim quotes from welcome message (same pattern as /chats/new.vue)
 const trimmedWelcomeMessage = computed(() => {
+  // Second gate, and not redundant: gcTime keeps this conversation's greeting cached for
+  // 30 minutes, and a disabled query still reads the cache. Without this, revisiting the
+  // same conversation inside that window would show the greeting again.
+  if (!isFreshlyCreatedSession) return undefined
   if (!welcomeMessageData.value?.message) return undefined
   let msg = welcomeMessageData.value.message
   if (msg.startsWith('"') && msg.endsWith('"')) {

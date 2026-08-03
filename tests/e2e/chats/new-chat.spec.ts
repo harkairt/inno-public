@@ -57,6 +57,32 @@ test.describe('New Chat With User', () => {
       timeout: 15_000,
     })
     expect(questionCalls).toHaveLength(1)
+
+    // The greeting survives the new-chat → /chats/<uuid> handoff: this conversation
+    // was just created, so it is still "brand new" for the duration of this visit.
+    await expect(messages.getByText('Welcome! How can I assist you today?')).toBeVisible()
+  })
+
+  test('shows no agent greeting when opening an existing conversation', async ({
+    mockedAuthenticatedPage: page,
+  }) => {
+    // Regression guard for the reported bug: session-123 is a 1:1 virtual-agent
+    // conversation and mockAllApis mocks welcomeText, so before the fix the greeting
+    // was fetched and prepended to the top of this existing thread. Arriving here
+    // directly (not via the new-chat flow) must neither request nor render it.
+    const welcomeCalls: string[] = []
+    page.on('request', (r) => {
+      if (r.url().includes('/api/AIWebAPI/welcomeText')) welcomeCalls.push(r.url())
+    })
+
+    await page.goto('/chats/session-123')
+
+    // Wait for the thread itself so the assertion is not just racing an empty page.
+    const messages = page.locator(selectors.chat.messagesContainer)
+    await expect(messages).toBeVisible({ timeout: 15_000 })
+
+    await expect(page.getByText('Welcome! How can I assist you today?')).toHaveCount(0)
+    expect(welcomeCalls).toHaveLength(0)
   })
 
   test('renders the new-chat page for a human user via direct navigation', async ({
