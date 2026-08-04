@@ -121,6 +121,7 @@ export function makeSession(overrides: Partial<AISessionHeaderDTO> = {}): AISess
     agentImage: null,
     agentDarkImage: null,
     insertDate: '2024-01-01T00:00:00Z',
+    modifiedAt: null,
     members: ['testuser'],
     memberDetails: null,
     userCode: 'testuser',

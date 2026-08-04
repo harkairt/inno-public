@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
 import { ref, type Component } from 'vue'
+import type { AISessionHeaderDTO } from '@/types/api/schemas'
+import { makeSession } from '../../../utils/factories'
 
 const clearDraftConversationMock = vi.fn()
 const navigateToMock = vi.fn()
 
 const listDataMock = {
   users: ref([{ id: 10, email: 'alice@example.com', name: 'Alice Agent', isVirtual: false }]),
-  filteredSessions: ref([]),
+  filteredSessions: ref<AISessionHeaderDTO[]>([]),
   filteredDraftSessions: ref([
     {
       draftId: 'draft-new-10',
@@ -43,6 +45,7 @@ describe('ChatListPanel drafts', () => {
   beforeEach(() => {
     clearDraftConversationMock.mockReset()
     navigateToMock.mockReset()
+    listDataMock.formatRelativeDate.mockClear()
     ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
       params: {},
       path: '/chats',
@@ -130,5 +133,34 @@ describe('ChatListPanel drafts', () => {
     await renderPanel()
 
     expect(screen.getByTestId('empty')).toBeTruthy()
+  })
+
+  it('formats the session subtitle from modifiedAt when present', async () => {
+    listDataMock.filteredSessions.value = [
+      makeSession({
+        sessionId: 'session-modified',
+        insertDate: '2024-01-01T00:00:00Z',
+        modifiedAt: '2024-09-01T00:00:00Z',
+      }),
+    ]
+
+    await renderPanel()
+
+    expect(listDataMock.formatRelativeDate).toHaveBeenCalledWith('2024-09-01T00:00:00Z')
+    expect(listDataMock.formatRelativeDate).not.toHaveBeenCalledWith('2024-01-01T00:00:00Z')
+  })
+
+  it('falls back to insertDate for the subtitle when modifiedAt is null', async () => {
+    listDataMock.filteredSessions.value = [
+      makeSession({
+        sessionId: 'session-unmodified',
+        insertDate: '2024-01-01T00:00:00Z',
+        modifiedAt: null,
+      }),
+    ]
+
+    await renderPanel()
+
+    expect(listDataMock.formatRelativeDate).toHaveBeenCalledWith('2024-01-01T00:00:00Z')
   })
 })

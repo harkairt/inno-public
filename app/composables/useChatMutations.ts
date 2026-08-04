@@ -101,6 +101,7 @@ function createSyntheticSession(
     members: request.members,
     sessionName: '',
     insertDate: timestamp,
+    modifiedAt: timestamp,
     messages: [],
   }
 }
@@ -122,6 +123,7 @@ function createSyntheticSessionHeader(
     members: request.members,
     sessionName: truncateSessionTitle(request.question, 60), // temp title until server names it
     insertDate: timestamp,
+    modifiedAt: timestamp,
   }
 }
 
@@ -191,6 +193,7 @@ async function handleNewSessionCacheUpdate(params: SendMessageSuccessParams): Pr
     members: request.members,
     sessionName: '', // Will be filled by background refetch
     insertDate: userMessageTimestamp,
+    modifiedAt: userMessageTimestamp,
     messages: isEmptyResponse(serverMessage)
       ? [syntheticUserMessage] // Only user message, no empty response
       : [syntheticUserMessage, serverMessage], // Both messages
@@ -283,6 +286,14 @@ async function handleSendMessageOnMutate(
       if (old.some((s) => s.sessionId === request.sessionId)) return old // dedupe
       return [header, ...old]
     })
+  } else {
+    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
+      old?.map((s) =>
+        s.sessionId === request.sessionId
+          ? { ...s, modifiedAt: userMessageTimestamp.toISOString() }
+          : s,
+      ),
+    )
   }
 
   return {

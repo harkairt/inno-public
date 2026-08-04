@@ -279,6 +279,8 @@ export const AISessionHeaderDTOSchema = z.object({
   agentId: z.number(),
   agentImage: z.string().nullable().optional(),
   insertDate: z.string(), // ISO date string
+  // Optional only for backends predating the field; readers fall back to insertDate.
+  modifiedAt: z.string().nullable().optional(),
   members: z.array(z.string()),
   memberDetails: z.array(SessionMemberSchema).nullable().optional(),
   sessionId: z.string(),
@@ -292,6 +294,7 @@ export const AISessionDTOSchema = z.object({
   agentId: z.number(),
   agentImage: z.string().nullable().optional(),
   insertDate: z.string(), // ISO date string
+  modifiedAt: z.string().nullable().optional(),
   members: z.array(z.string()),
   memberDetails: z.array(SessionMemberSchema).nullable().optional(),
   messages: z.array(AISessionMessageDTOSchema).nullable().optional(),

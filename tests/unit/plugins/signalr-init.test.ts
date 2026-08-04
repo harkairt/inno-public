@@ -102,6 +102,21 @@ describe('signalr-init plugin', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.unread(), exact: true })
   })
 
+  it('invalidates the sessions list on ReceiveMessage so the sidebar reorders', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token' })
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await runPlugin(queryClient)
+    await advance(500)
+
+    fake.emitFromServer('ReceiveMessage', 'sess-1', 5)
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: chatQueryKeys.sessions(), exact: true })
+  })
+
   it('ignores ReceiveMessage payloads with the wrong types', async () => {
     seedAuthStorage({ accessToken: 'seeded-access-token' })
     const fake = installFakeSignalR()

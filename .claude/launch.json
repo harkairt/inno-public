@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "innochat-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:clean"],
+      "port": 3000
+    }
+  ]
+}

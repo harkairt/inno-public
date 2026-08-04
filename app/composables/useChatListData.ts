@@ -10,6 +10,7 @@ import {
   checkIsPrimarySession,
   getPrimarySessionForUser,
 } from '~/composables/usePrimarySession'
+import { getSessionActivityDate } from '@/app/utils/session'
 import type { AISessionHeaderDTO, GetUnreadMessagesDTO, UserDTO } from '@/types/api/schemas'
 
 export interface DraftConversationListItem {
@@ -129,7 +130,9 @@ function sortAndFilterSessions(
     if (unreadA > 0 && unreadB === 0) return -1
     if (unreadB > 0 && unreadA === 0) return 1
 
-    return new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime()
+    return (
+      new Date(getSessionActivityDate(b)).getTime() - new Date(getSessionActivityDate(a)).getTime()
+    )
   })
 }
 
