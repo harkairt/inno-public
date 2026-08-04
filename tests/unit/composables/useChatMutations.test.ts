@@ -556,6 +556,34 @@ describe('useSendMessage — optimistic sidebar header', () => {
     expect(header).toBeDefined()
     expect(header?.sessionName).toBe('Hello there')
     expect(Date.parse(header!.insertDate)).toBeGreaterThanOrEqual(before)
+    expect(Date.parse(header!.modifiedAt!)).toBeGreaterThanOrEqual(before)
+
+    resolveService()
+    await mutatePromise
+  })
+
+  it('bumps modifiedAt on the existing header when sending into an existing session', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { mutation, resolveService } = await pendingSendMutation(queryClient)()
+
+    // Pre-seed the individual session so onMutate computes isNewSession = false.
+    queryClient.setQueryData(chatQueryKeys.session('session-1'), makeSessionDTO())
+    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), [
+      makeSessionHeader({ sessionId: 'session-1', modifiedAt: '2024-01-01T00:00:00Z' }),
+      makeSessionHeader({ sessionId: 'session-2', modifiedAt: '2024-03-01T00:00:00Z' }),
+    ])
+
+    const before = Date.now()
+    const mutatePromise = mutation.mutateAsync(makeQuestionRequest())
+    await new Promise((r) => setTimeout(r, 0))
+
+    const sessions = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
+    const bumped = sessions?.find((s) => s.sessionId === 'session-1')
+    expect(Date.parse(bumped!.modifiedAt!)).toBeGreaterThanOrEqual(before)
+    expect(bumped?.insertDate).toBe('2024-01-01T00:00:00Z')
+
+    const other = sessions?.find((s) => s.sessionId === 'session-2')
+    expect(other?.modifiedAt).toBe('2024-03-01T00:00:00Z')
 
     resolveService()
     await mutatePromise

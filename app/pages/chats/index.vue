@@ -107,6 +107,7 @@ import { useChatSessions, useUnreadMessageCounts } from '~/composables/useChatQu
 import ChatListPanel from '~/components/chat/ChatListPanel.vue'
 import AgentTile from '~/components/chat/AgentTile.vue'
 import UnreadChatCard from '~/components/chat/UnreadChatCard.vue'
+import { getSessionActivityDate } from '@/app/utils/session'
 
 const { t } = useI18n()
 const { isMobile } = useNavigationVisibility()
@@ -144,7 +145,11 @@ const unreadChats = computed(() => {
       }
     })
     .filter((session) => session.unreadCount > 0)
-    .sort((a, b) => new Date(b.insertDate).getTime() - new Date(a.insertDate).getTime())
+    .sort(
+      (a, b) =>
+        new Date(getSessionActivityDate(b)).getTime() -
+        new Date(getSessionActivityDate(a)).getTime(),
+    )
 })
 </script>
 

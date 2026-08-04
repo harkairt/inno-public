@@ -38,6 +38,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         queryKey: chatQueryKeys.unread(),
         exact: true,
       })
+      // Reorders the sidebar: the payload has no timestamp, so modifiedAt must be refetched.
+      void queryClient.invalidateQueries({
+        queryKey: chatQueryKeys.sessions(),
+        exact: true,
+      })
     })
 
     listenersRegistered = true

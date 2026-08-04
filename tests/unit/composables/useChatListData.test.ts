@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
+import type { AISessionHeaderDTO, GetUnreadMessagesDTO } from '@/types/api/schemas'
+import { makeSession } from '../../utils/factories'
 
 const usersRef = ref([
   { id: 10, name: 'Alice Agent', email: 'alice@example.com', isVirtual: false },
   { id: 11, name: 'Bob Bot', email: 'bob@example.com', isVirtual: true },
 ])
-const sessionsRef = ref([])
-const unreadRef = ref([])
+const sessionsRef = ref<AISessionHeaderDTO[]>([])
+const unreadRef = ref<GetUnreadMessagesDTO[]>([])
 const draftMessagesRef = ref<Record<string, string>>({})
 
 vi.mock('~/composables/useUsers', () => ({
@@ -82,5 +84,70 @@ describe('useChatListData drafts', () => {
     result.sessionSearchQuery.value = 'bob@example.com'
     expect(result.filteredDraftSessions.value).toHaveLength(1)
     expect(result.filteredDraftSessions.value[0].userId).toBe(11)
+  })
+})
+
+describe('useChatListData session ordering', () => {
+  beforeEach(() => {
+    sessionsRef.value = []
+    unreadRef.value = []
+    draftMessagesRef.value = {}
+  })
+
+  async function orderedSessionIds(): Promise<string[]> {
+    const { useChatListData } = await import('~/composables/useChatListData')
+    return useChatListData().filteredSessions.value.map((s) => s.sessionId)
+  }
+
+  it('sorts by modifiedAt descending, not by insertDate', async () => {
+    sessionsRef.value = [
+      makeSession({
+        sessionId: 'stale',
+        insertDate: '2024-06-01T00:00:00Z',
+        modifiedAt: '2024-06-01T00:00:00Z',
+      }),
+      makeSession({
+        sessionId: 'oldest-but-active',
+        insertDate: '2024-01-01T00:00:00Z',
+        modifiedAt: '2024-09-01T00:00:00Z',
+      }),
+    ]
+
+    expect(await orderedSessionIds()).toEqual(['oldest-but-active', 'stale'])
+  })
+
+  it('falls back to insertDate when modifiedAt is null or absent', async () => {
+    const withoutField = makeSession({ sessionId: 'absent', insertDate: '2024-08-01T00:00:00Z' })
+    delete withoutField.modifiedAt
+
+    sessionsRef.value = [
+      makeSession({ sessionId: 'null-old', insertDate: '2024-02-01T00:00:00Z', modifiedAt: null }),
+      withoutField,
+      makeSession({
+        sessionId: 'modified-middle',
+        insertDate: '2024-01-01T00:00:00Z',
+        modifiedAt: '2024-05-01T00:00:00Z',
+      }),
+    ]
+
+    expect(await orderedSessionIds()).toEqual(['absent', 'modified-middle', 'null-old'])
+  })
+
+  it('keeps unread sessions above more recently modified read ones', async () => {
+    sessionsRef.value = [
+      makeSession({
+        sessionId: 'read-recent',
+        insertDate: '2024-01-01T00:00:00Z',
+        modifiedAt: '2024-09-01T00:00:00Z',
+      }),
+      makeSession({
+        sessionId: 'unread-old',
+        insertDate: '2024-01-01T00:00:00Z',
+        modifiedAt: '2024-02-01T00:00:00Z',
+      }),
+    ]
+    unreadRef.value = [{ sessionId: 'unread-old', unreadMessageCount: 3 }]
+
+    expect(await orderedSessionIds()).toEqual(['unread-old', 'read-recent'])
   })
 })

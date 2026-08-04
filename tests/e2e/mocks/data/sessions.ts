@@ -30,6 +30,7 @@ interface AISessionHeaderDTO {
   agentId: number
   agentImage?: string | null
   insertDate: string
+  modifiedAt?: string | null
   members: string[]
   memberDetails?: SessionMember[] | null
   sessionId: string

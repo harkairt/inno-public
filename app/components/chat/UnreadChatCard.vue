@@ -2,6 +2,7 @@
 import type { AISessionHeaderDTO, UserDTO } from '@/types/api/schemas'
 import SessionMembers from '~/components/chat/SessionMembers.vue'
 import { useRelativeDate } from '~/composables/useRelativeDate'
+import { getSessionActivityDate } from '@/app/utils/session'
 
 interface UnreadChatSession extends AISessionHeaderDTO {
   unreadCount: number
@@ -14,7 +15,7 @@ const props = defineProps<{
 
 const { formatRelativeDate } = useRelativeDate()
 
-const relativeTime = computed(() => formatRelativeDate(props.session.insertDate))
+const relativeTime = computed(() => formatRelativeDate(getSessionActivityDate(props.session)))
 </script>
 
 <template>

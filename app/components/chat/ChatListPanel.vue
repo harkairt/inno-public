@@ -139,7 +139,8 @@
               class="unread-dot"
             />
             <span class="line-clamp-1">
-              {{ formatRelativeDate(session.insertDate) }} · {{ getMemberNames(session.members) }}
+              {{ formatRelativeDate(getSessionActivityDate(session)) }} ·
+              {{ getMemberNames(session.members) }}
             </span>
           </p>
         </NuxtLink>
@@ -167,6 +168,7 @@ import { useChatListData } from '~/composables/useChatListData'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import SessionItemMenu from '~/components/chat/SessionItemMenu.vue'
 import SessionMembers from '~/components/chat/SessionMembers.vue'
+import { getSessionActivityDate } from '@/app/utils/session'
 
 const { t } = useI18n()
 const route = useRoute()
