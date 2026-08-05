@@ -264,6 +264,26 @@
   background: hsl(var(--muted));
 }
 
+/* Option labels — markdown-it wraps every label in a <p>, whose default margin
+   would make each single/multi-select row needlessly tall. */
+.option-markdown .markdown-content p,
+.option-markdown .markdown-content ul,
+.option-markdown .markdown-content ol {
+  margin: 0;
+}
+
+.option-markdown .markdown-content p + p {
+  margin-top: 0.375rem;
+}
+
+.option-markdown .markdown-content img {
+  max-height: 11rem;
+  max-width: 100%;
+  width: auto;
+  margin: 0.25rem 0;
+  cursor: zoom-in;
+}
+
 /* Chart placeholder — responsive container for Chart.js canvas */
 .chart-placeholder {
   min-width: 350px;

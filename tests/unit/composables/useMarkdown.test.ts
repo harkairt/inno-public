@@ -44,3 +44,30 @@ describe('useMarkdown.parse', () => {
     expect(first.parse('**x**')).toBe(second.parse('**x**'))
   })
 })
+
+describe('useMarkdown.toPlainText', () => {
+  it('replaces images with their alt text', () => {
+    const { toPlainText } = useMarkdown()
+    expect(toPlainText('![Alt text](/x.png)')).toBe('Alt text')
+  })
+
+  it('keeps link text and drops the URL', () => {
+    const { toPlainText } = useMarkdown()
+    expect(toPlainText('[Docs](https://example.com)')).toBe('Docs')
+  })
+
+  it('strips emphasis markers', () => {
+    const { toPlainText } = useMarkdown()
+    expect(toPlainText('**bold** and _em_')).toBe('bold and em')
+  })
+
+  it('collapses multi-line content to single spaces', () => {
+    const { toPlainText } = useMarkdown()
+    expect(toPlainText('line one\n\nline two')).toBe('line one line two')
+  })
+
+  it('returns an empty string for empty input', () => {
+    const { toPlainText } = useMarkdown()
+    expect(toPlainText('')).toBe('')
+  })
+})

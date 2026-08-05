@@ -45,7 +45,7 @@
       <div
         v-for="item in payload.Items"
         :key="item.Key"
-        class="flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-150"
+        class="flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all duration-150"
         :class="[
           isActive
             ? 'hover:bg-[hsl(var(--accent))] cursor-pointer'
@@ -54,10 +54,10 @@
             ? 'border-[hsl(var(--primary))] bg-[hsl(var(--accent))]'
             : 'border-[hsl(var(--border))]',
         ]"
-        @click="isActive && selectSingle(item.Value)"
+        @click="onSingleRowClick($event, item.Value)"
       >
         <div
-          class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+          class="w-4 h-4 mt-0.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
           :class="
             selectedSingle === item.Value
               ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]'
@@ -69,7 +69,9 @@
             class="w-1.5 h-1.5 rounded-full bg-white"
           />
         </div>
-        <span class="text-sm">{{ item.Value }}</span>
+        <div class="option-markdown min-w-0 flex-1">
+          <MarkdownContent :content="item.Value" />
+        </div>
       </div>
       <div
         v-if="payload.IsPlainTextEnabled"
@@ -113,7 +115,7 @@
       <div
         v-for="item in payload.Items"
         :key="item.Key"
-        class="flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-150"
+        class="flex items-start gap-2.5 px-3 py-2 rounded-lg border transition-all duration-150"
         :class="[
           isActive
             ? 'hover:bg-[hsl(var(--accent))] cursor-pointer'
@@ -122,10 +124,10 @@
             ? 'border-[hsl(var(--primary))] bg-[hsl(var(--accent))]'
             : 'border-[hsl(var(--border))]',
         ]"
-        @click="isActive && toggleMultiple(item.Value)"
+        @click="onMultiRowClick($event, item.Value)"
       >
         <div
-          class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+          class="w-4 h-4 mt-0.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
           :class="
             selectedMultiple.includes(item.Value)
               ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]'
@@ -138,7 +140,9 @@
             class="size-2.5 text-white"
           />
         </div>
-        <span class="text-sm">{{ item.Value }}</span>
+        <div class="option-markdown min-w-0 flex-1">
+          <MarkdownContent :content="item.Value" />
+        </div>
       </div>
     </div>
 
@@ -160,10 +164,12 @@ import { ref, computed, watch, watchEffect, useTemplateRef } from 'vue'
 import type { OptionsMessagePayload } from '@/types/api/schemas'
 import { OptionsUIControlType } from '@/types/enums'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
+import { useMarkdown } from '@/app/composables/useMarkdown'
 
 const CUSTOM_SENTINEL = '__custom__'
 
 const { t } = useI18n()
+const { toPlainText } = useMarkdown()
 
 interface Props {
   payload: OptionsMessagePayload
@@ -205,7 +211,10 @@ const isCombobox = computed(
 )
 
 const comboboxItems = computed(() => {
-  const items = props.payload.Items.map((item) => ({ label: item.Value, value: item.Value }))
+  const items = props.payload.Items.map((item) => ({
+    label: toPlainText(item.Value),
+    value: item.Value,
+  }))
   if (props.payload.IsPlainTextEnabled) {
     items.push({ label: t('chat.options.customOption'), value: CUSTOM_SENTINEL })
   }
@@ -267,6 +276,20 @@ function toggleMultiple(value: string) {
   } else {
     selectedMultiple.value.splice(idx, 1)
   }
+}
+
+function isMarkdownInteraction(e: MouseEvent): boolean {
+  return e.target instanceof Element && e.target.closest('a, img') !== null
+}
+
+function onSingleRowClick(e: MouseEvent, value: string) {
+  if (!props.isActive || isMarkdownInteraction(e)) return
+  selectSingle(value)
+}
+
+function onMultiRowClick(e: MouseEvent, value: string) {
+  if (!props.isActive || isMarkdownInteraction(e)) return
+  toggleMultiple(value)
 }
 
 function handleSubmit() {
