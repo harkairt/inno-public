@@ -76,6 +76,10 @@ export default defineConfig({
         'tests/**',
         '**/*.d.ts',
         '**/*.config.*',
+        // Dev-only component gallery — stripped from production builds by
+        // `$production.ignore`, so it must not dilute the thresholds below.
+        'app/pages/dev/**',
+        'app/plugins/dev-gallery.client.ts',
       ],
       thresholds: {
         // GLOBAL thresholds are the top-level keys directly under `thresholds`

@@ -10,6 +10,7 @@
     "lib/validation/**",
     "lib/api/validation.ts",
     "lib/types/chat/Message.ts",
+    "app/dev/**",
     "tests/e2e/actions/**",
     "tests/e2e/fixtures/**",
     "tests/e2e/mocks/**",
