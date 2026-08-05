@@ -25,5 +25,14 @@ export const useMarkdown = () => {
         return sanitizeHTML(markdown) // Fallback to sanitized text
       }
     },
+    // No sanitizeHTML: the HTML is parsed into a detached document that never reaches
+    // the live DOM, and only textContent is read back out.
+    toPlainText: (markdown: string): string => {
+      const doc = new DOMParser().parseFromString(markdownInstance!.render(markdown), 'text/html')
+      doc.querySelectorAll('img').forEach((img) => {
+        img.replaceWith(doc.createTextNode(img.getAttribute('alt') ?? ''))
+      })
+      return (doc.body.textContent ?? '').replace(/\s+/g, ' ').trim()
+    },
   }
 }
