@@ -24,6 +24,11 @@ const baseURL = rawBase.endsWith('/') ? rawBase : `${rawBase}/`
 export default defineNuxtConfig({
   ssr: false,
   compatibilityDate: '2026-02-26',
+
+  $production: {
+    ignore: ['app/pages/dev/**', 'app/plugins/dev-gallery.client.ts', 'app/dev/**'],
+  },
+
   devServer: {
     host: '0.0.0.0',
   },
