@@ -74,7 +74,9 @@
               size="2xs"
               class="flex-shrink-0"
             />
-            <h3 class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0">
+            <h3
+              class="font-display-family text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0"
+            >
               {{ draft.userName }}
             </h3>
           </div>
@@ -110,53 +112,63 @@
           {{ t('sidebar.chatSessions') }}
         </h2>
       </div>
-      <div
-        v-for="session in filteredSessions"
-        :key="session.sessionId"
-        class="group relative"
+      <TransitionGroup
+        name="session-list"
+        tag="div"
       >
-        <NuxtLink
-          :to="`/chats/${session.sessionId}`"
-          class="sidebar-item block pr-10"
-          :class="{ 'sidebar-item-active': session.sessionId === activeSessionId }"
-          :data-testid="`session-item-${session.sessionId}`"
-        >
-          <div class="flex items-center gap-2">
-            <SessionMembers
-              :members="getOtherMembers(session.members)"
-              :selectable-users="users || []"
-              size="2xs"
-              class="flex-shrink-0"
-            />
-            <h3 class="font-display text-sm font-medium tracking-tight line-clamp-1 flex-1 min-w-0">
-              {{ getDisplayName(session) }}
-            </h3>
-          </div>
-
-          <p class="flex items-center gap-1.5 text-xs text-muted tracking-wide mt-1">
-            <span
-              v-if="getUnreadCount(session.sessionId) > 0"
-              class="unread-dot"
-            />
-            <span class="line-clamp-1">
-              {{ formatRelativeDate(getSessionActivityDate(session)) }} ·
-              {{ getMemberNames(session.members) }}
-            </span>
-          </p>
-        </NuxtLink>
-
         <div
-          class="absolute top-3 right-2 transition-opacity"
-          :class="isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+          v-for="session in filteredSessions"
+          :key="session.sessionId"
+          class="group relative"
         >
-          <SessionItemMenu
-            :session-id="session.sessionId"
-            :session-name="session.sessionName"
-            :agent-id="session.agentId"
-            :is-primary-session="isPrimarySessionCheck(session)"
-          />
+          <NuxtLink
+            :to="`/chats/${session.sessionId}`"
+            class="sidebar-item block pr-10"
+            :class="{ 'sidebar-item-active': session.sessionId === activeSessionId }"
+            :data-testid="`session-item-${session.sessionId}`"
+          >
+            <div class="flex items-center gap-2">
+              <SessionMembers
+                :members="getOtherMembers(session.members)"
+                :selectable-users="users || []"
+                size="2xs"
+                class="flex-shrink-0"
+              />
+              <h3
+                :class="[
+                  'font-display-family text-sm tracking-tight line-clamp-1 flex-1 min-w-0',
+                  getUnreadCount(session.sessionId) > 0 ? 'font-bold' : 'font-medium',
+                ]"
+              >
+                {{ getDisplayName(session) }}
+              </h3>
+            </div>
+
+            <p class="flex items-center gap-1.5 text-xs text-muted tracking-wide mt-1">
+              <span
+                v-if="getUnreadCount(session.sessionId) > 0"
+                class="unread-dot"
+              />
+              <span class="line-clamp-1">
+                {{ formatRelativeDate(getSessionActivityDate(session)) }} ·
+                {{ getMemberNames(session.members) }}
+              </span>
+            </p>
+          </NuxtLink>
+
+          <div
+            class="absolute top-3 right-2 transition-opacity"
+            :class="isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+          >
+            <SessionItemMenu
+              :session-id="session.sessionId"
+              :session-name="session.sessionName"
+              :agent-id="session.agentId"
+              :is-primary-session="isPrimarySessionCheck(session)"
+            />
+          </div>
         </div>
-      </div>
+      </TransitionGroup>
     </div>
   </div>
 </template>

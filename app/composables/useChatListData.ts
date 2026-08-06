@@ -110,7 +110,6 @@ function buildDraftItems(
 function sortAndFilterSessions(
   sessions: AISessionHeaderDTO[] | undefined,
   query: string,
-  unreadCounts: GetUnreadMessagesDTO[] | undefined,
 ): AISessionHeaderDTO[] {
   if (!sessions) return []
 
@@ -123,17 +122,10 @@ function sortAndFilterSessions(
       )
     : [...sessions]
 
-  return filtered.sort((a, b) => {
-    const unreadA = getUnreadCountFromEntries(unreadCounts, a.sessionId)
-    const unreadB = getUnreadCountFromEntries(unreadCounts, b.sessionId)
-
-    if (unreadA > 0 && unreadB === 0) return -1
-    if (unreadB > 0 && unreadA === 0) return 1
-
-    return (
-      new Date(getSessionActivityDate(b)).getTime() - new Date(getSessionActivityDate(a)).getTime()
-    )
-  })
+  return filtered.sort(
+    (a, b) =>
+      new Date(getSessionActivityDate(b)).getTime() - new Date(getSessionActivityDate(a)).getTime(),
+  )
 }
 
 export function useChatListData() {
@@ -153,11 +145,7 @@ export function useChatListData() {
   const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
 
   const filteredSessions = computed(() =>
-    sortAndFilterSessions(
-      sessions.value,
-      sessionSearchQuery.value.toLowerCase(),
-      unreadCounts.value,
-    ),
+    sortAndFilterSessions(sessions.value, sessionSearchQuery.value.toLowerCase()),
   )
 
   const filteredDraftSessions = computed<DraftConversationListItem[]>(() =>

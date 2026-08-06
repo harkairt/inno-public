@@ -150,7 +150,7 @@ interface SendMessageSuccessParams {
 }
 
 async function handleSendMessageSuccess(params: SendMessageSuccessParams): Promise<void> {
-  const { chatStore, authStore, request, context, queryClient } = params
+  const { chatStore, authStore, serverMessage, request, context, queryClient } = params
   if (context?.virtualAgentName) {
     chatStore.removeTypingUser(request.sessionId, context.virtualAgentName)
   }
@@ -159,6 +159,12 @@ async function handleSendMessageSuccess(params: SendMessageSuccessParams): Promi
 
   if (!context?.isNewSession) {
     await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
+
+    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
+      old?.map((s) =>
+        s.sessionId === request.sessionId ? { ...s, modifiedAt: serverMessage.sendDate } : s,
+      ),
+    )
   }
 
   if (context?.tempMessageId) {
