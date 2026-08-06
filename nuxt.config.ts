@@ -139,6 +139,7 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL ?? '',
       devLoginEmail: '',
+      devLoginPassword: '',
       // Transcription service (Hugging Face Spaces)
       transcriptionServiceUrl: process.env.NUXT_PUBLIC_TRANSCRIPTION_SERVICE_URL ?? '',
       // Sentry

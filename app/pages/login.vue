@@ -124,7 +124,7 @@ const config = useRuntimeConfig()
 // Check for remembered email first, then fall back to dev credentials
 const rememberedEmail = getRememberedEmail()
 const email = ref(rememberedEmail ?? config.public.devLoginEmail ?? '')
-const password = ref('')
+const password = ref(config.public.devLoginPassword ?? '')
 const showPassword = ref(false)
 // Pre-check "Remember Me" if email was remembered
 const rememberMe = ref<boolean | 'indeterminate'>(!!rememberedEmail)
@@ -176,9 +176,12 @@ onMounted(() => {
     void router.push(safeRedirect)
   }
 
-  // Sync dev email after hydration (fixes SSR/client mismatch)
+  // Sync dev credentials after hydration (fixes SSR/client mismatch)
   if (!email.value && config.public.devLoginEmail) {
     email.value = config.public.devLoginEmail
+  }
+  if (!password.value && config.public.devLoginPassword) {
+    password.value = config.public.devLoginPassword
   }
 })
 </script>
