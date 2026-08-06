@@ -128,7 +128,9 @@
     "table": {
       "filter-placeholder": "Filter...",
       "no-data": "No data",
-      "no-results": "No matching results"
+      "no-results": "No matching results",
+      "exportXlsx": "Export as Excel",
+      "exportXlsxFailed": "Failed to export table"
     },
     "pivot": {
       "openTable": "Open the table",

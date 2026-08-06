@@ -255,6 +255,30 @@
   background: hsl(var(--muted) / 0.3);
 }
 
+/* Markdown table wrapper — export button overlay */
+.md-table-wrapper {
+  position: relative;
+}
+
+.md-table-export-btn {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.md-table-wrapper:hover .md-table-export-btn,
+.md-table-wrapper:focus-within .md-table-export-btn {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .md-table-export-btn {
+    opacity: 1;
+  }
+}
+
 /* Dark mode adjustments */
 .dark .markdown-content pre:not(.shiki) {
   background: hsl(var(--muted));
@@ -364,9 +388,19 @@
   padding: 1.5rem 1rem;
 }
 
-.table-filter {
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid hsl(var(--border));
+}
+
+.table-toolbar .table-filter {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border-bottom: none;
 }
 
 .table-pagination {

@@ -42,6 +42,14 @@
         :source="echart.source"
       />
     </Teleport>
+    <Teleport
+      v-for="mdTable in mdTableEntries"
+      :key="mdTable.id"
+      :to="`[data-md-table-id='${mdTable.id}']`"
+      :defer="true"
+    >
+      <MarkdownTableWrapper :table-html="mdTable.html" />
+    </Teleport>
   </div>
   <!-- eslint-enable vue/no-v-html -->
 </template>
@@ -67,6 +75,7 @@ import ChatChart from '~/components/chat/ChatChart.vue'
 import ChatTable from '~/components/chat/ChatTable.vue'
 import ChatPivotTable from '~/components/chat/ChatPivotTable.vue'
 import ChatEChart from '~/components/chat/ChatEChart.vue'
+import MarkdownTableWrapper from '~/components/chat/MarkdownTableWrapper.vue'
 
 interface Props {
   content?: string | null
@@ -107,11 +116,17 @@ interface EChartEntry {
   blockIndex: number
 }
 
+interface MdTableEntry {
+  id: string
+  html: string
+}
+
 const renderedHTML = ref('')
 const chartEntries = ref<ChartEntry[]>([])
 const tableEntries = ref<TableEntry[]>([])
 const pivotEntries = ref<PivotEntry[]>([])
 const echartEntries = ref<EChartEntry[]>([])
+const mdTableEntries = ref<MdTableEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
 
@@ -233,6 +248,20 @@ const extractEChartsBlocks = (html: string): { html: string; entries: EChartEntr
   return { html: replaced, entries }
 }
 
+const extractMarkdownTables = (html: string): { html: string; entries: MdTableEntry[] } => {
+  const entries: MdTableEntry[] = []
+  let index = 0
+  const tableRegex = /<table>[\s\S]*?<\/table>/g
+
+  const replaced = html.replace(tableRegex, (match) => {
+    const id = `${instancePrefix}-md-table-${index++}`
+    entries.push({ id, html: match })
+    return `<div data-md-table-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
 const applyEChartsBlocks = (html: string): string => {
   if (!hasEChartsBlocks(props.content)) {
     echartEntries.value = []
@@ -270,6 +299,7 @@ const renderContent = () => {
     tableEntries.value = []
     pivotEntries.value = []
     echartEntries.value = []
+    mdTableEntries.value = []
     return
   }
 
@@ -314,6 +344,10 @@ const renderContent = () => {
 
     html = applyEChartsBlocks(html)
 
+    const mdTableResult = extractMarkdownTables(html)
+    html = mdTableResult.html
+    mdTableEntries.value = mdTableResult.entries
+
     if (shikiLoaded.value && hasCodeBlocks(props.content)) {
       html = highlightCodeBlocks(html)
     }
@@ -325,6 +359,7 @@ const renderContent = () => {
     tableEntries.value = []
     pivotEntries.value = []
     echartEntries.value = []
+    mdTableEntries.value = []
   }
 }
 
