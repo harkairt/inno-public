@@ -14,8 +14,8 @@
  * for content with code fences.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { nextTick } from 'vue'
-import type { Component } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
+import type { Component, PropType } from 'vue'
 import { renderWithProviders } from '@/tests/utils/render'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 
@@ -26,6 +26,55 @@ const codeToHtml = vi.fn(
 const getLoadedLanguages = vi.fn(() => ['javascript', 'typescript', 'text'])
 vi.mock('shiki', () => ({
   createHighlighter: vi.fn(async () => ({ codeToHtml, getLoadedLanguages })),
+}))
+
+let echartsImportCount = 0
+
+vi.mock('echarts', () => {
+  echartsImportCount++
+  return {
+    init: () => ({ setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn(), on: vi.fn() }),
+  }
+})
+
+vi.mock('~/components/chat/ChatEChart.vue', () => ({
+  default: defineComponent({
+    name: 'ChatEChart',
+    props: {
+      option: { type: Object, required: true },
+      blockIndex: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+    setup: (props) => () =>
+      h('div', { class: 'echart-stub', 'data-block-index': String(props.blockIndex) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatTable.vue', () => ({
+  default: defineComponent({
+    name: 'ChatTable',
+    props: { tableData: { type: Object as PropType<{ columns: unknown[] }>, required: true } },
+    setup: (props) => () =>
+      h('div', { class: 'table-stub', 'data-columns': String(props.tableData.columns.length) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatPivotTable.vue', () => ({
+  default: defineComponent({
+    name: 'ChatPivotTable',
+    props: { data: { type: Array, required: true } },
+    setup: (props) => () =>
+      h('div', { class: 'pivot-stub', 'data-rows': String(props.data.length) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatChart.vue', () => ({
+  default: defineComponent({
+    name: 'ChatChart',
+    props: { config: { type: Object, required: true } },
+    setup: (props) => () =>
+      h('div', { class: 'chart-stub', 'data-chart-type': String(props.config.type) }),
+  }),
 }))
 
 async function renderMarkdown(content: string | null) {
@@ -158,5 +207,195 @@ describe('sanitizeHTML', () => {
     const out = sanitizeHTML('<iframe src="evil"></iframe><p>safe</p>')
     expect(out).not.toContain('<iframe')
     expect(out).toContain('safe')
+  })
+})
+
+const ECHARTS_BAR =
+  '{"xAxis":{"type":"category","data":["a","b"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}'
+
+const fence = (body: string) => ['```echarts', body, '```'].join('\n')
+
+describe('S27, S26 MarkdownContent — ECharts engine is not loaded speculatively', () => {
+  it('S27 never imports the ECharts engine for content without an echarts block', async () => {
+    expect(echartsImportCount).toBe(0)
+
+    await renderSettled('# Title\n\n```js\nconst a = 1\n```\n\nSome prose.')
+
+    expect(echartsImportCount).toBe(0)
+    expect(document.querySelector('[data-echart-id]')).toBeNull()
+  })
+
+  it('S26 leaves an unterminated echarts fence untouched and loads no engine', async () => {
+    expect(echartsImportCount).toBe(0)
+
+    const { container } = await renderSettled(`Here it comes:\n\n\`\`\`echarts\n${ECHARTS_BAR}`)
+
+    expect(echartsImportCount).toBe(0)
+    expect(container.querySelector('[data-echart-id]')).toBeNull()
+    expect(container.querySelector('.echart-stub')).toBeNull()
+    expect(container.textContent).toContain('"series"')
+  })
+})
+
+describe('S22, S23 MarkdownContent — ECharts block extraction', () => {
+  it('S22 replaces a single echarts block with a placeholder holding the chart', async () => {
+    const { container } = await renderSettled(
+      `## Revenue\n\n${fence(ECHARTS_BAR)}\n\nThat is the split.`,
+    )
+
+    const placeholder = container.querySelector('[data-echart-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.echart-stub')).not.toBeNull()
+
+    expect(container.querySelector('code.language-echarts')).toBeNull()
+    expect(container.textContent).not.toContain('"series"')
+    expect(container.textContent).toContain('That is the split.')
+  })
+
+  it('S23 gives three blocks three placeholders with distinct ids and block indexes', async () => {
+    const { container } = await renderSettled(
+      [
+        fence(ECHARTS_BAR),
+        fence('{"series":[{"type":"line","data":[3,4]}]}'),
+        fence('{"series":[{"type":"pie","data":[{"value":5,"name":"x"}]}]}'),
+      ].join('\n\n'),
+    )
+
+    const placeholders = [...container.querySelectorAll('[data-echart-id]')]
+    expect(placeholders).toHaveLength(3)
+
+    const ids = placeholders.map((el) => el.getAttribute('data-echart-id'))
+    expect(new Set(ids).size).toBe(3)
+
+    const indexes = [...container.querySelectorAll('.echart-stub')].map((el) =>
+      el.getAttribute('data-block-index'),
+    )
+    expect(indexes).toEqual(['0', '1', '2'])
+  })
+})
+
+const STORED_CHART_JS_MESSAGE = [
+  '## Quarterly revenue',
+  '',
+  'Here is the breakdown you asked for:',
+  '',
+  '```chart.js',
+  '{"type":"bar","data":{"labels":["North","South"],"datasets":[{"label":"Q4","data":[820,932]}]}}',
+  '```',
+  '',
+  'Let me know if you want it by month.',
+].join('\n')
+
+async function renderSettled(content: string) {
+  const utils = await renderMarkdown(content)
+  for (let i = 0; i < 6; i++) {
+    await Promise.resolve()
+    await nextTick()
+  }
+  return utils
+}
+
+describe('S25 MarkdownContent — rejected ECharts block', () => {
+  it('keeps the rejected block as code, renders its siblings, and logs reason plus index', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const { container } = await renderSettled(
+      [
+        fence(ECHARTS_BAR),
+        fence('{ not json at all }'),
+        fence('{"series":[{"type":"line"}]}'),
+      ].join('\n\n'),
+    )
+
+    const indexes = [...container.querySelectorAll('.echart-stub')].map((el) =>
+      el.getAttribute('data-block-index'),
+    )
+    expect(indexes).toEqual(['0', '2'])
+
+    const survivor = [...container.querySelectorAll('pre')].find((el) =>
+      el.textContent?.includes('not json at all'),
+    )
+    expect(survivor).toBeDefined()
+
+    const records = warnSpy.mock.calls.filter((call) => call[0] === '[MarkdownContent]')
+    expect(records).toHaveLength(1)
+    expect(records[0]?.[2]).toEqual({ reason: 'unparseable', blockIndex: 1 })
+
+    warnSpy.mockRestore()
+  })
+})
+
+const MIXED_MESSAGE = [
+  '# Report',
+  '',
+  'Inline math $E = mc^2$ follows.',
+  '',
+  fence(ECHARTS_BAR),
+  '',
+  '```chart.js',
+  '{"type":"bar","data":{"labels":["North"],"datasets":[{"label":"Q4","data":[820]}]}}',
+  '```',
+  '',
+  '```rows',
+  '[{"region":"North","q4":820}]',
+  '```',
+  '',
+  '```pivot',
+  '[{"region":"North","q4":820}]',
+  '```',
+  '',
+  '```ts',
+  'const x: number = 1',
+  '```',
+].join('\n')
+
+describe('S24 MarkdownContent — mixed block types', () => {
+  it('renders every block type independently in one message', async () => {
+    const { container } = await renderSettled(MIXED_MESSAGE)
+
+    const echart = container.querySelector('[data-echart-id]')
+    expect(echart?.querySelector('.echart-stub')).not.toBeNull()
+
+    const chart = container.querySelector('[data-chart-id]')
+    expect(chart?.querySelector('.chart-stub')?.getAttribute('data-chart-type')).toBe('bar')
+
+    const table = container.querySelector('[data-table-id]')
+    expect(table?.querySelector('.table-stub')?.getAttribute('data-columns')).toBe('2')
+
+    const pivot = container.querySelector('[data-pivot-id]')
+    expect(pivot?.querySelector('.pivot-stub')?.getAttribute('data-rows')).toBe('1')
+
+    expect(container.querySelector('.katex')).not.toBeNull()
+    expect(container.querySelector('h1')?.textContent).toBe('Report')
+    expect(container.textContent).toContain('const x: number = 1')
+
+    expect(container.querySelector('code.language-echarts')).toBeNull()
+    expect(container.querySelector('code.language-chart\\.js')).toBeNull()
+  })
+})
+
+describe('S29 MarkdownContent — chart.js regression guard', () => {
+  // Snapshot captured before MarkdownContent gained an ECharts pass (FR-020).
+  // A mismatch means chart.js rendering changed — fix the code, never -u this.
+  it('renders a stored chart.js message identically to the pre-ECharts snapshot', async () => {
+    const { container } = await renderSettled(STORED_CHART_JS_MESSAGE)
+    expect(container.innerHTML).toMatchSnapshot()
+  })
+
+  it('emits a chart placeholder and teleports the chart into it', async () => {
+    const { container } = await renderSettled(STORED_CHART_JS_MESSAGE)
+
+    const placeholder = container.querySelector('[data-chart-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.chart-stub')).not.toBeNull()
+    expect(placeholder?.querySelector('.chart-stub')?.getAttribute('data-chart-type')).toBe('bar')
+  })
+
+  it('does not leave the raw chart.js fence in the rendered output', async () => {
+    const { container } = await renderSettled(STORED_CHART_JS_MESSAGE)
+
+    expect(container.querySelector('code.language-chart\\.js')).toBeNull()
+    expect(container.textContent).toContain('Quarterly revenue')
+    expect(container.textContent).toContain('Let me know if you want it by month.')
   })
 })

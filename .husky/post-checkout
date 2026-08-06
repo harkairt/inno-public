@@ -1,0 +1,4 @@
+seed="$(git rev-parse --show-toplevel)/scripts/seed-worktree-env.sh"
+if [ -f "$seed" ]; then
+  bash "$seed" "$1" "$2" "$3" || echo "warning: worktree env seeding failed" >&2
+fi

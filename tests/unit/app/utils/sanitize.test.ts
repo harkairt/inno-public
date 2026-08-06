@@ -154,6 +154,17 @@ describe('sanitizeHTML — data-* attributes', () => {
     expect(out).toContain('data-pivot-id="3"')
     expect(out).not.toContain('data-foo')
   })
+
+  it('S28 keeps data-echart-id so the ECharts placeholder survives sanitization', () => {
+    const out = sanitizeHTML('<div data-echart-id="v-0-echart-0"></div>')
+    expect(out).toContain('data-echart-id="v-0-echart-0"')
+  })
+
+  it('S28 keeps data-echart-id alongside the chart.js placeholder attribute', () => {
+    const out = sanitizeHTML('<div data-chart-id="0"></div><div data-echart-id="1"></div>')
+    expect(out).toContain('data-chart-id="0"')
+    expect(out).toContain('data-echart-id="1"')
+  })
 })
 
 // ---------------------------------------------------------------------------

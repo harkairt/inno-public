@@ -106,10 +106,13 @@ export default defineConfig({
         // client/interceptor-setup, plugins, layouts) + storage-blocked simulation
         // + token-lifecycle/SignalR/clock backfill (+132 tests). floor(actual − 2):
         // branches 81.07→79, functions 74.52→72, lines/statements 81.84→79.
-        branches: 79,
-        functions: 72,
-        lines: 79,
-        statements: 79,
+        // 001-echarts-code-blocks (2026-08-05) — ECharts validation, composable,
+        // component and store suites. floor(actual − 2): branches 85.56→83,
+        // functions 79.09→77, lines/statements 85.30→83.
+        branches: 83,
+        functions: 77,
+        lines: 83,
+        statements: 83,
         // Wave B1 per-glob ratchet — floor(actual − 2). The interceptor chain and
         // most services are now driven end-to-end through MSW. lib/api/services is
         // held lower because LogService's specialized logging methods are out of
@@ -123,7 +126,7 @@ export default defineConfig({
           statements: 92,
         },
         'lib/api/services/**': {
-          branches: 82,
+          branches: 83,
           functions: 73,
           lines: 68,
           statements: 68,
@@ -131,7 +134,7 @@ export default defineConfig({
         // Wave B2 per-glob ratchet — floor(actual − 2). SignalRService is driven
         // through a mocked @microsoft/signalr; SignalROperations vs a stub.
         'lib/signalr/**': {
-          branches: 84,
+          branches: 88,
           functions: 98,
           lines: 93,
           statements: 93,
@@ -145,10 +148,10 @@ export default defineConfig({
         // Phase 4 (2026-07-08): useRelativeDate frozen-clock buckets +
         // groupMessages date boundaries; floor(actual − 2), branches held at 80.
         'app/composables/**': {
-          branches: 80,
-          functions: 78,
-          lines: 75,
-          statements: 75,
+          branches: 84,
+          functions: 82,
+          lines: 79,
+          statements: 79,
         },
         // Wave B3 per-glob ratchet — floor(actual − 2). config-init/public-auth/
         // vue-query/pinia-persistence/buffer/viewer driven via setup() + MSW; the
@@ -157,10 +160,10 @@ export default defineConfig({
         // Phase 4 (2026-07-08): api-interceptors.client + ssr-width plugins now
         // covered (the two files B3 deferred); floor(actual − 2).
         'app/plugins/**': {
-          branches: 67,
-          functions: 78,
-          lines: 85,
-          statements: 85,
+          branches: 69,
+          functions: 81,
+          lines: 86,
+          statements: 86,
         },
         // Wave B5 per-glob ratchet — floor(actual − 2). SFC coverage verified
         // stable across two identical runs (v8 .vue line-mapping did not jitter),
@@ -170,20 +173,20 @@ export default defineConfig({
         // Phase 4 (2026-07-08): ChatListPanel sessionStorage guards nudged
         // component coverage up; floor(actual − 2).
         'app/components/**': {
-          branches: 75,
-          functions: 51,
-          lines: 78,
-          statements: 78,
+          branches: 78,
+          functions: 60,
+          lines: 82,
+          statements: 82,
         },
         // Wave B6 per-glob ratchet — floor(actual − 2). Pages rendered as
         // components via renderWithProviders + MSW; the plan's ≈80% lines target
         // is met (82.50% → floor 80). Functions held down by visual/layout
         // branches and page methods pragmatically excluded from B6 scope.
         'app/pages/**': {
-          branches: 69,
+          branches: 76,
           functions: 36,
-          lines: 80,
-          statements: 80,
+          lines: 83,
+          statements: 83,
         },
         // Wave B6 per-glob ratchet — floor(actual − 2). auth.global.ts fully
         // driven by the public/private route matrix (100% lines/functions,

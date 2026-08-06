@@ -191,6 +191,20 @@ onMounted(() => {
   }
 })
 
+watch(
+  () => chatStore.composerRequest?.seq,
+  (seq) => {
+    const request = chatStore.composerRequest
+    if (seq === undefined || !request) return
+
+    const currentText = messageText.value.trim()
+    messageText.value = currentText ? `${currentText} ${request.text}` : request.text
+
+    chatStore.clearComposerRequest()
+    focus()
+  },
+)
+
 // Typing indicator state
 const isTypingActive = ref(false)
 let typingTimeoutId: ReturnType<typeof setTimeout> | null = null

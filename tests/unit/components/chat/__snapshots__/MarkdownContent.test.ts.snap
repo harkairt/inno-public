@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`S29 MarkdownContent — chart.js regression guard > renders a stored chart.js message identically to the pre-ECharts snapshot 1`] = `
+"<!-- eslint-disable vue/no-v-html -- sanitized via DOMPurify in sanitizeHTML() --><div class="markdown-content"><div><h2>Quarterly revenue</h2>
+<p>Here is the breakdown you asked for:</p>
+<div class="chart-placeholder" data-chart-id="v-0-chart-0"><div class="chart-stub" data-chart-type="bar"></div></div>
+<p>Let me know if you want it by month.</p>
+</div><!--teleport start--><!--teleport end--></div><!-- eslint-enable vue/no-v-html -->"
+`;
