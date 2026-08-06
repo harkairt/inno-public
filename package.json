@@ -76,6 +76,7 @@
     "vue": "^3.5.22",
     "vue-pivottable": "^1.4.1",
     "vue-router": "^4.6.3",
+    "xlsx": "^0.18.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {

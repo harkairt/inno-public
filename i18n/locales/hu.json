@@ -128,7 +128,9 @@
     "table": {
       "filter-placeholder": "Szűrés...",
       "no-data": "Nincs adat",
-      "no-results": "Nincs találat"
+      "no-results": "Nincs találat",
+      "exportXlsx": "Exportálás Excelbe",
+      "exportXlsxFailed": "A táblázat exportálása sikertelen"
     },
     "pivot": {
       "openTable": "Táblázat megnyitása",

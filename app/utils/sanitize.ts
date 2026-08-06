@@ -66,6 +66,7 @@ const config: Config = {
     'data-echart-id',
     'data-table-id',
     'data-pivot-id',
+    'data-md-table-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',
     'width',

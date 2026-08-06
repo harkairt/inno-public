@@ -3,16 +3,28 @@
     ref="containerRef"
     class="table-container"
   >
-    <div
-      v-if="hasFilterable"
-      class="table-filter"
-    >
-      <UInput
-        v-model="globalFilter"
-        :placeholder="t('chat.table.filter-placeholder')"
-        icon="i-lucide-search"
-        size="sm"
-      />
+    <div class="table-toolbar">
+      <div
+        v-if="hasFilterable"
+        class="table-filter"
+      >
+        <UInput
+          v-model="globalFilter"
+          :placeholder="t('chat.table.filter-placeholder')"
+          icon="i-lucide-search"
+          size="sm"
+        />
+      </div>
+      <UTooltip :text="t('chat.table.exportXlsx')">
+        <UButton
+          icon="i-lucide-download"
+          size="xs"
+          variant="outline"
+          :loading="xlsxLoading"
+          :aria-label="t('chat.table.exportXlsx')"
+          @click="handleExport"
+        />
+      </UTooltip>
     </div>
 
     <UTable
@@ -57,6 +69,7 @@ import { useI18n } from 'vue-i18n'
 import type { SortingState } from '@tanstack/table-core'
 import type { TableData, CellValue } from '@/lib/validation/table'
 import { typeRules, type TypeRule } from '@/lib/table-types'
+import { useXlsx } from '~/composables/useXlsx'
 
 interface Props {
   tableData: TableData
@@ -71,6 +84,9 @@ const currentPage = ref(1)
 const globalFilter = ref('')
 
 const sorting = ref<SortingState>([])
+
+const { isLoading: xlsxLoading, exportToXlsx } = useXlsx()
+const toast = useToast()
 
 const containerRef = useTemplateRef<HTMLDivElement>('containerRef')
 const containerMinWidth = ref(0)
@@ -171,6 +187,21 @@ const captureWidth = () => {
   const el = containerRef.value
   if (el && paginatedRows.value.length > 0) {
     containerMinWidth.value = el.scrollWidth
+  }
+}
+
+const handleExport = async () => {
+  const headers = props.tableData.columns.map((col) => col.name)
+  const rows = props.tableData.rows.map((row) =>
+    props.tableData.columns.map((col) => {
+      const val = row[col.name]
+      if (val == null) return ''
+      return ruleFor(col).format(val, locale.value)
+    }),
+  )
+  const success = await exportToXlsx(headers, rows)
+  if (!success) {
+    toast.add({ title: t('chat.table.exportXlsxFailed'), color: 'error' })
   }
 }
 
