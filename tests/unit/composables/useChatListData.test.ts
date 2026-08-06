@@ -133,7 +133,7 @@ describe('useChatListData session ordering', () => {
     expect(await orderedSessionIds()).toEqual(['absent', 'modified-middle', 'null-old'])
   })
 
-  it('keeps unread sessions above more recently modified read ones', async () => {
+  it('does not reorder sessions by unread status', async () => {
     sessionsRef.value = [
       makeSession({
         sessionId: 'read-recent',
@@ -148,6 +148,6 @@ describe('useChatListData session ordering', () => {
     ]
     unreadRef.value = [{ sessionId: 'unread-old', unreadMessageCount: 3 }]
 
-    expect(await orderedSessionIds()).toEqual(['unread-old', 'read-recent'])
+    expect(await orderedSessionIds()).toEqual(['read-recent', 'unread-old'])
   })
 })
