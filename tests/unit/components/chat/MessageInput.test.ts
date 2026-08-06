@@ -4,9 +4,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import { ref, type Component } from 'vue'
+import { ref, nextTick, type Component } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
+import { useChatStore } from '~/stores/chat'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -42,14 +43,6 @@ vi.mock('@/app/stores/auth', () => ({
   }),
 }))
 
-vi.mock('@/app/stores/chat', () => ({
-  useChatStore: () => ({
-    getDraft: vi.fn().mockReturnValue(''),
-    saveDraft: vi.fn(),
-    clearDraft: vi.fn(),
-  }),
-}))
-
 vi.mock('@/app/composables/useSignalRChat', () => ({
   useSignalRChat: () => ({
     sendTypingIndicator: vi.fn(),
@@ -80,10 +73,11 @@ vi.mock('@/lib/api/services/TranscriptionService', () => ({
 // Render helper
 // ---------------------------------------------------------------------------
 
-async function renderMessageInput(props = {}) {
+async function renderMessageInput(props = {}, beforeRender?: () => void) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const pinia = createPinia()
   setActivePinia(pinia)
+  beforeRender?.()
 
   const { default: MessageInput } = (await import('~/components/chat/MessageInput.vue')) as {
     default: Component
@@ -109,8 +103,9 @@ async function renderMessageInput(props = {}) {
           name: 'UTextarea',
           props: ['modelValue', 'placeholder', 'disabled', 'rows'],
           emits: ['update:modelValue', 'keydown'],
+          setup: () => ({ textareaRef: ref<HTMLTextAreaElement | null>(null) }),
           template:
-            '<textarea :placeholder="placeholder" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown="$emit(\'keydown\', $event)" data-testid="message-input"></textarea>',
+            '<textarea ref="textareaRef" :placeholder="placeholder" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown="$emit(\'keydown\', $event)" data-testid="message-input"></textarea>',
         },
         UAlert: { template: '<div />' },
         ChatFormattingToolbar: { template: '<div />' },
@@ -223,5 +218,78 @@ describe('MessageInput — voice button', () => {
     const buttons = screen.queryAllByRole('button')
     const voiceButton = buttons.find((b) => b.getAttribute('aria-label')?.includes('Recording'))
     expect(voiceButton).toBeUndefined()
+  })
+})
+
+describe('S46–S51 MessageInput — composer requests from a chart click', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const textarea = () => screen.getByTestId('message-input') as HTMLTextAreaElement
+
+  it('S46 inserts the request text into an empty composer and focuses it', async () => {
+    await renderMessageInput()
+    const store = useChatStore()
+
+    store.requestComposerText('Why did North drop?')
+    await nextTick()
+
+    expect(textarea().value).toBe('Why did North drop?')
+    expect(document.activeElement).toBe(textarea())
+  })
+
+  it('S47 appends to existing text without removing anything', async () => {
+    await renderMessageInput()
+    const store = useChatStore()
+
+    await fireEvent.update(textarea(), 'existing')
+    store.requestComposerText('Why did North drop?')
+    await nextTick()
+
+    expect(textarea().value).toBe('existing Why did North drop?')
+  })
+
+  it('S48 appends both requests in order', async () => {
+    await renderMessageInput()
+    const store = useChatStore()
+
+    store.requestComposerText('first question')
+    await nextTick()
+    store.requestComposerText('second question')
+    await nextTick()
+
+    expect(textarea().value).toBe('first question second question')
+  })
+
+  it('S49 clears the request and sends nothing', async () => {
+    await renderMessageInput()
+    const store = useChatStore()
+
+    store.requestComposerText('Why?')
+    await nextTick()
+
+    expect(store.composerRequest).toBeNull()
+    expect(mockMutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('S50 appends even while the input is disabled', async () => {
+    await renderMessageInput({ disabled: true })
+    const store = useChatStore()
+
+    store.requestComposerText('Why?')
+    await nextTick()
+
+    expect(textarea().value).toBe('Why?')
+  })
+
+  it('S51 does not insert a request that already existed at mount', async () => {
+    await renderMessageInput({}, () => {
+      useChatStore().requestComposerText('stale question')
+    })
+    await nextTick()
+
+    expect(textarea().value).toBe('')
+    expect(useChatStore().composerRequest?.text).toBe('stale question')
   })
 })

@@ -2,6 +2,7 @@ import type MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import type { Scenario } from '@/app/dev/fixtures/scenario'
 import { SAMPLE_IMAGE_DATA_URI } from '@/app/dev/fixtures/options'
 import { salesRows, barChart } from '@/app/dev/fixtures/tabular'
+import { echartsBar } from '@/app/dev/fixtures/echarts'
 
 type MarkdownContentProps = InstanceType<typeof MarkdownContent>['$props']
 
@@ -97,5 +98,34 @@ export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
     id: 'md-chart',
     title: 'Embedded ```chart.js block → ChatChart',
     props: { content: fence('chart.js', JSON.stringify(barChart, null, 2)) },
+  },
+  {
+    id: 'md-echarts',
+    title: 'Embedded ```echarts block → ChatEChart',
+    props: { content: fence('echarts', JSON.stringify(echartsBar, null, 2)) },
+  },
+  {
+    id: 'md-echarts-rejected',
+    title: 'Rejected ```echarts block (external reference) → stays a code block',
+    props: {
+      content: fence(
+        'echarts',
+        JSON.stringify(
+          {
+            xAxis: { type: 'category', data: ['A', 'B'] },
+            yAxis: { type: 'value' },
+            series: [{ type: 'bar', data: [1, 2] }],
+            graphic: { type: 'image', style: { image: 'image://evil.png' } },
+          },
+          null,
+          2,
+        ),
+      ),
+    },
+  },
+  {
+    id: 'md-echarts-unparseable',
+    title: 'Malformed ```echarts block → stays a code block',
+    props: { content: fence('echarts', '{ "series": [ ') },
   },
 ]

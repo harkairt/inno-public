@@ -63,6 +63,7 @@ const config: Config = {
     'class',
     'data-language',
     'data-chart-id',
+    'data-echart-id',
     'data-table-id',
     'data-pivot-id',
     // KaTeX attributes (SVG + inline styles for positioning):

@@ -134,6 +134,11 @@
       "openTable": "Open the table",
       "tabTable": "Table",
       "tabPivot": "Pivot"
+    },
+    "echart": {
+      "loading": "Loading chart…",
+      "renderFailed": "This chart could not be displayed.",
+      "clickHint": "Select a data point to ask about it"
     }
   },
   "errors": {

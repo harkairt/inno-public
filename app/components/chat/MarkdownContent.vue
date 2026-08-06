@@ -30,6 +30,18 @@
     >
       <ChatPivotTable :data="pivot.data" />
     </Teleport>
+    <Teleport
+      v-for="echart in echartEntries"
+      :key="echart.id"
+      :to="`[data-echart-id='${echart.id}']`"
+      :defer="true"
+    >
+      <ChatEChart
+        :option="echart.option"
+        :block-index="echart.blockIndex"
+        :source="echart.source"
+      />
+    </Teleport>
   </div>
   <!-- eslint-enable vue/no-v-html -->
 </template>
@@ -39,8 +51,11 @@ import { ref, computed, watch, onMounted, useId } from 'vue'
 import { useMarkdown } from '@/app/composables/useMarkdown'
 import { useShiki } from '@/app/composables/useShiki'
 import { useChartJs } from '~/composables/useChartJs'
+import { useECharts } from '~/composables/useECharts'
 import { sanitizeHTML } from '@/app/utils/sanitize'
+import { createLogger } from '@/lib/utils/logger'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
+import { parseEChartsOption, type EChartsOption } from '@/lib/validation/echarts'
 import {
   parseRowsBlock,
   parseHRowsBlock,
@@ -51,6 +66,7 @@ import {
 import ChatChart from '~/components/chat/ChatChart.vue'
 import ChatTable from '~/components/chat/ChatTable.vue'
 import ChatPivotTable from '~/components/chat/ChatPivotTable.vue'
+import ChatEChart from '~/components/chat/ChatEChart.vue'
 
 interface Props {
   content?: string | null
@@ -62,6 +78,10 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { isLoaded: shikiLoaded, loadHighlighter, highlightCode } = useShiki()
 const { isLoaded: chartJsLoaded, loadChartJs } = useChartJs()
+const { isLoaded: echartsLoaded, loadECharts } = useECharts()
+
+const logger = createLogger('MarkdownContent')
+const reportedRejections = new Set<string>()
 
 const instancePrefix = useId()
 
@@ -80,10 +100,18 @@ interface PivotEntry {
   data: PivotData
 }
 
+interface EChartEntry {
+  id: string
+  option: EChartsOption
+  source: string
+  blockIndex: number
+}
+
 const renderedHTML = ref('')
 const chartEntries = ref<ChartEntry[]>([])
 const tableEntries = ref<TableEntry[]>([])
 const pivotEntries = ref<PivotEntry[]>([])
+const echartEntries = ref<EChartEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
 
@@ -96,6 +124,13 @@ const hasChartBlocks = (content: string | null | undefined): boolean => {
   const openIdx = content.indexOf('```chart.js')
   if (openIdx === -1) return false
   return content.indexOf('```', openIdx + 11) !== -1
+}
+
+const hasEChartsBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```echarts')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 10) !== -1
 }
 
 const hasTableBlocks = (content: string | null | undefined): boolean => {
@@ -171,6 +206,44 @@ const extractChartBlocks = (html: string): { html: string; entries: ChartEntry[]
   return { html: replaced, entries }
 }
 
+const extractEChartsBlocks = (html: string): { html: string; entries: EChartEntry[] } => {
+  const entries: EChartEntry[] = []
+  let index = 0
+  const echartsBlockRegex = /<pre><code\s+class="language-echarts">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(echartsBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseEChartsOption(source)
+    const blockIndex = index++
+
+    if (parsed.isErr()) {
+      const key = `${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected ECharts block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+
+    const id = `${instancePrefix}-echart-${blockIndex}`
+    entries.push({ id, option: parsed.value, source, blockIndex })
+    return `<div class="echart-placeholder" data-echart-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const applyEChartsBlocks = (html: string): string => {
+  if (!hasEChartsBlocks(props.content)) {
+    echartEntries.value = []
+    return html
+  }
+
+  const result = extractEChartsBlocks(html)
+  echartEntries.value = result.entries
+  return result.html
+}
+
 const highlightCodeBlocks = (html: string): string => {
   if (html.length > MAX_CONTENT_SIZE) return html
 
@@ -196,6 +269,7 @@ const renderContent = () => {
     chartEntries.value = []
     tableEntries.value = []
     pivotEntries.value = []
+    echartEntries.value = []
     return
   }
 
@@ -238,6 +312,8 @@ const renderContent = () => {
       chartEntries.value = []
     }
 
+    html = applyEChartsBlocks(html)
+
     if (shikiLoaded.value && hasCodeBlocks(props.content)) {
       html = highlightCodeBlocks(html)
     }
@@ -248,6 +324,7 @@ const renderContent = () => {
     chartEntries.value = []
     tableEntries.value = []
     pivotEntries.value = []
+    echartEntries.value = []
   }
 }
 
@@ -271,12 +348,21 @@ watch(chartJsLoaded, (loaded) => {
   }
 })
 
+watch(echartsLoaded, (loaded) => {
+  if (loaded && echartEntries.value.length > 0) {
+    renderContent()
+  }
+})
+
 onMounted(() => {
   if (hasCodeBlocks(props.content)) {
     void loadHighlighter()
   }
   if (hasChartBlocks(props.content)) {
     void loadChartJs()
+  }
+  if (hasEChartsBlocks(props.content)) {
+    void loadECharts()
   }
 })
 </script>

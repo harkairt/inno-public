@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { createApp } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore } from '~/stores/chat'
 import { AIAnswerType, MessageStatus } from '@/types/enums'
@@ -344,5 +345,73 @@ describe('Chat Store — resetUserData', () => {
     expect(store.getPendingMessages('session-1')).toHaveLength(0)
     expect(store.getTypingUsers('session-1')).toHaveLength(0)
     expect(store.error).toBeNull()
+  })
+})
+
+describe('S37–S40 Chat Store — composer requests', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('S37 collapses newlines and whitespace runs to single spaces', () => {
+    const store = useChatStore()
+    store.requestComposerText('a  b\n\nc')
+
+    expect(store.composerRequest?.text).toBe('a b c')
+  })
+
+  it('S37 ignores whitespace-only input', () => {
+    const store = useChatStore()
+    store.requestComposerText('   \n  ')
+
+    expect(store.composerRequest).toBeNull()
+  })
+
+  it('S38 gives two identical texts two distinct seq values', () => {
+    const store = useChatStore()
+
+    store.requestComposerText('Why did North drop?')
+    const first = store.composerRequest?.seq
+
+    store.requestComposerText('Why did North drop?')
+    const second = store.composerRequest?.seq
+
+    expect(first).toBeDefined()
+    expect(second).toBeDefined()
+    expect(second).not.toBe(first)
+  })
+
+  it('S39 clears the request', () => {
+    const store = useChatStore()
+    store.requestComposerText('Why?')
+    store.clearComposerRequest()
+
+    expect(store.composerRequest).toBeNull()
+  })
+
+  it('S39 clears the request on resetUserData', () => {
+    const store = useChatStore()
+    store.requestComposerText('Why?')
+    store.resetUserData()
+
+    expect(store.composerRequest).toBeNull()
+  })
+
+  it('S40 keeps composerRequest out of the persisted payload', () => {
+    let persist: { key?: string; pick?: string[] } | undefined
+
+    const pinia = createPinia()
+    pinia.use((context) => {
+      if (context.store.$id === 'chat') {
+        persist = (context.options as { persist?: { key?: string; pick?: string[] } }).persist
+      }
+    })
+    createApp({}).use(pinia)
+    setActivePinia(pinia)
+    useChatStore()
+
+    expect(persist?.key).toBe('innochat-chat')
+    expect(persist?.pick).toEqual(['failedMessages', 'activeSessionId', 'draftMessages'])
+    expect(persist?.pick).not.toContain('composerRequest')
   })
 })

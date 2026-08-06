@@ -134,6 +134,11 @@
       "openTable": "Táblázat megnyitása",
       "tabTable": "Táblázat",
       "tabPivot": "Pivot"
+    },
+    "echart": {
+      "loading": "Diagram betöltése…",
+      "renderFailed": "Ezt a diagramot nem sikerült megjeleníteni.",
+      "clickHint": "Válassz egy adatpontot a kérdéshez"
     }
   },
   "errors": {

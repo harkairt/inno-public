@@ -129,6 +129,46 @@
       </section>
 
       <section class="space-y-4">
+        <h2 class="text-lg font-semibold">ChatEChart</h2>
+        <div
+          class="sticky top-16 z-10 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))]/95 p-3 text-xs backdrop-blur"
+        >
+          <span class="text-[hsl(var(--muted-foreground))]">chat store composerRequest: </span>
+          <code>{{ composerRequest ? composerRequest.text : '—' }}</code>
+          <span
+            v-if="composerRequest"
+            class="text-[hsl(var(--muted-foreground))]"
+          >
+            (seq {{ composerRequest.seq }})
+          </span>
+          <UButton
+            v-if="composerRequest"
+            class="ml-2"
+            size="xs"
+            color="neutral"
+            variant="outline"
+            @click="chatStore.clearComposerRequest()"
+          >
+            clear
+          </UButton>
+        </div>
+        <div
+          v-for="scenario in echartsScenarios"
+          :key="scenario.id"
+          class="rounded-xl border border-[hsl(var(--border))] p-4"
+        >
+          <div class="mb-3 text-xs font-medium text-[hsl(var(--muted-foreground))]">
+            {{ scenario.title }}
+          </div>
+          <ChatEChart
+            :option="scenario.props.option"
+            :block-index="scenario.props.blockIndex"
+            :source="scenario.props.source"
+          />
+        </div>
+      </section>
+
+      <section class="space-y-4">
         <h2 class="text-lg font-semibold">ChatPivotTable</h2>
         <div
           v-for="scenario in pivotScenarios"
@@ -174,11 +214,14 @@ import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import ChatTable from '@/app/components/chat/ChatTable.vue'
 import ChatChart from '@/app/components/chat/ChatChart.vue'
+import ChatEChart from '@/app/components/chat/ChatEChart.vue'
 import ChatPivotTable from '@/app/components/chat/ChatPivotTable.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
+import { useChatStore } from '~/stores/chat'
 import { optionsScenarios } from '@/app/dev/fixtures/options'
 import { markdownScenarios } from '@/app/dev/fixtures/markdown'
 import { tableScenarios, chartScenarios, pivotScenarios } from '@/app/dev/fixtures/tabular'
+import { echartsScenarios } from '@/app/dev/fixtures/echarts'
 import { threadMessages, ACTIVE_OPTIONS_MESSAGE_ID } from '@/app/dev/fixtures/thread'
 
 definePageMeta({ layout: false })
@@ -193,6 +236,8 @@ const WIDTH_PRESETS = [
 
 const colorMode = useColorMode()
 const { locale, setLocale } = useI18n()
+const chatStore = useChatStore()
+const composerRequest = computed(() => chatStore.composerRequest)
 
 const activeMode = computed(() => colorMode.value)
 const activeLocale = computed(() => locale.value)

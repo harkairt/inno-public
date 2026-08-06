@@ -58,6 +58,7 @@
     "buffer": "^6.0.3",
     "chart.js": "^4.5.1",
     "dompurify": "^3.2.2",
+    "echarts": "^6.1.0",
     "js-sha512": "^0.9.0",
     "katex": "^0.16.25",
     "markdown-it": "^14.1.0",
