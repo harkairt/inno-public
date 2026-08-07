@@ -43,6 +43,18 @@
       />
     </Teleport>
     <Teleport
+      v-for="barRace in barRaceEntries"
+      :key="barRace.id"
+      :to="`[data-bar-race-id='${barRace.id}']`"
+      :defer="true"
+    >
+      <ChatBarRace
+        :data="barRace.data"
+        :block-index="barRace.blockIndex"
+        :source="barRace.source"
+      />
+    </Teleport>
+    <Teleport
       v-for="mdTable in mdTableEntries"
       :key="mdTable.id"
       :to="`[data-md-table-id='${mdTable.id}']`"
@@ -64,6 +76,7 @@ import { sanitizeHTML } from '@/app/utils/sanitize'
 import { createLogger } from '@/lib/utils/logger'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
 import { parseEChartsOption, type EChartsOption } from '@/lib/validation/echarts'
+import { parseBarRaceData, type BarRaceData } from '@/lib/validation/barRace'
 import {
   parseRowsBlock,
   parseHRowsBlock,
@@ -75,6 +88,7 @@ import ChatChart from '~/components/chat/ChatChart.vue'
 import ChatTable from '~/components/chat/ChatTable.vue'
 import ChatPivotTable from '~/components/chat/ChatPivotTable.vue'
 import ChatEChart from '~/components/chat/ChatEChart.vue'
+import ChatBarRace from '~/components/chat/ChatBarRace.vue'
 import MarkdownTableWrapper from '~/components/chat/MarkdownTableWrapper.vue'
 
 interface Props {
@@ -116,6 +130,13 @@ interface EChartEntry {
   blockIndex: number
 }
 
+interface BarRaceEntry {
+  id: string
+  data: BarRaceData
+  source: string
+  blockIndex: number
+}
+
 interface MdTableEntry {
   id: string
   html: string
@@ -126,6 +147,7 @@ const chartEntries = ref<ChartEntry[]>([])
 const tableEntries = ref<TableEntry[]>([])
 const pivotEntries = ref<PivotEntry[]>([])
 const echartEntries = ref<EChartEntry[]>([])
+const barRaceEntries = ref<BarRaceEntry[]>([])
 const mdTableEntries = ref<MdTableEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
@@ -146,6 +168,13 @@ const hasEChartsBlocks = (content: string | null | undefined): boolean => {
   const openIdx = content.indexOf('```echarts')
   if (openIdx === -1) return false
   return content.indexOf('```', openIdx + 10) !== -1
+}
+
+const hasBarRaceBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```bar-race')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 11) !== -1
 }
 
 const hasTableBlocks = (content: string | null | undefined): boolean => {
@@ -248,6 +277,44 @@ const extractEChartsBlocks = (html: string): { html: string; entries: EChartEntr
   return { html: replaced, entries }
 }
 
+const extractBarRaceBlocks = (html: string): { html: string; entries: BarRaceEntry[] } => {
+  const entries: BarRaceEntry[] = []
+  let index = 0
+  const barRaceBlockRegex = /<pre><code\s+class="language-bar-race">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(barRaceBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseBarRaceData(source)
+    const blockIndex = index++
+
+    if (parsed.isErr()) {
+      const key = `bar-race-${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected bar-race block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+
+    const id = `${instancePrefix}-bar-race-${blockIndex}`
+    entries.push({ id, data: parsed.value, source, blockIndex })
+    return `<div class="bar-race-placeholder" data-bar-race-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const applyBarRaceBlocks = (html: string): string => {
+  if (!hasBarRaceBlocks(props.content)) {
+    barRaceEntries.value = []
+    return html
+  }
+
+  const result = extractBarRaceBlocks(html)
+  barRaceEntries.value = result.entries
+  return result.html
+}
+
 const extractMarkdownTables = (html: string): { html: string; entries: MdTableEntry[] } => {
   const entries: MdTableEntry[] = []
   let index = 0
@@ -299,6 +366,7 @@ const renderContent = () => {
     tableEntries.value = []
     pivotEntries.value = []
     echartEntries.value = []
+    barRaceEntries.value = []
     mdTableEntries.value = []
     return
   }
@@ -343,6 +411,7 @@ const renderContent = () => {
     }
 
     html = applyEChartsBlocks(html)
+    html = applyBarRaceBlocks(html)
 
     const mdTableResult = extractMarkdownTables(html)
     html = mdTableResult.html
@@ -359,6 +428,7 @@ const renderContent = () => {
     tableEntries.value = []
     pivotEntries.value = []
     echartEntries.value = []
+    barRaceEntries.value = []
     mdTableEntries.value = []
   }
 }
@@ -384,7 +454,7 @@ watch(chartJsLoaded, (loaded) => {
 })
 
 watch(echartsLoaded, (loaded) => {
-  if (loaded && echartEntries.value.length > 0) {
+  if (loaded && (echartEntries.value.length > 0 || barRaceEntries.value.length > 0)) {
     renderContent()
   }
 })
@@ -396,7 +466,7 @@ onMounted(() => {
   if (hasChartBlocks(props.content)) {
     void loadChartJs()
   }
-  if (hasEChartsBlocks(props.content)) {
+  if (hasEChartsBlocks(props.content) || hasBarRaceBlocks(props.content)) {
     void loadECharts()
   }
 })

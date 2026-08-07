@@ -67,6 +67,7 @@ const config: Config = {
     'data-table-id',
     'data-pivot-id',
     'data-md-table-id',
+    'data-bar-race-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',
     'width',
