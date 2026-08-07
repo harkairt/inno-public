@@ -1,8 +1,8 @@
 <template>
-  <div class="border-t border-[hsl(var(--border)/0.5)] bg-[hsl(var(--background))] flex-shrink-0">
-    <div class="px-3 py-2">
+  <div class="bg-[hsl(var(--background))] flex-shrink-0">
+    <div class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] py-3">
       <form
-        class="flex flex-col gap-1"
+        class="composer-pill flex flex-col gap-1 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] px-3 py-2 shadow-md transition-colors focus-within:border-[hsl(var(--primary))]"
         @submit.prevent="handleSubmit"
       >
         <!-- Agent Selection - only show if virtual agents exist -->
@@ -52,14 +52,18 @@
               v-model="messageText"
               :placeholder="inputPlaceholder"
               :aria-label="inputPlaceholder"
-              :rows="textareaRows"
+              :rows="1"
               :maxrows="5"
               autoresize
+              variant="none"
               size="lg"
               class="w-full"
               :disabled="disabled || isTranscribing"
               data-testid="message-input"
-              :ui="{ root: 'relative flex items-center', base: 'placeholder:text-dimmed/40' }"
+              :ui="{
+                root: 'relative flex items-center',
+                base: 'placeholder:text-dimmed/70',
+              }"
             />
           </div>
 
@@ -96,18 +100,10 @@
             icon="i-heroicons-paper-airplane-20-solid"
             size="lg"
             color="primary"
-            class="shrink-0"
+            class="shrink-0 !rounded-xl"
             :aria-label="t('chat.messageInput.send')"
             data-testid="send-button"
           />
-        </div>
-
-        <!-- Helper Text (desktop only) -->
-        <div
-          v-if="width >= 1024"
-          class="text-xs text-[hsl(var(--muted-foreground))]"
-        >
-          {{ t('chat.messageInput.pressEnterToSend') }}
         </div>
       </form>
     </div>
@@ -316,10 +312,6 @@ watch(voiceError, (errorMsg) => {
   }
 })
 
-// Responsive rows: 1 on mobile, 2 on desktop (lg breakpoint = 1024px)
-const { width } = useWindowSize()
-const textareaRows = computed(() => (width.value >= 1024 ? 3 : 1))
-
 // Function: Toggle agent selection
 function toggleAgent(agentId: number) {
   // If clicking the already-selected agent, deselect it (return to undefined)
@@ -330,12 +322,9 @@ function toggleAgent(agentId: number) {
   }
 }
 
-// Dynamic placeholder based on conversation state
-// undefined = messages not loaded yet, show no placeholder to avoid flash of wrong text
 const inputPlaceholder = computed(() => {
-  if (props.isNewConversation === undefined) return ''
-  if (props.isNewConversation) {
-    return t('chat.messageInput.placeholderNew')
+  if (props.selectedAgentName) {
+    return t('chat.messageInput.placeholderWithAgent', { agentName: props.selectedAgentName })
   }
   return t('chat.messageInput.placeholderReply')
 })

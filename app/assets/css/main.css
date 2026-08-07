@@ -27,6 +27,9 @@
   --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
   --font-display: 'Bricolage Grotesque', var(--font-sans);
 
+  /* Chat szál max szélesség (820px = tartalom + 2×26px padding) */
+  --container-chat: 820px;
+
   /* Lágy, meleg árnyékok (Elemtár: rgba(20,30,29,…) alapú) */
   --shadow-xs: 0 1px 2px 0 rgb(20 30 29 / 0.04);
   --shadow-sm: 0 1px 2px 0 rgb(20 30 29 / 0.04), 0 1px 3px -1px rgb(20 30 29 / 0.05);
@@ -40,8 +43,9 @@
    ============================================ */
 :root {
   /* Config-vezérelt üzenet-stílus (fallback — Elemtár buborékok) */
-  /* saját üzenet: brand (petróleum) halvány változata */
-  --config-own-message-bg: hsl(167 30% 91%);            /* #E1EFEC brandsoft */
+  /* saját üzenet: primary szín, világos szöveg */
+  --config-own-message-bg: hsl(var(--primary));
+  --config-own-message-fg: hsl(var(--primary-foreground));
   --config-own-message-font-size: 15px;
   --config-own-message-font-style: normal;
   --config-own-message-font-weight: normal;
@@ -188,7 +192,7 @@
   }
 
   body {
-    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    @apply bg-[hsl(var(--card))] text-[hsl(var(--foreground))];
     line-height: 1.55; /* Elemtár buborék line-height */
   }
 
@@ -204,6 +208,9 @@
   input:focus-visible,
   textarea:focus-visible {
     @apply ring-1!;
+  }
+  .composer-pill textarea:focus-visible {
+    @apply ring-0!;
   }
 
   /* Címek — Elemtár: Bricolage Grotesque 600–700, negatív betűköz */
@@ -375,7 +382,7 @@
 
   /* Oldalsáv-elem — Elemtár: aktív = brandsoft háttér, 14px rádiusz */
   .sidebar-item {
-    @apply relative px-3 py-2.5 transition-colors duration-150 cursor-pointer;
+    @apply relative px-3 py-2 transition-colors duration-150 cursor-pointer;
     border-radius: 14px;
   }
 
@@ -419,15 +426,14 @@
 
   .unread-badge {
     @apply inline-flex items-center justify-center shrink-0;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
     background: hsl(var(--destructive));
     color: #fff;
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 800;
-    border: 2px solid hsl(var(--card));
   }
 
   /* Online státusz-pötty — Elemtár zöld */

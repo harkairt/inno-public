@@ -53,8 +53,8 @@
   },
   "chat": {
     "messageInput": {
-      "placeholderNew": "How can I help you?",
-      "placeholderReply": "Reply...",
+      "placeholderReply": "Write a message...",
+      "placeholderWithAgent": "Write a message — {agentName}...",
       "send": "Send",
       "retry": "Retry",
       "failedToSend": "Failed to send message",
@@ -66,10 +66,8 @@
     "messages": {
       "noMessages": "No messages yet",
       "emptyState": "Be the first to say something!",
-      "sending": "Sending...",
-      "sent": "Sent",
-      "failedToSend": "Failed to send",
-      "ariaLabel": "Chat messages"
+      "ariaLabel": "Chat messages",
+      "copyMessage": "Copy message"
     },
     "typing": {
       "single": "{name} is typing",

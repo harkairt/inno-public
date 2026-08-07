@@ -64,17 +64,21 @@
       >
         <div
           ref="messagesContainer"
-          class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col"
+          class="flex-1 overflow-y-auto min-h-0 py-4 flex flex-col"
         >
-          <div class="flex-1" />
-          <ChatMessages
-            :messages="messages"
-            :welcome-message="trimmedWelcomeMessage"
-            :agent-id="agentId"
-            :agent-name="selectedUser.name || selectedUser.email"
-            :active-options-message-id="lastUnansweredOptionsMessageId"
-            @option-submitted="handleOptionSubmitted"
-          />
+          <div
+            class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
+          >
+            <div class="flex-1" />
+            <ChatMessages
+              :messages="messages"
+              :welcome-message="trimmedWelcomeMessage"
+              :agent-id="agentId"
+              :agent-name="selectedUser.name || selectedUser.email"
+              :active-options-message-id="lastUnansweredOptionsMessageId"
+              @option-submitted="handleOptionSubmitted"
+            />
+          </div>
         </div>
 
         <!-- Typing Indicator -->

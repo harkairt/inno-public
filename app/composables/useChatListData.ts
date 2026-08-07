@@ -131,7 +131,7 @@ function sortAndFilterSessions(
 export function useChatListData() {
   const authStore = useAuthStore()
   const chatStore = useChatStore()
-  const { formatRelativeDate } = useRelativeDate()
+  const { formatRelativeDate, formatSessionDate } = useRelativeDate()
 
   const currentUserEmail = computed(() => authStore.user?.email ?? '')
 
@@ -210,6 +210,7 @@ export function useChatListData() {
     handleUserClick,
     clearDraftConversation: (draftKey: string) => chatStore.clearDraft(draftKey),
     formatRelativeDate,
+    formatSessionDate,
     currentUserEmail,
   }
 }
