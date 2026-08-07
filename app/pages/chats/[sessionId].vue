@@ -6,7 +6,7 @@
     >
       <!-- Header Section -->
       <div
-        class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)] min-h-[73px]"
+        class="flex items-center gap-3 px-4 py-3 border-b border-[hsl(var(--border)/0.5)] min-h-[73px] bg-[hsl(var(--card))]"
       >
         <!-- Mobile: back button to session list -->
         <UButton
@@ -188,49 +188,53 @@
         <div class="relative flex-1 overflow-hidden min-h-0">
           <div
             ref="messagesContainer"
-            class="h-full overflow-y-auto p-4 flex flex-col"
+            class="h-full overflow-y-auto py-4 flex flex-col"
           >
-            <div class="flex-1" />
-            <Transition
-              name="shimmer-swap"
-              mode="out-in"
-              @enter="onMessagesEnter"
-              @after-enter="onMessagesEntered"
+            <div
+              class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
             >
-              <!-- Show bubble-shaped skeletons while waiting for real data -->
-              <div
-                v-if="!isMessagesReady"
-                key="shimmer"
-                data-testid="messages-shimmer"
-                class="space-y-3 animate-[fade-in_0.4s_ease_both]"
+              <div class="flex-1" />
+              <Transition
+                name="shimmer-swap"
+                mode="out-in"
+                @enter="onMessagesEnter"
+                @after-enter="onMessagesEntered"
               >
-                <div class="flex justify-end">
-                  <USkeleton
-                    class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-                    style="border-radius: var(--config-message-border-radius)"
-                  />
+                <!-- Show bubble-shaped skeletons while waiting for real data -->
+                <div
+                  v-if="!isMessagesReady"
+                  key="shimmer"
+                  data-testid="messages-shimmer"
+                  class="space-y-3 animate-[fade-in_0.4s_ease_both]"
+                >
+                  <div class="flex justify-end">
+                    <USkeleton
+                      class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+                      style="border-radius: var(--config-message-border-radius)"
+                    />
+                  </div>
+                  <div class="flex justify-start">
+                    <USkeleton
+                      class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+                      style="border-radius: var(--config-message-border-radius)"
+                    />
+                  </div>
                 </div>
-                <div class="flex justify-start">
-                  <USkeleton
-                    class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-                    style="border-radius: var(--config-message-border-radius)"
-                  />
-                </div>
-              </div>
-              <ChatMessages
-                v-else
-                key="messages"
-                :messages="messages"
-                :welcome-message="trimmedWelcomeMessage"
-                :agent-id="session?.agentId ?? virtualAgentFromSession?.agentId"
-                :agent-name="virtualAgentFromSession?.agentName"
-                :welcome-message-date="virtualAgentFromSession?.firstMessageDate"
-                :member-count="session?.members?.length ?? 2"
-                :active-options-message-id="lastUnansweredOptionsMessageId"
-                :skip-entrance-animation="skipEntranceAnimation"
-                @option-submitted="handleOptionSubmitted"
-              />
-            </Transition>
+                <ChatMessages
+                  v-else
+                  key="messages"
+                  :messages="messages"
+                  :welcome-message="trimmedWelcomeMessage"
+                  :agent-id="session?.agentId ?? virtualAgentFromSession?.agentId"
+                  :agent-name="virtualAgentFromSession?.agentName"
+                  :welcome-message-date="virtualAgentFromSession?.firstMessageDate"
+                  :member-count="session?.members?.length ?? 2"
+                  :active-options-message-id="lastUnansweredOptionsMessageId"
+                  :skip-entrance-animation="skipEntranceAnimation"
+                  @option-submitted="handleOptionSubmitted"
+                />
+              </Transition>
+            </div>
           </div>
           <!-- Bottom fade gradient -->
           <div

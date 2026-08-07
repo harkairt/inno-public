@@ -117,6 +117,13 @@ global.useWindowSize = vi.fn(() => ({
 
 global.watchDebounced = vi.fn()
 
+global.useNavigationVisibility = vi.fn(() => ({
+  isMobile: ref(false),
+  isActiveChat: ref(false),
+  showBottomTabBar: ref(false),
+  showRail: ref(true),
+}))
+
 // -----------------------------------------------------------------------
 // Vue mocks
 // -----------------------------------------------------------------------

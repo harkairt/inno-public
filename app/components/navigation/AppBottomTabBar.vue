@@ -2,7 +2,7 @@
   <nav
     role="navigation"
     :aria-label="t('navigation.mainNavigation')"
-    class="fixed bottom-0 inset-x-0 z-50 border-t border-[hsl(var(--border))] bg-[hsl(var(--background))]"
+    class="fixed bottom-0 inset-x-0 z-50 border-t border-[hsl(var(--border))] bg-[hsl(var(--card))]"
     style="padding-bottom: env(safe-area-inset-bottom)"
     data-testid="bottom-tab-bar"
   >

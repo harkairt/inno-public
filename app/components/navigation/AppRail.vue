@@ -2,7 +2,7 @@
   <nav
     role="navigation"
     :aria-label="t('navigation.mainNavigation')"
-    class="w-16 h-dvh flex flex-col items-center border-r border-[hsl(var(--border)/0.5)] bg-[hsl(var(--background))] flex-shrink-0"
+    class="w-16 h-dvh flex flex-col items-center border-r border-[hsl(var(--border)/0.5)] bg-[hsl(var(--card))] flex-shrink-0"
     data-testid="app-rail"
   >
     <div class="flex flex-col items-center gap-1 pt-4 flex-1">

@@ -3,19 +3,21 @@
     <!-- Chat Content Area -->
     <div
       ref="messagesContainer"
-      class="flex-1 overflow-y-auto min-h-0 p-4 flex flex-col"
+      class="flex-1 overflow-y-auto min-h-0 py-4 flex flex-col"
     >
-      <div class="flex-1" />
-      <ChatMessages
-        :messages="messages"
-        :welcome-message="trimmedWelcomeMessage"
-        :welcome-message-date="chatStartTime"
-        :agent-id="agentId"
-        :agent-name="agentName"
-        :hide-sender-names="true"
-      >
-        <template #empty />
-      </ChatMessages>
+      <div class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1">
+        <div class="flex-1" />
+        <ChatMessages
+          :messages="messages"
+          :welcome-message="trimmedWelcomeMessage"
+          :welcome-message-date="chatStartTime"
+          :agent-id="agentId"
+          :agent-name="agentName"
+          :hide-sender-names="true"
+        >
+          <template #empty />
+        </ChatMessages>
+      </div>
     </div>
 
     <!-- Typing Indicator -->

@@ -1,6 +1,6 @@
 <template>
   <header
-    class="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))]"
+    class="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]"
   >
     <!-- Agent info -->
     <div class="flex items-center gap-3">

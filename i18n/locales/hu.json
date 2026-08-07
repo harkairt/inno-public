@@ -53,8 +53,8 @@
   },
   "chat": {
     "messageInput": {
-      "placeholderNew": "Miben segíthetek?",
-      "placeholderReply": "Válasz..",
+      "placeholderReply": "Írj üzenetet...",
+      "placeholderWithAgent": "Írj üzenetet — {agentName}...",
       "send": "Küldés",
       "retry": "Újra",
       "failedToSend": "Nem sikerült elküldeni az üzenetet",
@@ -66,10 +66,8 @@
     "messages": {
       "noMessages": "Még nincsenek üzenetek",
       "emptyState": "Legyen Ön az első, aki mond valamit!",
-      "sending": "Küldés...",
-      "sent": "Elküldve",
-      "failedToSend": "Nem sikerült elküldeni",
-      "ariaLabel": "Chat üzenetek"
+      "ariaLabel": "Chat üzenetek",
+      "copyMessage": "Üzenet másolása"
     },
     "typing": {
       "single": "{name} gépel",

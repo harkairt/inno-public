@@ -3,7 +3,7 @@
     class="flex flex-col h-full overflow-hidden"
     data-testid="chat-list-panel"
   >
-    <div class="border-b border-[hsl(var(--border)/0.5)] px-4 py-3">
+    <div class="px-5 py-3">
       <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
         {{ t('navigation.conversations') }}
       </h1>
@@ -12,15 +12,17 @@
         icon="i-heroicons-magnifying-glass"
         :placeholder="t('sidebar.searchSessions')"
         size="lg"
+        variant="soft"
+        color="neutral"
         class="w-full"
-        :ui="{ root: 'w-full' }"
+        :ui="{ root: 'w-full', base: '!rounded-[12px] focus:!bg-[var(--ui-bg)]' }"
         data-testid="session-search-input"
       />
     </div>
 
     <div
       v-if="isLoadingSessions"
-      class="space-y-2 px-3"
+      class="space-y-2 px-4"
     >
       <USkeleton
         v-for="i in 3"
@@ -33,7 +35,7 @@
       v-else-if="sessionsError"
       color="error"
       variant="soft"
-      class="mx-3"
+      class="mx-4"
     >
       {{ sessionsError.message }}
     </UAlert>
@@ -47,7 +49,7 @@
     <div
       v-else
       ref="scrollContainer"
-      class="flex-1 overflow-y-auto"
+      class="flex-1 overflow-y-auto px-3"
     >
       <div
         v-if="filteredDraftSessions.length > 0"
@@ -115,59 +117,21 @@
       <TransitionGroup
         name="session-list"
         tag="div"
+        class="flex flex-col gap-0.5"
       >
-        <div
+        <SessionListItem
           v-for="session in filteredSessions"
           :key="session.sessionId"
-          class="group relative"
-        >
-          <NuxtLink
-            :to="`/chats/${session.sessionId}`"
-            class="sidebar-item block pr-10"
-            :class="{ 'sidebar-item-active': session.sessionId === activeSessionId }"
-            :data-testid="`session-item-${session.sessionId}`"
-          >
-            <div class="flex items-center gap-2">
-              <SessionMembers
-                :members="getOtherMembers(session.members)"
-                :selectable-users="users || []"
-                size="2xs"
-                class="flex-shrink-0"
-              />
-              <h3
-                :class="[
-                  'font-display-family text-sm tracking-tight line-clamp-1 flex-1 min-w-0',
-                  getUnreadCount(session.sessionId) > 0 ? 'font-bold' : 'font-medium',
-                ]"
-              >
-                {{ getDisplayName(session) }}
-              </h3>
-            </div>
-
-            <p class="flex items-center gap-1.5 text-xs text-muted tracking-wide mt-1">
-              <span
-                v-if="getUnreadCount(session.sessionId) > 0"
-                class="unread-dot"
-              />
-              <span class="line-clamp-1">
-                {{ formatRelativeDate(getSessionActivityDate(session)) }} ·
-                {{ getMemberNames(session.members) }}
-              </span>
-            </p>
-          </NuxtLink>
-
-          <div
-            class="absolute top-3 right-2 transition-opacity"
-            :class="isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
-          >
-            <SessionItemMenu
-              :session-id="session.sessionId"
-              :session-name="session.sessionName"
-              :agent-id="session.agentId"
-              :is-primary-session="isPrimarySessionCheck(session)"
-            />
-          </div>
-        </div>
+          :session="session"
+          :users="users || []"
+          :is-active="session.sessionId === activeSessionId"
+          :unread-count="getUnreadCount(session.sessionId)"
+          :display-name="getDisplayName(session)"
+          :member-names="getMemberNames(session.members)"
+          :other-members="getOtherMembers(session.members)"
+          :is-primary-session="isPrimarySessionCheck(session)"
+          :is-mobile="isMobile"
+        />
       </TransitionGroup>
     </div>
   </div>
@@ -178,9 +142,8 @@ import { ref, onMounted, watch } from 'vue'
 import { useScroll } from '@vueuse/core'
 import { useChatListData } from '~/composables/useChatListData'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
-import SessionItemMenu from '~/components/chat/SessionItemMenu.vue'
 import SessionMembers from '~/components/chat/SessionMembers.vue'
-import { getSessionActivityDate } from '@/app/utils/session'
+import SessionListItem from '~/components/chat/SessionListItem.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -199,7 +162,6 @@ const {
   getDisplayName,
   isPrimarySessionCheck,
   clearDraftConversation,
-  formatRelativeDate,
 } = useChatListData()
 
 const activeSessionId = computed(() => route.params.sessionId as string)

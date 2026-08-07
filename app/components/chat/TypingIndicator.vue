@@ -1,6 +1,6 @@
 <template>
   <div
-    class="h-6 px-4"
+    class="h-6 max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px]"
     data-testid="typing-indicator"
     role="status"
     aria-live="polite"

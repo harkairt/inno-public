@@ -42,88 +42,94 @@
           "
         >
           <div
-            class="max-w-[95%] md:max-w-[75%] sm:max-w-[70%] px-3 py-2"
-            :class="{
-              'rounded-br-md': isUserMessage(message),
-              'rounded-bl-md': !isUserMessage(message),
-            }"
-            :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
+            class="flex flex-col"
+            :class="isUserMessage(message) ? 'items-end' : 'items-start'"
           >
-            <!-- Sender Name + Rating Controls -->
             <div
-              v-if="showSenderName(message)"
-              class="flex items-start justify-between gap-2"
+              class="max-w-[95%] md:max-w-[75%] sm:max-w-[70%] px-3 py-2"
+              :class="{
+                'rounded-br-md': isUserMessage(message),
+                'rounded-bl-md': !isUserMessage(message),
+              }"
+              :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
+              @click="handleBubbleTap(message.messageID)"
             >
               <div
-                class="text-xs font-medium mb-1.5"
-                :class="{
-                  'opacity-80': isUserMessage(message),
-                  'text-[hsl(var(--muted-foreground))]': !isUserMessage(message),
-                }"
+                v-if="showSenderName(message)"
+                class="flex items-start justify-between gap-2"
               >
-                {{ message.senderName }}
+                <div
+                  class="text-xs font-medium mb-1.5"
+                  :class="{
+                    'opacity-80': isUserMessage(message),
+                    'text-[hsl(var(--muted-foreground))]': !isUserMessage(message),
+                  }"
+                >
+                  {{ message.senderName }}
+                </div>
+
+                <div
+                  v-if="false && !isUserMessage(message) && message.messageID !== 'welcome'"
+                  class="transition-opacity duration-200 -mt-1 -mr-1"
+                  :class="message.isRated ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+                >
+                  <MessageRating
+                    :message-id="message.messageID"
+                    :session-id="message.sessionId"
+                    :agent-id="props.agentId ?? 0"
+                    :is-rated="message.isRated"
+                    :rating="message.rating ?? null"
+                  />
+                </div>
               </div>
 
-              <!-- Rating Controls (AI messages only, not welcome message) -->
-              <!-- TEMPORARILY HIDDEN: Thumbs up/down rating feature -->
-              <div
-                v-if="false && !isUserMessage(message) && message.messageID !== 'welcome'"
-                class="transition-opacity duration-200 -mt-1 -mr-1"
-                :class="message.isRated ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
-              >
-                <MessageRating
-                  :message-id="message.messageID"
-                  :session-id="message.sessionId"
-                  :agent-id="props.agentId ?? 0"
-                  :is-rated="message.isRated"
-                  :rating="message.rating ?? null"
+              <template v-if="message.messageType === AIAnswerType.Options">
+                <MarkdownContent
+                  v-if="!parseOptionsPayload(message.messageText)"
+                  :content="message.messageText"
                 />
-              </div>
-            </div>
-
-            <!-- Message Content -->
-            <template v-if="message.messageType === AIAnswerType.Options">
+                <OptionsMessage
+                  v-else
+                  :payload="parseOptionsPayload(message.messageText)!"
+                  :is-active="message.messageID === props.activeOptionsMessageId"
+                  :selected-answer="getSelectedAnswer(group.messages, messageIndex)"
+                  @submit="(answer) => emit('optionSubmitted', answer)"
+                />
+              </template>
               <MarkdownContent
-                v-if="!parseOptionsPayload(message.messageText)"
+                v-else
                 :content="message.messageText"
               />
-              <OptionsMessage
-                v-else
-                :payload="parseOptionsPayload(message.messageText)!"
-                :is-active="message.messageID === props.activeOptionsMessageId"
-                :selected-answer="getSelectedAnswer(group.messages, messageIndex)"
-                @submit="(answer) => emit('optionSubmitted', answer)"
-              />
-            </template>
-            <MarkdownContent
-              v-else
-              :content="message.messageText"
-            />
+            </div>
 
-            <!-- Message Status and Time -->
-            <div class="flex items-center justify-between mt-2 text-xs opacity-70">
-              <span>{{ formatTime(message.sendDate) }}</span>
-
-              <!-- Message Status for user messages -->
+            <div class="h-5 flex items-center pl-2">
               <div
-                v-if="isUserMessage(message) && message.status"
-                class="flex items-center ml-2"
+                :class="[
+                  'flex items-center gap-1.5 px-1 transition-opacity duration-150',
+                  isMobile
+                    ? tappedMessageId === message.messageID
+                      ? 'opacity-100'
+                      : 'opacity-0 pointer-events-none'
+                    : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto',
+                ]"
               >
-                <div
-                  v-if="message.status === MessageStatus.PENDING"
-                  class="w-2 h-2 bg-amber-400 dark:bg-amber-300 rounded-full animate-pulse"
-                  :title="t('chat.messages.sending')"
-                />
-                <div
-                  v-else-if="message.status === MessageStatus.SENT"
-                  class="w-2 h-2 bg-emerald-400 dark:bg-emerald-300 rounded-full"
-                  :title="t('chat.messages.sent')"
-                />
-                <div
-                  v-else-if="message.status === MessageStatus.FAILED"
-                  class="w-2 h-2 bg-rose-400 dark:bg-rose-300 rounded-full"
-                  :title="t('chat.messages.failedToSend')"
-                />
+                <span class="text-[10px] text-[hsl(var(--muted-foreground)/0.6)] select-none">
+                  {{ formatActionBarDate(message.sendDate) }}
+                </span>
+                <button
+                  class="text-[hsl(var(--muted-foreground)/0.5)] hover:text-[hsl(var(--muted-foreground))] transition-colors p-0.5 rounded"
+                  :aria-label="t('chat.messages.copyMessage')"
+                  @click.stop="handleCopy(message.messageID, message.messageText)"
+                >
+                  <UIcon
+                    :name="
+                      copiedMessageId === message.messageID
+                        ? 'i-heroicons-check-20-solid'
+                        : 'i-heroicons-square-2-stack'
+                    "
+                    class="size-3"
+                  />
+                </button>
               </div>
             </div>
           </div>
@@ -157,11 +163,14 @@ import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { parseOptionsPayload } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
 import { AIAnswerType } from '@/types/enums'
+import { useClipboard } from '@vueuse/core'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
 
 const { t, locale } = useI18n()
+const { isMobile } = useNavigationVisibility()
+const { copy } = useClipboard()
 
 // Config-driven message styles using CSS variables
 const ownMessageStyle = computed<CSSProperties>(() => ({
@@ -173,7 +182,7 @@ const ownMessageStyle = computed<CSSProperties>(() => ({
   borderColor: 'var(--config-message-border-color)',
   borderStyle: 'var(--config-message-border-style)' as CSSProperties['borderStyle'],
   borderRadius: 'var(--config-message-border-radius)',
-  color: 'hsl(var(--foreground))',
+  color: 'var(--config-own-message-fg)',
 }))
 
 const partnerMessageStyle = computed<CSSProperties>(() => ({
@@ -188,16 +197,7 @@ const partnerMessageStyle = computed<CSSProperties>(() => ({
   color: 'hsl(var(--foreground))',
 }))
 
-enum MessageStatus {
-  PENDING = 'PENDING',
-  SENT = 'SENT',
-  FAILED = 'FAILED',
-}
-
-// Extended message type for optimistic updates
-type ExtendedMessage = AISessionMessageDTO & {
-  status?: MessageStatus
-}
+type ExtendedMessage = AISessionMessageDTO
 
 interface Props {
   messages?: ExtendedMessage[]
@@ -228,10 +228,27 @@ const emit = defineEmits<{
 }>()
 
 const authStore = useAuthStore()
+const tappedMessageId = ref<string | null>(null)
+const copiedMessageId = ref<string | null>(null)
 
-// Helper to determine if a message is from the current user
 const isUserMessage = (message: ExtendedMessage) => {
   return message.senderUserCode === authStore.user?.email
+}
+
+function handleBubbleTap(messageId: string) {
+  if (!isMobile.value) return
+  tappedMessageId.value = tappedMessageId.value === messageId ? null : messageId
+}
+
+async function handleCopy(messageId: string, text: string | null | undefined) {
+  if (!text) return
+  await copy(text)
+  copiedMessageId.value = messageId
+  setTimeout(() => {
+    if (copiedMessageId.value === messageId) {
+      copiedMessageId.value = null
+    }
+  }, 1500)
 }
 
 // Find the user's answer to an Options message by looking at the next user message after it
@@ -267,7 +284,6 @@ const welcomeMessageObj = computed((): ExtendedMessage | null => {
     rating: null,
     readByUsers: [],
     sessionId: '',
-    status: MessageStatus.SENT,
   }
 })
 
@@ -392,16 +408,28 @@ function formatDate(date: Date): string {
   }
 }
 
-function formatTime(dateString: string): string {
+function formatActionBarDate(dateString: string): string {
   try {
     const date = new Date(dateString)
-    if (isNaN(date.getTime())) {
-      return ''
+    if (isNaN(date.getTime())) return ''
+
+    const now = new Date()
+    const isToday =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+
+    if (isToday) {
+      return date.toLocaleTimeString(locale.value, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
     }
-    return date.toLocaleTimeString(locale.value, {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
+
+    return date.toLocaleDateString(locale.value, {
+      month: 'short',
+      day: 'numeric',
     })
   } catch {
     return ''

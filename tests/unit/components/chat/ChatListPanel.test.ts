@@ -83,6 +83,21 @@ describe('ChatListPanel drafts', () => {
           UEmpty: { template: '<div data-testid="empty"></div>' },
           SessionItemMenu: { template: '<div />' },
           SessionMembers: { template: '<div data-testid="session-members"></div>' },
+          SessionListItem: {
+            props: [
+              'session',
+              'users',
+              'isActive',
+              'unreadCount',
+              'displayName',
+              'memberNames',
+              'otherMembers',
+              'isPrimarySession',
+              'isMobile',
+            ],
+            template:
+              '<div :data-testid="`session-item-${session.sessionId}`" :data-session-id="session.sessionId"></div>',
+          },
           NuxtLink: {
             props: ['to'],
             template: '<a :href="to"><slot /></a>',
@@ -135,7 +150,7 @@ describe('ChatListPanel drafts', () => {
     expect(screen.getByTestId('empty')).toBeTruthy()
   })
 
-  it('formats the session subtitle from modifiedAt when present', async () => {
+  it('renders a SessionListItem for each session', async () => {
     listDataMock.filteredSessions.value = [
       makeSession({
         sessionId: 'session-modified',
@@ -146,21 +161,18 @@ describe('ChatListPanel drafts', () => {
 
     await renderPanel()
 
-    expect(listDataMock.formatRelativeDate).toHaveBeenCalledWith('2024-09-01T00:00:00Z')
-    expect(listDataMock.formatRelativeDate).not.toHaveBeenCalledWith('2024-01-01T00:00:00Z')
+    expect(screen.getByTestId('session-item-session-modified')).toBeTruthy()
   })
 
-  it('falls back to insertDate for the subtitle when modifiedAt is null', async () => {
+  it('renders multiple sessions in the list', async () => {
     listDataMock.filteredSessions.value = [
-      makeSession({
-        sessionId: 'session-unmodified',
-        insertDate: '2024-01-01T00:00:00Z',
-        modifiedAt: null,
-      }),
+      makeSession({ sessionId: 'session-a' }),
+      makeSession({ sessionId: 'session-b' }),
     ]
 
     await renderPanel()
 
-    expect(listDataMock.formatRelativeDate).toHaveBeenCalledWith('2024-01-01T00:00:00Z')
+    expect(screen.getByTestId('session-item-session-a')).toBeTruthy()
+    expect(screen.getByTestId('session-item-session-b')).toBeTruthy()
   })
 })
