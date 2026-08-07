@@ -139,6 +139,12 @@
       "loading": "Loading chart…",
       "renderFailed": "This chart could not be displayed.",
       "clickHint": "Select a data point to ask about it"
+    },
+    "barRace": {
+      "loading": "Loading chart…",
+      "renderFailed": "This chart could not be displayed.",
+      "play": "Play",
+      "pause": "Pause"
     }
   },
   "errors": {

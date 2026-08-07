@@ -139,6 +139,12 @@
       "loading": "Diagram betöltése…",
       "renderFailed": "Ezt a diagramot nem sikerült megjeleníteni.",
       "clickHint": "Válassz egy adatpontot a kérdéshez"
+    },
+    "barRace": {
+      "loading": "Diagram betöltése…",
+      "renderFailed": "Ezt a diagramot nem sikerült megjeleníteni.",
+      "play": "Lejátszás",
+      "pause": "Szünet"
     }
   },
   "errors": {

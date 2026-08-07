@@ -169,6 +169,24 @@
       </section>
 
       <section class="space-y-4">
+        <h2 class="text-lg font-semibold">ChatBarRace</h2>
+        <div
+          v-for="scenario in barRaceScenarios"
+          :key="scenario.id"
+          class="rounded-xl border border-[hsl(var(--border))] p-4"
+        >
+          <div class="mb-3 text-xs font-medium text-[hsl(var(--muted-foreground))]">
+            {{ scenario.title }}
+          </div>
+          <ChatBarRace
+            :data="scenario.props.data"
+            :block-index="scenario.props.blockIndex"
+            :source="scenario.props.source"
+          />
+        </div>
+      </section>
+
+      <section class="space-y-4">
         <h2 class="text-lg font-semibold">ChatPivotTable</h2>
         <div
           v-for="scenario in pivotScenarios"
@@ -215,6 +233,7 @@ import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import ChatTable from '@/app/components/chat/ChatTable.vue'
 import ChatChart from '@/app/components/chat/ChatChart.vue'
 import ChatEChart from '@/app/components/chat/ChatEChart.vue'
+import ChatBarRace from '@/app/components/chat/ChatBarRace.vue'
 import ChatPivotTable from '@/app/components/chat/ChatPivotTable.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import { useChatStore } from '~/stores/chat'
@@ -222,6 +241,7 @@ import { optionsScenarios } from '@/app/dev/fixtures/options'
 import { markdownScenarios } from '@/app/dev/fixtures/markdown'
 import { tableScenarios, chartScenarios, pivotScenarios } from '@/app/dev/fixtures/tabular'
 import { echartsScenarios } from '@/app/dev/fixtures/echarts'
+import { barRaceScenarios } from '@/app/dev/fixtures/barRace'
 import { threadMessages, ACTIVE_OPTIONS_MESSAGE_ID } from '@/app/dev/fixtures/thread'
 
 definePageMeta({ layout: false })
