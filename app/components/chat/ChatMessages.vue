@@ -24,7 +24,7 @@
       </div>
 
       <!-- Messages in this group -->
-      <div class="space-y-3">
+      <div>
         <div
           v-for="(message, messageIndex) in group.messages"
           :key="message.messageID"
@@ -42,7 +42,7 @@
           "
         >
           <div
-            class="flex flex-col"
+            class="flex flex-col w-full"
             :class="isUserMessage(message) ? 'items-end' : 'items-start'"
           >
             <div
