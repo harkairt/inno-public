@@ -1,25 +1,6 @@
-/**
- * AppRail — the desktop side navigation rail.
- *
- * Note on "visibility per auth/public mode": AppRail does NOT gate its own
- * visibility — the parent layout mounts/unmounts it via useNavigationVisibility
- * (`showRail`, covered in that composable's B4 test). So here we test what the
- * component itself owns: nav-item rendering, route-active states, and the unread
- * badge. useChatListData is mocked to a controllable totalUnreadCount so no
- * queries fire (no MSW needed). useRoute is the global Nuxt stub, overridden
- * per test to drive the active branch. navigateTo is the global stub.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/vue'
-import { ref, type Component } from 'vue'
-
-const listDataMock = {
-  totalUnreadCount: ref(0),
-}
-
-vi.mock('~/composables/useChatListData', () => ({
-  useChatListData: () => listDataMock,
-}))
+import { render, screen, type RenderResult } from '@testing-library/vue'
+import type { Component } from 'vue'
 
 function setRoute(path: string) {
   ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -32,84 +13,79 @@ function setRoute(path: string) {
 
 const stubs = {
   UTooltip: { name: 'UTooltip', template: '<div><slot /></div>' },
-  UChip: {
-    name: 'UChip',
-    props: ['text', 'show'],
-    template: '<div><span v-if="show" data-testid="rail-badge">{{ text }}</span><slot /></div>',
+  NuxtLink: {
+    name: 'NuxtLink',
+    props: ['to'],
+    template: '<a :href="to"><slot /></a>',
   },
-  // Single-root stub: undeclared bindings (data-testid, aria-current, aria-label,
-  // variant, color) fall through as DOM attributes; @click works natively.
-  UButton: { name: 'UButton', template: '<button><slot /></button>' },
+  UIcon: { name: 'UIcon', props: ['name'], template: '<i :data-icon="name" />' },
+  UserAvatar: {
+    name: 'UserAvatar',
+    props: ['image', 'darkImage', 'alt'],
+    template: '<span data-testid="rail-avatar" :data-image="image"><slot /></span>',
+  },
 }
 
-// `navigateTo` is called from the template, so Vue resolves it via
-// globalProperties (not JS globals). Inject a spy through VTU's `global.mocks`.
-const navigateToSpy = vi.fn()
-
-async function renderRail() {
+async function renderRail(): Promise<RenderResult> {
   const { default: AppRail } = (await import('~/components/navigation/AppRail.vue')) as {
     default: Component
   }
-  return render(AppRail, { global: { stubs, mocks: { navigateTo: navigateToSpy } } })
+  return render(AppRail, { global: { stubs } })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  listDataMock.totalUnreadCount.value = 0
   setRoute('/chats')
 })
 
-describe('AppRail — rendering', () => {
-  it('renders the rail with all nav items', async () => {
+describe('AppRail', () => {
+  it('renders a static logo, the two primary destinations, and a profile avatar link', async () => {
     await renderRail()
+
     expect(screen.getByTestId('app-rail')).toBeTruthy()
-    expect(screen.getByTestId('rail-chats')).toBeTruthy()
-    expect(screen.getByTestId('rail-users')).toBeTruthy()
-    expect(screen.getByTestId('rail-profile')).toBeTruthy()
-  })
-})
-
-describe('AppRail — active route', () => {
-  it('marks the chats item active on /chats routes', async () => {
-    setRoute('/chats/abc-123')
-    await renderRail()
-    expect(screen.getByTestId('rail-chats').getAttribute('aria-current')).toBe('page')
-    expect(screen.getByTestId('rail-users').getAttribute('aria-current')).toBeNull()
+    expect(screen.getByTestId('app-rail').className).toContain('w-[74px]')
+    expect(screen.getByTestId('rail-logo').tagName).toBe('DIV')
+    expect(screen.queryByRole('button', { name: 'InnoChat' })).toBeNull()
+    expect(screen.getByTestId('rail-chats').getAttribute('href')).toBe('/chats')
+    expect(screen.getByTestId('rail-users').getAttribute('href')).toBe('/users')
+    expect(screen.getByTestId('rail-profile').getAttribute('href')).toBe('/profile')
   })
 
-  it('marks the users item active on /users', async () => {
-    setRoute('/users')
+  it('uses the reference icon set and does not render an unread badge', async () => {
     await renderRail()
-    expect(screen.getByTestId('rail-users').getAttribute('aria-current')).toBe('page')
-    expect(screen.getByTestId('rail-chats').getAttribute('aria-current')).toBeNull()
-  })
-})
 
-describe('AppRail — navigation', () => {
-  it('navigates to the item route on click', async () => {
-    setRoute('/chats')
-    await renderRail()
-    await fireEvent.click(screen.getByTestId('rail-users'))
-    expect(navigateToSpy).toHaveBeenCalledWith('/users')
-  })
-})
-
-describe('AppRail — unread badge', () => {
-  it('hides the badge when there are no unread messages', async () => {
-    listDataMock.totalUnreadCount.value = 0
-    await renderRail()
+    expect(
+      screen.getByTestId('rail-chats').querySelector('[data-icon]')?.getAttribute('data-icon'),
+    ).toBe('i-ph-chats-duotone')
+    expect(
+      screen.getByTestId('rail-users').querySelector('[data-icon]')?.getAttribute('data-icon'),
+    ).toBe('i-ph-users-three')
     expect(screen.queryByTestId('rail-badge')).toBeNull()
   })
 
-  it('shows the unread count when there are unread messages', async () => {
-    listDataMock.totalUnreadCount.value = 5
+  it('marks the matching route active', async () => {
+    setRoute('/chats/abc-123')
+    const chatsRender = await renderRail()
+    expect(screen.getByTestId('rail-chats').getAttribute('aria-current')).toBe('page')
+    expect(screen.getByTestId('rail-users').getAttribute('aria-current')).toBeNull()
+    expect(screen.getByTestId('rail-chats').className).toContain('bg-[#f0efea]')
+    expect(screen.getByTestId('rail-chats').querySelector('[data-icon]')?.className).toContain(
+      'text-[#0e5c5c]',
+    )
+    expect(screen.getByTestId('rail-users').className).toContain('hover:bg-[#f0efea]')
+    chatsRender.unmount()
+
+    setRoute('/profile')
     await renderRail()
-    expect(screen.getByTestId('rail-badge').textContent).toContain('5')
+    expect(screen.getByTestId('rail-profile').getAttribute('aria-current')).toBe('page')
+    expect(screen.getByTestId('rail-avatar').className).toContain('border-[#0e5c5c]')
   })
 
-  it('caps the badge at 99+', async () => {
-    listDataMock.totalUnreadCount.value = 150
+  it('provides an initials fallback when no avatar image is available', async () => {
     await renderRail()
-    expect(screen.getByTestId('rail-badge').textContent).toContain('99+')
+
+    const avatar = screen.getByTestId('rail-avatar')
+    expect(avatar.getAttribute('data-image')).toBeNull()
+    expect(avatar.textContent).toContain('U')
   })
 })

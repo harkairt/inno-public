@@ -1,92 +1,219 @@
 <template>
   <div
-    class="flex flex-col h-full overflow-hidden"
+    class="h-full overflow-y-auto bg-[hsl(var(--background))]"
     data-testid="users-page"
   >
-    <div class="border-b border-[hsl(var(--border)/0.5)] px-4 py-3">
-      <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
-        {{ t('navigation.users') }}
-      </h1>
-      <UInput
-        v-model="userSearchQuery"
-        icon="i-heroicons-magnifying-glass"
-        :placeholder="t('sidebar.searchUsers')"
-        size="lg"
-        class="w-full"
-        :ui="{ root: 'w-full' }"
-        data-testid="user-search-input"
-      />
-    </div>
-
-    <div
-      v-if="isLoadingUsers"
-      class="space-y-2 p-4"
+    <main
+      id="main-content"
+      class="mx-auto w-full max-w-[1040px] px-4 pt-6 pb-28 sm:px-6 md:px-9 md:pt-8 md:pb-15"
     >
-      <USkeleton
-        v-for="i in 5"
-        :key="i"
-        class="h-14"
-      />
-    </div>
+      <header>
+        <h1 class="text-[26px] leading-tight md:text-[28px]">
+          {{ t('users.title') }}
+        </h1>
+        <p
+          class="mt-1 max-w-3xl text-sm leading-relaxed text-[hsl(var(--muted-foreground))] md:text-base"
+        >
+          {{ t('users.subtitle') }}
+        </p>
 
-    <UAlert
-      v-else-if="usersError"
-      color="error"
-      variant="soft"
-      class="m-4"
-    >
-      {{ usersError.message }}
-    </UAlert>
-
-    <UEmpty
-      v-else-if="filteredUsers.length === 0"
-      :description="userSearchQuery ? t('sidebar.noUsersFound') : t('sidebar.noUsersFound')"
-      class="py-12"
-    />
-
-    <div
-      v-else
-      class="flex-1 overflow-y-auto"
-    >
-      <button
-        v-for="user in filteredUsers"
-        :key="user.id"
-        class="sidebar-item w-full text-left flex items-center gap-3"
-        :data-testid="`user-item-${user.id}`"
-        @click="onUserClick(user.id)"
-      >
-        <UserAvatar
-          :image="user.image"
-          :dark-image="user.darkImage"
-          :alt="user.name"
-          size="sm"
-          class="flex-shrink-0"
+        <UInput
+          v-model="userSearchQuery"
+          icon="i-heroicons-magnifying-glass"
+          :placeholder="t('users.searchPlaceholder')"
+          :aria-label="t('users.searchLabel')"
+          size="xl"
+          class="mt-5 w-full max-w-[480px]"
+          :ui="{ root: 'w-full', base: '!rounded-xl' }"
+          data-testid="user-search-input"
         />
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium truncate">{{ user.name }}</p>
-          <p class="text-xs text-[hsl(var(--muted-foreground))] truncate">
-            {{ user.isVirtual ? t('users.aiAgent') : user.email }}
-          </p>
+
+        <div
+          class="mt-3 flex flex-wrap gap-2"
+          role="group"
+          :aria-label="t('users.filterLabel')"
+        >
+          <button
+            v-for="filter in filters"
+            :key="filter.value"
+            type="button"
+            class="directory-filter"
+            :class="
+              activeFilter === filter.value
+                ? 'directory-filter-active'
+                : 'directory-filter-inactive'
+            "
+            :aria-pressed="activeFilter === filter.value"
+            :data-testid="`user-filter-${filter.value}`"
+            @click="activeFilter = filter.value"
+          >
+            {{ filter.label }}
+          </button>
         </div>
-      </button>
-    </div>
+      </header>
+
+      <section
+        class="mt-6"
+        :aria-labelledby="directoryHeadingId"
+      >
+        <div class="mb-4 flex items-center gap-2.5">
+          <h2
+            :id="directoryHeadingId"
+            class="text-[17px] font-semibold"
+          >
+            {{ sectionHeading }}
+          </h2>
+          <span
+            class="inline-flex min-w-8 items-center justify-center rounded-full bg-[hsl(var(--surface-2))] px-2 py-0.5 text-xs font-semibold text-[hsl(var(--muted-foreground))]"
+            data-testid="users-result-count"
+          >
+            {{ visibleUsers.length }}
+          </span>
+        </div>
+
+        <div
+          v-if="isLoadingUsers"
+          class="user-directory-grid"
+          data-testid="users-loading"
+        >
+          <USkeleton
+            v-for="i in 6"
+            :key="i"
+            class="h-[142px] rounded-[18px]"
+          />
+        </div>
+
+        <UAlert
+          v-else-if="usersError"
+          color="error"
+          variant="soft"
+        >
+          {{ usersError.message }}
+        </UAlert>
+
+        <UEmpty
+          v-else-if="visibleUsers.length === 0"
+          icon="i-heroicons-user-group"
+          :description="emptyDescription"
+          class="rounded-[18px] border border-dashed border-[hsl(var(--border))] bg-[hsl(var(--card)/0.55)] py-14"
+          data-testid="users-empty"
+        />
+
+        <div
+          v-else
+          class="user-directory-grid"
+          data-testid="users-grid"
+        >
+          <UserDirectoryCard
+            v-for="user in visibleUsers"
+            :key="user.id"
+            :user="user"
+            :favorite="isFavorite(user.id)"
+            @toggle-favorite="toggleFavorite(user.id)"
+            @open-conversation="onUserClick(user.id)"
+          />
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { UserDTO } from '@/types/api/schemas'
 import { useChatListData } from '~/composables/useChatListData'
-import UserAvatar from '~/components/UserAvatar.vue'
+import { useUserFavorites } from '~/composables/useUserFavorites'
+import UserDirectoryCard from '~/components/users/UserDirectoryCard.vue'
+
+type DirectoryFilter = 'all' | 'ai' | 'human' | 'favorites'
 
 const { t } = useI18n()
 const router = useRouter()
+const directoryHeadingId = 'users-directory-heading'
+
+const activeFilter = ref<DirectoryFilter>('all')
 
 const { filteredUsers, isLoadingUsers, usersError, userSearchQuery, handleUserClick } =
   useChatListData()
+const { favoriteIds, isFavorite, toggleFavorite } = useUserFavorites()
+
+const filters = computed<Array<{ value: DirectoryFilter; label: string }>>(() => [
+  { value: 'all', label: t('users.filters.all') },
+  { value: 'ai', label: t('users.filters.ai') },
+  { value: 'human', label: t('users.filters.human') },
+  { value: 'favorites', label: t('users.filters.favorites') },
+])
+
+const visibleUsers = computed<UserDTO[]>(() => {
+  // Reading the list makes this computed update immediately after a favorite toggle.
+  void favoriteIds.value
+
+  return filteredUsers.value.filter((user) => {
+    if (activeFilter.value === 'ai') return user.isVirtual
+    if (activeFilter.value === 'human') return !user.isVirtual
+    if (activeFilter.value === 'favorites') return isFavorite(user.id)
+    return true
+  })
+})
+
+const sectionHeading = computed(() => t(`users.headings.${activeFilter.value}`))
+
+const emptyDescription = computed(() => {
+  if (userSearchQuery.value.trim()) return t('users.noSearchResults')
+  if (activeFilter.value === 'favorites') return t('users.noFavorites')
+  return t('users.noUsers')
+})
 
 function onUserClick(userId: number) {
   const target = handleUserClick(userId)
-  if (target) {
-    void router.push(target)
-  }
+  if (target) void router.push(target)
 }
 </script>
+
+<style scoped>
+.user-directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 304px), 1fr));
+  gap: 15px;
+}
+
+.directory-filter {
+  height: 36px;
+  padding: 0 15px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.directory-filter:hover {
+  transform: translateY(-1px);
+}
+
+.directory-filter-active {
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary));
+}
+
+.directory-filter-inactive {
+  color: hsl(var(--muted-foreground));
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.directory-filter-inactive:hover {
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+.directory-filter:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+</style>

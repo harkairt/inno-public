@@ -44,7 +44,32 @@
     "build-info": "Verzió"
   },
   "users": {
-    "aiAgent": "AI Ügynök"
+    "title": "Agent-tár & Emberek",
+    "subtitle": "Válaszd ki, kivel dolgozol — mentsd el a kedvenceidet, vagy nyiss meg egy beszélgetést.",
+    "searchPlaceholder": "Keress agentek és emberek között…",
+    "searchLabel": "Agentek és emberek keresése",
+    "filterLabel": "Partnerek szűrése",
+    "aiAgent": "AI ügynök",
+    "available": "Elérhető",
+    "unavailable": "Nem elérhető",
+    "addFavorite": "Hozzáadás a kedvencekhez",
+    "removeFavorite": "Eltávolítás a kedvencekből",
+    "openConversation": "Beszélgetés megnyitása",
+    "noUsers": "Nem található megjeleníthető partner.",
+    "noSearchResults": "Nincs a keresésnek megfelelő partner.",
+    "noFavorites": "Még nincsenek kedvenc partnereid.",
+    "filters": {
+      "all": "Összes",
+      "ai": "AI ügynökök",
+      "human": "Emberek",
+      "favorites": "Kedvencek"
+    },
+    "headings": {
+      "all": "Összes partner",
+      "ai": "AI ügynökök",
+      "human": "Emberek",
+      "favorites": "Kedvencek"
+    }
   },
   "common": {
     "loading": "Betöltés...",

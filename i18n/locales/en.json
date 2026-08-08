@@ -44,7 +44,32 @@
     "build-info": "Build"
   },
   "users": {
-    "aiAgent": "AI Agent"
+    "title": "Agents & People",
+    "subtitle": "Choose who you work with — save your favorites or open a conversation.",
+    "searchPlaceholder": "Search agents and people…",
+    "searchLabel": "Search agents and people",
+    "filterLabel": "Filter partners",
+    "aiAgent": "AI agent",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites",
+    "openConversation": "Open conversation",
+    "noUsers": "No partners are available to display.",
+    "noSearchResults": "No partners match your search.",
+    "noFavorites": "You do not have any favorite partners yet.",
+    "filters": {
+      "all": "All",
+      "ai": "AI agents",
+      "human": "People",
+      "favorites": "Favorites"
+    },
+    "headings": {
+      "all": "All partners",
+      "ai": "AI agents",
+      "human": "People",
+      "favorites": "Favorites"
+    }
   },
   "common": {
     "loading": "Loading...",

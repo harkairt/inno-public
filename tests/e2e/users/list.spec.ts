@@ -57,10 +57,54 @@ test.describe('User List', () => {
 
       const firstUser = page.locator(selectors.users.userItems).first()
       await expect(firstUser).toBeVisible()
-      await firstUser.click()
+      await firstUser.locator('[data-testid^="open-conversation-"]').click()
 
-      // Clicking a user opens their primary session or a new-chat route.
+      // The explicit card action opens the primary session or a new-chat route.
       await expect(page).toHaveURL(/\/chats\//)
+    })
+  })
+
+  test.describe('Favorites', () => {
+    test('should persist a favorite across reloads', async ({ mockedAuthenticatedPage: page }) => {
+      await navigateToUsers(page)
+
+      const favorite = page.locator(selectors.users.favoriteButton(1))
+      await expect(favorite).toBeVisible()
+      await favorite.click()
+      await expect(favorite).toHaveAttribute('aria-pressed', 'true')
+
+      await page.reload()
+
+      await expect(page.locator(selectors.users.favoriteButton(1))).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await page.locator(selectors.users.filter('favorites')).click()
+      await expect(page.locator(selectors.users.userItem(1))).toBeVisible()
+    })
+  })
+
+  test.describe('Responsive grid', () => {
+    test('should flow from one to two to three columns based on available width', async ({
+      mockedAuthenticatedPage: page,
+    }) => {
+      const getColumnCount = async () => {
+        const boxes = await page
+          .locator(selectors.users.userItems)
+          .evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().x)))
+        return new Set(boxes).size
+      }
+
+      await page.setViewportSize({ width: 390, height: 844 })
+      await navigateToUsers(page)
+      await expect(page.locator(selectors.users.userItems).first()).toBeVisible()
+      expect(await getColumnCount()).toBe(1)
+
+      await page.setViewportSize({ width: 900, height: 900 })
+      await expect.poll(getColumnCount).toBe(2)
+
+      await page.setViewportSize({ width: 1280, height: 900 })
+      await expect.poll(getColumnCount).toBe(3)
     })
   })
 })
