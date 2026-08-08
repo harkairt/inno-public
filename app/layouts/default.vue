@@ -5,7 +5,7 @@
   >
     <main
       class="relative flex-1 overflow-hidden"
-      :class="{ 'pb-20': showBottomTabBar }"
+      :class="{ 'pb-[73px]': showBottomTabBar }"
     >
       <slot />
     </main>

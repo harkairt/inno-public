@@ -64,6 +64,11 @@ export const selectors = {
     userItem: (id: number) => `[data-testid="user-item-${id}"]`,
     userItems: '[data-testid^="user-item-"]',
     userSearch: '[data-testid="user-search-input"]',
+    usersGrid: '[data-testid="users-grid"]',
+    filter: (filter: 'all' | 'ai' | 'human' | 'favorites') =>
+      `[data-testid="user-filter-${filter}"]`,
+    favoriteButton: (id: number) => `[data-testid="favorite-user-${id}"]`,
+    openConversationButton: (id: number) => `[data-testid="open-conversation-${id}"]`,
   },
 }
 

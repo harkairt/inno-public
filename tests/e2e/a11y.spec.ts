@@ -38,6 +38,8 @@ const BASELINE_CONVERSATION = 2
 const BASELINE_DELETE_DIALOG = 2
 const BASELINE_PUBLIC_MODE = 4
 const BASELINE_CHAT_LIST_MOBILE = 1
+// The two remaining findings are the app-wide document title/lang baselines.
+const BASELINE_USERS = 2
 
 /** Run axe over the whole page, scoped to the stable WCAG 2 A/AA rule sets. */
 async function scan(page: Page) {
@@ -120,6 +122,18 @@ test.describe('Accessibility smoke (axe-core, WCAG 2 A/AA)', () => {
 
     const { violations } = await scan(page)
     assertWithinBaseline(violations, BASELINE_CHAT_LIST, 'chat-list')
+  })
+
+  test('partner directory (authenticated, users loaded)', async ({
+    mockedAuthenticatedPage: page,
+  }) => {
+    await page.goto('/users')
+
+    await expect(page.locator(selectors.users.userItems).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Agents & People' })).toBeVisible()
+
+    const { violations } = await scan(page)
+    assertWithinBaseline(violations, BASELINE_USERS, 'users')
   })
 
   test('active conversation (messages rendered)', async ({ mockedAuthenticatedPage: page }) => {
