@@ -25,6 +25,18 @@
           "
         />
 
+        <UserAvatar
+          v-if="session && headerAgent"
+          :image="headerAgent.image"
+          :dark-image="headerAgent.darkImage"
+          :alt="headerAgent.name"
+          size="md"
+          class="flex-shrink-0"
+          :style="!headerAgent.image ? { backgroundColor: headerAvatarColor } : undefined"
+        >
+          {{ headerInitials }}
+        </UserAvatar>
+
         <div
           v-if="session"
           class="min-w-0 flex-1 group"
@@ -357,6 +369,8 @@ import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
 import ManageSessionUsers from '@/app/components/chat/ManageSessionUsers.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+import UserAvatar from '~/components/UserAvatar.vue'
+import { getInitials, getAvatarColor } from '@/app/utils/user'
 import { createLogger } from '@/lib/utils/logger'
 
 const logger = createLogger('ChatSession')
@@ -656,6 +670,20 @@ const otherParticipantNames = computed(() => {
     })
     .join(', ')
 })
+
+const headerAgent = computed(() => {
+  if (!session.value?.members || !selectableUsers.value) return undefined
+  const currentEmail = authStore.user?.email
+  const otherEmails = session.value.members.filter((email) => email !== currentEmail)
+  for (const email of otherEmails) {
+    const user = selectableUsers.value.find((u) => u.email === email)
+    if (user) return user
+  }
+  return undefined
+})
+
+const headerInitials = computed(() => getInitials(headerAgent.value?.name ?? ''))
+const headerAvatarColor = computed(() => getAvatarColor(headerAgent.value?.name ?? ''))
 
 // Handle target agent change
 function handleTargetAgentChanged(agentId: number | undefined) {
