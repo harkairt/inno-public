@@ -1,21 +1,15 @@
 <template>
   <div
-    class="flex flex-col h-full overflow-hidden"
+    class="flex flex-col h-full overflow-hidden bg-white dark:bg-[var(--ui-bg)]"
     data-testid="chat-list-panel"
   >
     <div class="px-5 py-3">
       <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
         {{ t('navigation.conversations') }}
       </h1>
-      <UInput
+      <SearchInput
         v-model="sessionSearchQuery"
-        icon="i-heroicons-magnifying-glass"
         :placeholder="t('sidebar.searchSessions')"
-        size="lg"
-        variant="soft"
-        color="neutral"
-        class="w-full"
-        :ui="{ root: 'w-full', base: '!rounded-[12px] focus:!bg-[var(--ui-bg)]' }"
         data-testid="session-search-input"
       />
     </div>

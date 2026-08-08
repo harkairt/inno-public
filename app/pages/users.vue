@@ -17,14 +17,12 @@
           {{ t('users.subtitle') }}
         </p>
 
-        <UInput
+        <SearchInput
           v-model="userSearchQuery"
-          icon="i-heroicons-magnifying-glass"
           :placeholder="t('users.searchPlaceholder')"
           :aria-label="t('users.searchLabel')"
           size="xl"
-          class="mt-5 w-full max-w-[480px]"
-          :ui="{ root: 'w-full', base: '!rounded-xl' }"
+          class="mt-5 max-w-[480px]"
           data-testid="user-search-input"
         />
 
