@@ -64,7 +64,7 @@ interface SendMessageMutateContext {
   tempMessageDTO: AISessionMessageDTO
   userMessageTimestamp: Date
   isNewSession: boolean
-  virtualAgentName: string | undefined
+  thinkingAgentName: string | undefined
 }
 
 function createTempMessageDTO(
@@ -151,8 +151,8 @@ interface SendMessageSuccessParams {
 
 async function handleSendMessageSuccess(params: SendMessageSuccessParams): Promise<void> {
   const { chatStore, authStore, serverMessage, request, context, queryClient } = params
-  if (context?.virtualAgentName) {
-    chatStore.removeTypingUser(request.sessionId, context.virtualAgentName)
+  if (context?.thinkingAgentName) {
+    chatStore.stopAgentThinking(request.sessionId, context.thinkingAgentName)
   }
 
   notifyMembersViaSignalR(request, authStore)
@@ -253,9 +253,9 @@ async function handleSendMessageOnMutate(
   const userMessageTimestamp = new Date()
 
   const agent = getAgentFromCache(queryClient, request.agentId)
-  const virtualAgentName = agent?.isVirtual ? agent.name : undefined
-  if (virtualAgentName) {
-    chatStore.addTypingUser(request.sessionId, virtualAgentName)
+  const thinkingAgentName = agent?.isVirtual ? agent.name : undefined
+  if (thinkingAgentName) {
+    chatStore.startAgentThinking(request.sessionId, thinkingAgentName)
   }
 
   const tempMessageDTO = createTempMessageDTO(
@@ -308,7 +308,7 @@ async function handleSendMessageOnMutate(
     tempMessageDTO,
     userMessageTimestamp,
     isNewSession,
-    virtualAgentName,
+    thinkingAgentName,
   }
 }
 
@@ -320,8 +320,8 @@ function handleSendMessageOnError(
   const { chatStore } = params
 
   // Stryker disable next-line OptionalChaining: context is provably non-null in every reachable onError path
-  if (context?.virtualAgentName) {
-    chatStore.removeTypingUser(request.sessionId, context.virtualAgentName)
+  if (context?.thinkingAgentName) {
+    chatStore.stopAgentThinking(request.sessionId, context.thinkingAgentName)
   }
 
   if (context?.tempMessageId) {

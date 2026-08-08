@@ -320,6 +320,23 @@ describe('Chat Store — typing indicators', () => {
     expect(typing).not.toContain('Alice')
     expect(typing).toContain('Bob')
   })
+
+  it('tracks agents that are awaiting responses separately from typing users', () => {
+    const store = useChatStore()
+
+    store.startAgentThinking('session-1', 'Assistant')
+    store.startAgentThinking('session-1', 'Assistant')
+    store.addTypingUser('session-1', 'Alice')
+
+    expect(store.getThinkingAgents('session-1')).toEqual(['Assistant'])
+    expect(store.getTypingUsers('session-1')).toEqual(['Alice'])
+
+    store.stopAgentThinking('session-1', 'Assistant')
+    expect(store.getThinkingAgents('session-1')).toEqual(['Assistant'])
+
+    store.stopAgentThinking('session-1', 'Assistant')
+    expect(store.getThinkingAgents('session-1')).toEqual([])
+  })
 })
 
 describe('Chat Store — resetUserData', () => {
@@ -335,6 +352,7 @@ describe('Chat Store — resetUserData', () => {
     store.addFailedMessage('session-1', makeFailedMessage('msg-1'))
     store.addPendingMessage('session-1', makeMessage('temp-1', 'pending'))
     store.addTypingUser('session-1', 'Alice')
+    store.startAgentThinking('session-1', 'Assistant')
     store.setError('some error')
 
     store.resetUserData()
@@ -344,6 +362,7 @@ describe('Chat Store — resetUserData', () => {
     expect(store.getFailedMessages('session-1')).toHaveLength(0)
     expect(store.getPendingMessages('session-1')).toHaveLength(0)
     expect(store.getTypingUsers('session-1')).toHaveLength(0)
+    expect(store.getThinkingAgents('session-1')).toHaveLength(0)
     expect(store.error).toBeNull()
   })
 })

@@ -21,8 +21,10 @@ function seedTyping(users: string[]): string[] {
   return chatStore.getTypingUsers(SESSION)
 }
 
-function render(typingUsers: string[]) {
-  return renderWithProviders(TypingIndicator as Component, { props: { typingUsers } })
+function render(typingUsers: string[], thinkingAgents: string[] = []) {
+  return renderWithProviders(TypingIndicator as Component, {
+    props: { typingUsers, thinkingAgents },
+  })
 }
 
 afterEach(() => {
@@ -50,6 +52,13 @@ describe('TypingIndicator — visibility', () => {
   it('shows multiple-user typing text for 3+ users', () => {
     render(seedTyping(['Alice', 'Bob', 'Carol']))
     expect(screen.getByText(/chat\.typing\.multiple/)).toBeTruthy()
+  })
+
+  it('shows synthetic agent-thinking text independently of real typing users', () => {
+    render(seedTyping(['Alice']), ['Assistant'])
+
+    expect(screen.getByText(/chat\.typing\.single/)).toBeTruthy()
+    expect(screen.getByText(/chat\.thinking\.single/)).toBeTruthy()
   })
 })
 

@@ -28,6 +28,8 @@ import { UnknownError } from '@/lib/errors/types'
 
 const mockRemoveAllFailedMessages = vi.fn()
 const mockAddFailedMessage = vi.fn()
+const mockStartAgentThinking = vi.fn()
+const mockStopAgentThinking = vi.fn()
 
 vi.mock('@/lib/api/services/ChatService', () => ({
   chatService: {
@@ -67,8 +69,8 @@ vi.mock('@/app/stores/chat', () => ({
     addPendingMessage: vi.fn(),
     removePendingMessage: vi.fn(),
     removeAllPendingMessages: vi.fn(),
-    addTypingUser: vi.fn(),
-    removeTypingUser: vi.fn(),
+    startAgentThinking: mockStartAgentThinking,
+    stopAgentThinking: mockStopAgentThinking,
     onNewSessionConfirmed: vi.fn(),
     executeNewSessionCallback: vi.fn(),
     removeNewSessionCallback: vi.fn(),
@@ -509,6 +511,46 @@ describe('useSendMessage — new session cache update', () => {
     const texts = session?.messages?.map((m) => m.messageText)
     expect(texts).toContain('Hi there') // synthetic user message
     expect(texts).toContain('Final answer') // server answer
+  })
+})
+
+describe('useSendMessage — synthetic agent-thinking state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows thinking while awaiting a virtual agent response, then clears it', async () => {
+    const { chatService } = await import('@/lib/api/services/ChatService')
+    const { useSendMessage } = await import('~/composables/useChatMutations')
+    const { userQueryKeys } = await import('~/composables/useUsers')
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+    queryClient.setQueryData(userQueryKeys.selectable(), [
+      { id: 1, name: 'Assistant', isVirtual: true },
+    ])
+
+    let resolveService!: () => void
+    vi.mocked(chatService.sendQuestion).mockReturnValue(
+      new Promise((resolve) => {
+        resolveService = () => resolve(makeOkResult(makeMessage()))
+      }),
+    )
+
+    let mutation: ReturnType<typeof useSendMessage> | undefined
+    createWrapper(queryClient, () => {
+      mutation = useSendMessage()
+    })
+
+    const mutatePromise = mutation!.mutateAsync(makeQuestionRequest())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(mockStartAgentThinking).toHaveBeenCalledWith('session-1', 'Assistant')
+    expect(mockStopAgentThinking).not.toHaveBeenCalled()
+
+    resolveService()
+    await mutatePromise
+
+    expect(mockStopAgentThinking).toHaveBeenCalledWith('session-1', 'Assistant')
   })
 })
 

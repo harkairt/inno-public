@@ -5,20 +5,33 @@
     role="status"
     aria-live="polite"
   >
-    <Transition name="typing-indicator">
+    <TransitionGroup
+      name="typing-indicator"
+      tag="div"
+      class="flex items-center gap-2"
+    >
       <span
         v-if="typingText"
+        key="typing"
         class="text-xs text-[hsl(var(--muted-foreground))] italic"
       >
         {{ typingText }}{{ animatedDots }}
       </span>
-    </Transition>
+      <span
+        v-if="thinkingText"
+        key="thinking"
+        class="text-xs text-[hsl(var(--muted-foreground))] italic"
+      >
+        {{ thinkingText }}{{ animatedDots }}
+      </span>
+    </TransitionGroup>
   </div>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
   typingUsers: string[]
+  thinkingAgents: string[]
 }>()
 
 const { t } = useI18n()
@@ -37,14 +50,28 @@ const typingText = computed(() => {
   return t('chat.typing.multiple', { count: props.typingUsers.length })
 })
 
+const thinkingText = computed(() => {
+  if (props.thinkingAgents.length === 0) return ''
+  if (props.thinkingAgents.length === 1) {
+    return t('chat.thinking.single', { name: props.thinkingAgents[0] })
+  }
+  if (props.thinkingAgents.length === 2) {
+    return t('chat.thinking.double', {
+      name1: props.thinkingAgents[0],
+      name2: props.thinkingAgents[1],
+    })
+  }
+  return t('chat.thinking.multiple', { count: props.thinkingAgents.length })
+})
+
 // Animated dots: cycles through ".", "..", "..."
 const dotCount = ref(1)
 let dotsInterval: ReturnType<typeof setInterval> | null = null
 
 watch(
-  () => props.typingUsers.length > 0,
-  (isTyping) => {
-    if (isTyping) {
+  () => props.typingUsers.length > 0 || props.thinkingAgents.length > 0,
+  (isActive) => {
+    if (isActive) {
       dotCount.value = 1
       dotsInterval = setInterval(() => {
         dotCount.value = (dotCount.value % 3) + 1
