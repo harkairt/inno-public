@@ -243,7 +243,10 @@
         </div>
 
         <!-- Typing Indicator - fixed height, doesn't push messages -->
-        <TypingIndicator :typing-users="typingUsers" />
+        <TypingIndicator
+          :typing-users="typingUsers"
+          :thinking-agents="thinkingAgents"
+        />
 
         <MessageInput
           v-if="!isOptionsMode"
@@ -480,6 +483,7 @@ const messages = computed(() => {
 
 // Get typing users for this session
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
+const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId))
 
 // Header title: server-assigned name, or the user's first message for a freshly
 // created session the server hasn't named yet (mirrors the optimistic sidebar entry).

@@ -21,7 +21,10 @@
     </div>
 
     <!-- Typing Indicator -->
-    <TypingIndicator :typing-users="typingUsers" />
+    <TypingIndicator
+      :typing-users="typingUsers"
+      :thinking-agents="thinkingAgents"
+    />
 
     <!-- Message Input -->
     <MessageInput
@@ -152,6 +155,7 @@ const canSend = computed(() => !mutation.isPending.value)
 
 // Typing indicator users
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId.value))
+const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId.value))
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)

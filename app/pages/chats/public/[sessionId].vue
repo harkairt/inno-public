@@ -25,7 +25,10 @@
       </div>
 
       <!-- Typing Indicator -->
-      <TypingIndicator :typing-users="typingUsers" />
+      <TypingIndicator
+        :typing-users="typingUsers"
+        :thinking-agents="thinkingAgents"
+      />
 
       <!-- Message Input -->
       <MessageInput
@@ -185,6 +188,7 @@ async function handleOptionSubmitted(answer: string) {
 
 // Typing indicator users
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
+const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId))
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)

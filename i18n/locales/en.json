@@ -74,6 +74,11 @@
       "double": "{name1} and {name2} are typing",
       "multiple": "{count} people are typing"
     },
+    "thinking": {
+      "single": "{name} is thinking",
+      "double": "{name1} and {name2} are thinking",
+      "multiple": "{count} agents are thinking"
+    },
     "sessionList": {
       "noConversations": "No conversations yet",
       "startConversation": "Start a new conversation to see it here",

@@ -82,7 +82,10 @@
         </div>
 
         <!-- Typing Indicator -->
-        <TypingIndicator :typing-users="typingUsers" />
+        <TypingIndicator
+          :typing-users="typingUsers"
+          :thinking-agents="thinkingAgents"
+        />
 
         <MessageInput
           v-if="!isOptionsMode"
@@ -277,6 +280,7 @@ async function handleOptionSubmitted(answer: string) {
 
 // Typing indicator
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId.value))
+const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId.value))
 
 // Check if single virtual agent session - hide buttons if so
 const isSingleVirtualAgentSession = computed(() => {

@@ -74,6 +74,11 @@
       "double": "{name1} és {name2} gépelnek",
       "multiple": "{count} személy gépel"
     },
+    "thinking": {
+      "single": "{name} gondolkodik",
+      "double": "{name1} és {name2} gondolkodnak",
+      "multiple": "{count} ügynök gondolkodik"
+    },
     "sessionList": {
       "noConversations": "Még nincsenek beszélgetések",
       "startConversation": "Kezdeményezzen új beszélgetést, hogy itt lássa",
