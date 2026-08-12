@@ -76,7 +76,6 @@ const applyCurrent = () => {
       containerRef.value.style.aspectRatio = ''
     } else {
       containerRef.value.style.height = ''
-      containerRef.value.style.aspectRatio = ''
     }
   }
 
