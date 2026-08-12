@@ -87,6 +87,7 @@ const stubs = {
   },
   UIcon: { template: '<i />' },
   USkeleton: { template: '<div />' },
+  UserAvatar: { template: '<div />' },
 }
 
 function renderPage() {

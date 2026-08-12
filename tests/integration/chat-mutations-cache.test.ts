@@ -167,12 +167,12 @@ describe('useSendMessage — virtual-agent typing indicator', () => {
     const chatStore = useChatStore()
 
     const inFlight = mutation.mutateAsync(sendRequest())
-    await vi.waitFor(() => expect(chatStore.getTypingUsers('session-1')).toContain('Bot'))
+    await vi.waitFor(() => expect(chatStore.getThinkingAgents('session-1')).toContain('Bot'))
 
     gate.resolve()
     await inFlight
 
-    expect(chatStore.getTypingUsers('session-1')).toEqual([])
+    expect(chatStore.getThinkingAgents('session-1')).toEqual([])
   })
 
   it('clears the virtual-agent typing indicator when the send fails', async () => {
@@ -189,7 +189,7 @@ describe('useSendMessage — virtual-agent typing indicator', () => {
 
     await expect(mutation.mutateAsync(sendRequest())).rejects.toBeDefined()
 
-    expect(chatStore.getTypingUsers('session-1')).toEqual([])
+    expect(chatStore.getThinkingAgents('session-1')).toEqual([])
   })
 
   it('resolves the virtual agent from the public-chat-agent cache when not selectable', async () => {
@@ -213,11 +213,11 @@ describe('useSendMessage — virtual-agent typing indicator', () => {
     const chatStore = useChatStore()
 
     const inFlight = mutation.mutateAsync(sendRequest())
-    await vi.waitFor(() => expect(chatStore.getTypingUsers('session-1')).toContain('PubBot'))
+    await vi.waitFor(() => expect(chatStore.getThinkingAgents('session-1')).toContain('PubBot'))
 
     gate.resolve()
     await inFlight
-    expect(chatStore.getTypingUsers('session-1')).toEqual([])
+    expect(chatStore.getThinkingAgents('session-1')).toEqual([])
   })
 })
 

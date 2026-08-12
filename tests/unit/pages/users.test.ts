@@ -26,6 +26,12 @@ const stubs = {
     template:
       '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
   },
+  SearchInput: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template:
+      '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  },
   USkeleton: { template: '<div class="skeleton" />' },
   UAlert: { template: '<div role="alert"><slot /></div>' },
   UEmpty: {
