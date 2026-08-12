@@ -46,7 +46,7 @@
             :class="isUserMessage(message) ? 'items-end' : 'items-start'"
           >
             <div
-              class="max-w-[95%] md:max-w-[75%] sm:max-w-[70%] px-3 py-2"
+              class="message-bubble max-w-[95%] md:max-w-[75%] sm:max-w-[70%] px-3 py-2"
               :class="{
                 'rounded-br-md': isUserMessage(message),
                 'rounded-bl-md': !isUserMessage(message),

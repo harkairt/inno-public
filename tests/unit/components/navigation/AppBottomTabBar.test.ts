@@ -51,7 +51,7 @@ describe('AppBottomTabBar', () => {
 
     expect(
       screen.getByTestId('tab-chats').querySelector('[data-icon]')?.getAttribute('data-icon'),
-    ).toBe('i-ph-chats-duotone')
+    ).toBe('i-ph-chats-fill')
     expect(
       screen.getByTestId('tab-users').querySelector('[data-icon]')?.getAttribute('data-icon'),
     ).toBe('i-ph-users-three')

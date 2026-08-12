@@ -56,7 +56,7 @@ describe('AppRail', () => {
 
     expect(
       screen.getByTestId('rail-chats').querySelector('[data-icon]')?.getAttribute('data-icon'),
-    ).toBe('i-ph-chats-duotone')
+    ).toBe('i-ph-chats-fill')
     expect(
       screen.getByTestId('rail-users').querySelector('[data-icon]')?.getAttribute('data-icon'),
     ).toBe('i-ph-users-three')

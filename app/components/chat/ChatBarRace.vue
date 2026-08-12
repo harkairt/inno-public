@@ -136,9 +136,13 @@ const render = () => {
 
 watch(currentFrameIndex, applyFrame)
 
-watch(isLoaded, (loaded) => {
-  if (loaded) render()
-})
+watch(
+  isLoaded,
+  (loaded) => {
+    if (loaded) render()
+  },
+  { flush: 'post' },
+)
 
 watch(
   () => props.source,
@@ -180,7 +184,7 @@ onBeforeUnmount(() => {
 
 .bar-race-canvas {
   width: 100%;
-  height: 320px;
+  aspect-ratio: 1 / 1;
 }
 
 .bar-race-loading,

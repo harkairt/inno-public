@@ -63,18 +63,18 @@
           :to="item.to"
           class="flex size-[46px] items-center justify-center rounded-[13px] text-[23px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[hsl(var(--ring))]"
           :class="
-            isActive(item.to)
+            isActive(item.activePrefix)
               ? 'bg-[#f0efea] text-[#16201f] dark:bg-[hsl(var(--accent))] dark:text-[hsl(var(--accent-foreground))]'
               : 'text-[#8e9793] hover:bg-[#f0efea] hover:text-[#16201f] dark:text-[hsl(var(--muted-foreground))] dark:hover:bg-[hsl(var(--accent))] dark:hover:text-[hsl(var(--accent-foreground))]'
           "
-          :aria-current="isActive(item.to) ? 'page' : undefined"
+          :aria-current="isActive(item.activePrefix) ? 'page' : undefined"
           :aria-label="item.label"
           :data-testid="`rail-${item.key}`"
         >
           <UIcon
-            :name="isActive(item.to) ? item.activeIcon : item.icon"
+            :name="isActive(item.activePrefix) ? item.activeIcon : item.icon"
             class="size-6"
-            :class="isActive(item.to) ? 'text-[#0e5c5c]' : undefined"
+            :class="isActive(item.activePrefix) ? 'text-[#0e5c5c]' : undefined"
             aria-hidden="true"
           />
         </NuxtLink>
@@ -115,15 +115,22 @@
 import { computed } from 'vue'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { useAuthStore } from '~/stores/auth'
+import { useChatStore } from '~/stores/chat'
 
 const { t } = useI18n()
 const route = useRoute()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
+
+const chatsLink = computed(() =>
+  chatStore.activeSessionId ? `/chats/${chatStore.activeSessionId}` : '/chats',
+)
 
 const navItems = computed(() => [
   {
     key: 'chats',
-    to: '/chats',
+    to: chatsLink.value,
+    activePrefix: '/chats',
     icon: 'i-ph-chats',
     activeIcon: 'i-ph-chats-fill',
     label: t('navigation.conversations'),
@@ -131,6 +138,7 @@ const navItems = computed(() => [
   {
     key: 'users',
     to: '/users',
+    activePrefix: '/users',
     icon: 'i-ph-users-three',
     activeIcon: 'i-ph-users-three-fill',
     label: t('navigation.users'),
