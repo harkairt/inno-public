@@ -9,6 +9,10 @@
  */
 
 /* Base markdown container - compact chat styling */
+.message-bubble:has(.echart-placeholder, .bar-race-placeholder) {
+  width: 100%;
+}
+
 .markdown-content {
   /* Typography foundation */
   font-size: 0.875rem;

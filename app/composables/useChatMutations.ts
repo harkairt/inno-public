@@ -449,6 +449,10 @@ export function useDeleteSession() {
       chatStore.removeAllPendingMessages(params.sessionId)
       chatStore.removeAllFailedMessages(params.sessionId)
 
+      if (chatStore.activeSessionId === params.sessionId) {
+        chatStore.setActiveSession(null)
+      }
+
       // Invalidate unread counts
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.unread() })
     },

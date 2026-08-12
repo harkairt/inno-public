@@ -384,6 +384,8 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 
 // Consume one-shot flag: skip entrance animation when arriving from /chats/new/*
+chatStore.setActiveSession(sessionId)
+
 const skipEntranceAnimation = chatStore.skipNextEntranceAnimation
 chatStore.skipNextEntranceAnimation = false
 

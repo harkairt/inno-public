@@ -69,7 +69,18 @@ const handleClick = (params: unknown) => {
 const applyCurrent = () => {
   if (!instance) return
 
-  if (applyOption(instance, props.option, isDark.value, props.blockIndex)) {
+  const { height, ...optionWithoutHeight } = props.option
+  if (containerRef.value) {
+    if (typeof height === 'number' && height > 0) {
+      containerRef.value.style.height = `${height}px`
+      containerRef.value.style.aspectRatio = ''
+    } else {
+      containerRef.value.style.height = ''
+      containerRef.value.style.aspectRatio = ''
+    }
+  }
+
+  if (applyOption(instance, optionWithoutHeight, isDark.value, props.blockIndex)) {
     error.value = null
   } else {
     error.value = t('chat.echart.renderFailed')
@@ -86,17 +97,19 @@ const render = () => {
       return
     }
 
-    // Bound once per instance: ECharts handlers survive setOption, so binding in
-    // applyCurrent would make a single click raise one request per update.
     instance.on('click', handleClick)
   }
 
   applyCurrent()
 }
 
-watch(isLoaded, (loaded) => {
-  if (loaded) render()
-})
+watch(
+  isLoaded,
+  (loaded) => {
+    if (loaded) render()
+  },
+  { flush: 'post' },
+)
 
 watch(() => props.source, render)
 
@@ -132,7 +145,7 @@ onBeforeUnmount(() => {
 
 .echart-canvas {
   width: 100%;
-  height: 320px;
+  aspect-ratio: 1 / 1;
 }
 
 .echart-loading,
@@ -146,11 +159,5 @@ onBeforeUnmount(() => {
   padding: 0.25rem 0.25rem 0;
   font-size: 0.75rem;
   color: hsl(var(--muted-foreground));
-}
-
-@media (max-width: 640px) {
-  .echart-canvas {
-    height: 240px;
-  }
 }
 </style>
