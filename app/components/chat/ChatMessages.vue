@@ -133,6 +133,30 @@
                     class="size-3"
                   />
                 </button>
+                <button
+                  v-if="!isMobile && message.messageID !== 'welcome'"
+                  class="transition-colors p-0.5 rounded"
+                  :class="
+                    props.focusedIds.includes(message.messageID)
+                      ? 'text-[hsl(var(--primary))]'
+                      : 'text-[hsl(var(--muted-foreground)/0.5)] hover:text-[hsl(var(--muted-foreground))]'
+                  "
+                  :aria-label="
+                    props.focusedIds.includes(message.messageID)
+                      ? t('chat.focus.unfocusMessage')
+                      : t('chat.focus.focusMessage')
+                  "
+                  @click.stop="emit('toggleFocus', message.messageID)"
+                >
+                  <UIcon
+                    :name="
+                      props.focusedIds.includes(message.messageID)
+                        ? 'i-heroicons-bookmark-solid'
+                        : 'i-heroicons-bookmark'
+                    "
+                    class="size-3"
+                  />
+                </button>
               </div>
             </div>
           </div>
@@ -161,49 +185,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, type CSSProperties } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { parseOptionsPayload } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
 import { AIAnswerType } from '@/types/enums'
-import { useClipboard } from '@vueuse/core'
+import { useMessagePresentation } from '@/app/composables/useMessagePresentation'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
 
 const { t, locale } = useI18n()
 const { isMobile } = useNavigationVisibility()
-const { copy } = useClipboard()
-
-// Config-driven message styles using CSS variables
-const ownMessageStyle = computed<CSSProperties>(() => ({
-  backgroundColor: 'var(--config-own-message-bg)',
-  fontSize: 'var(--config-own-message-font-size)',
-  fontStyle: 'var(--config-own-message-font-style)' as CSSProperties['fontStyle'],
-  fontWeight: 'var(--config-own-message-font-weight)' as CSSProperties['fontWeight'],
-  borderWidth: 'var(--config-message-border-width)',
-  borderColor: 'var(--config-message-border-color)',
-  borderStyle: 'var(--config-message-border-style)' as CSSProperties['borderStyle'],
-  borderRadius: 'var(--config-message-border-radius)',
-  color: 'var(--config-own-message-fg)',
-}))
-
-const partnerMessageStyle = computed<CSSProperties>(() => ({
-  backgroundColor: 'var(--config-partner-message-bg)',
-  fontSize: 'var(--config-partner-message-font-size)',
-  fontStyle: 'var(--config-partner-message-font-style)' as CSSProperties['fontStyle'],
-  fontWeight: 'var(--config-partner-message-font-weight)' as CSSProperties['fontWeight'],
-  borderWidth: 'var(--config-message-border-width)',
-  borderColor: 'var(--config-message-border-color)',
-  borderStyle: 'var(--config-message-border-style)' as CSSProperties['borderStyle'],
-  borderRadius: 'var(--config-message-border-radius)',
-  color: 'hsl(var(--foreground))',
-}))
-
-type ExtendedMessage = AISessionMessageDTO
+const {
+  ownMessageStyle,
+  partnerMessageStyle,
+  isUserMessage,
+  formatActionBarDate,
+  handleCopy,
+  copiedMessageId,
+} = useMessagePresentation()
 
 interface Props {
-  messages?: ExtendedMessage[]
+  messages?: AISessionMessageDTO[]
   welcomeMessage?: string
   agentId?: number
   agentName?: string
@@ -212,6 +216,7 @@ interface Props {
   memberCount?: number
   activeOptionsMessageId?: string
   skipEntranceAnimation?: boolean
+  focusedIds?: readonly string[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -224,19 +229,16 @@ const props = withDefaults(defineProps<Props>(), {
   memberCount: 2,
   activeOptionsMessageId: undefined,
   skipEntranceAnimation: false,
+  focusedIds: () => [],
 })
 
 const emit = defineEmits<{
   optionSubmitted: [answer: string]
+  toggleFocus: [messageId: string]
 }>()
 
 const authStore = useAuthStore()
 const tappedMessageId = ref<string | null>(null)
-const copiedMessageId = ref<string | null>(null)
-
-const isUserMessage = (message: ExtendedMessage) => {
-  return message.senderUserCode === authStore.user?.email
-}
 
 const WIDE_CONTENT_MARKERS = [
   '```echarts',
@@ -249,7 +251,7 @@ const WIDE_CONTENT_MARKERS = [
 
 const MD_TABLE_RE = /^\|.+\|/m
 
-const hasWideContent = (message: ExtendedMessage): boolean => {
+const hasWideContent = (message: AISessionMessageDTO): boolean => {
   const text = message.messageText
   if (!text) return false
   return WIDE_CONTENT_MARKERS.some((marker) => text.includes(marker)) || MD_TABLE_RE.test(text)
@@ -260,19 +262,11 @@ function handleBubbleTap(messageId: string) {
   tappedMessageId.value = tappedMessageId.value === messageId ? null : messageId
 }
 
-async function handleCopy(messageId: string, text: string | null | undefined) {
-  if (!text) return
-  await copy(text)
-  copiedMessageId.value = messageId
-  setTimeout(() => {
-    if (copiedMessageId.value === messageId) {
-      copiedMessageId.value = null
-    }
-  }, 1500)
-}
-
 // Find the user's answer to an Options message by looking at the next user message after it
-function getSelectedAnswer(messages: ExtendedMessage[], currentIndex: number): string | undefined {
+function getSelectedAnswer(
+  messages: AISessionMessageDTO[],
+  currentIndex: number,
+): string | undefined {
   const userEmail = authStore.user?.email
   for (let i = currentIndex + 1; i < messages.length; i++) {
     if (messages[i]!.senderUserCode === userEmail) {
@@ -283,14 +277,14 @@ function getSelectedAnswer(messages: ExtendedMessage[], currentIndex: number): s
 }
 
 // Show sender name only for other people's messages in group chats (3+ members)
-const showSenderName = (message: ExtendedMessage) => {
+const showSenderName = (message: AISessionMessageDTO) => {
   if (props.hideSenderNames) return false
   if (isUserMessage(message)) return false
   return props.memberCount > 2
 }
 
 // Create welcome message if provided
-const welcomeMessageObj = computed((): ExtendedMessage | null => {
+const welcomeMessageObj = computed((): AISessionMessageDTO | null => {
   if (!props.welcomeMessage) return null
 
   return {
@@ -330,7 +324,7 @@ const ANIMATION_DURATION_MS = 300
 const seenMessageIds = ref(new Set<string>())
 const messageEnterDelays = ref(new Map<string, string>())
 
-function animateNewMessages(msgs: ExtendedMessage[], includeOwn = false) {
+function animateNewMessages(msgs: AISessionMessageDTO[], includeOwn = false) {
   const fresh = msgs.filter(
     (m) =>
       (includeOwn || !isUserMessage(m)) &&
@@ -380,7 +374,7 @@ const messageGroups = computed(() => {
     return []
   }
 
-  const groups = new Map<string, { messages: ExtendedMessage[]; timestamp: number }>()
+  const groups = new Map<string, { messages: AISessionMessageDTO[]; timestamp: number }>()
 
   allMessages.value.forEach((message) => {
     const dateObj = new Date(message.sendDate)
@@ -425,34 +419,6 @@ function formatDate(date: Date): string {
       day: 'numeric',
       year: 'numeric',
     })
-  }
-}
-
-function formatActionBarDate(dateString: string): string {
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return ''
-
-    const now = new Date()
-    const isToday =
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate()
-
-    if (isToday) {
-      return date.toLocaleTimeString(locale.value, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      })
-    }
-
-    return date.toLocaleDateString(locale.value, {
-      month: 'short',
-      day: 'numeric',
-    })
-  } catch {
-    return ''
   }
 }
 </script>

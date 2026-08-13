@@ -97,6 +97,19 @@
           <USkeleton class="h-4 w-32" />
         </div>
 
+        <!-- Focus sidebar toggle (desktop only) -->
+        <UButton
+          v-if="!isMobile && session"
+          :icon="focusSidebarOpen ? 'i-heroicons-bookmark-solid' : 'i-heroicons-bookmark'"
+          variant="ghost"
+          color="neutral"
+          square
+          size="sm"
+          :aria-label="t('chat.focus.toggleSidebar')"
+          data-testid="focus-sidebar-toggle"
+          @click="focusSidebarOpen = !focusSidebarOpen"
+        />
+
         <!-- Session Members Avatar Stack (hidden for primary sessions) -->
         <SessionMembers
           v-if="session && session.members.length > 0 && selectableUsers && !isPrimarySession"
@@ -195,85 +208,98 @@
       <!-- Chat Content -->
       <div
         v-else-if="session"
-        class="flex flex-col h-full min-h-0"
+        class="flex h-full min-h-0"
       >
-        <div class="relative flex-1 overflow-hidden min-h-0">
-          <div
-            ref="messagesContainer"
-            class="h-full overflow-y-auto py-4 flex flex-col"
-          >
+        <div class="flex flex-col flex-1 min-w-0 h-full">
+          <div class="relative flex-1 overflow-hidden min-h-0">
             <div
-              class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
+              ref="messagesContainer"
+              class="h-full overflow-y-auto py-4 flex flex-col"
             >
-              <div class="flex-1" />
-              <Transition
-                name="shimmer-swap"
-                mode="out-in"
-                @enter="onMessagesEnter"
-                @after-enter="onMessagesEntered"
+              <div
+                class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
               >
-                <!-- Show bubble-shaped skeletons while waiting for real data -->
-                <div
-                  v-if="!isMessagesReady"
-                  key="shimmer"
-                  data-testid="messages-shimmer"
-                  class="space-y-3 animate-[fade-in_0.4s_ease_both]"
+                <div class="flex-1" />
+                <Transition
+                  name="shimmer-swap"
+                  mode="out-in"
+                  @enter="onMessagesEnter"
+                  @after-enter="onMessagesEntered"
                 >
-                  <div class="flex justify-end">
-                    <USkeleton
-                      class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-                      style="border-radius: var(--config-message-border-radius)"
-                    />
+                  <!-- Show bubble-shaped skeletons while waiting for real data -->
+                  <div
+                    v-if="!isMessagesReady"
+                    key="shimmer"
+                    data-testid="messages-shimmer"
+                    class="space-y-3 animate-[fade-in_0.4s_ease_both]"
+                  >
+                    <div class="flex justify-end">
+                      <USkeleton
+                        class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+                        style="border-radius: var(--config-message-border-radius)"
+                      />
+                    </div>
+                    <div class="flex justify-start">
+                      <USkeleton
+                        class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
+                        style="border-radius: var(--config-message-border-radius)"
+                      />
+                    </div>
                   </div>
-                  <div class="flex justify-start">
-                    <USkeleton
-                      class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-                      style="border-radius: var(--config-message-border-radius)"
-                    />
-                  </div>
-                </div>
-                <ChatMessages
-                  v-else
-                  key="messages"
-                  :messages="messages"
-                  :welcome-message="trimmedWelcomeMessage"
-                  :agent-id="session?.agentId ?? virtualAgentFromSession?.agentId"
-                  :agent-name="virtualAgentFromSession?.agentName"
-                  :welcome-message-date="virtualAgentFromSession?.firstMessageDate"
-                  :member-count="session?.members?.length ?? 2"
-                  :active-options-message-id="lastUnansweredOptionsMessageId"
-                  :skip-entrance-animation="skipEntranceAnimation"
-                  @option-submitted="handleOptionSubmitted"
-                />
-              </Transition>
+                  <ChatMessages
+                    v-else
+                    key="messages"
+                    :messages="messages"
+                    :welcome-message="trimmedWelcomeMessage"
+                    :agent-id="session?.agentId ?? virtualAgentFromSession?.agentId"
+                    :agent-name="virtualAgentFromSession?.agentName"
+                    :welcome-message-date="virtualAgentFromSession?.firstMessageDate"
+                    :member-count="session?.members?.length ?? 2"
+                    :active-options-message-id="lastUnansweredOptionsMessageId"
+                    :skip-entrance-animation="skipEntranceAnimation"
+                    :focused-ids="focusedIds"
+                    @option-submitted="handleOptionSubmitted"
+                    @toggle-focus="toggleFocus"
+                  />
+                </Transition>
+              </div>
             </div>
+            <!-- Bottom fade gradient -->
+            <div
+              class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none"
+            />
           </div>
-          <!-- Bottom fade gradient -->
-          <div
-            class="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-t from-[hsl(var(--background))] to-transparent pointer-events-none"
+
+          <!-- Typing Indicator - fixed height, doesn't push messages -->
+          <TypingIndicator
+            :typing-users="typingUsers"
+            :thinking-agents="thinkingAgents"
+          />
+
+          <MessageInput
+            v-if="!isOptionsMode"
+            ref="messageInputRef"
+            :session-id="sessionId"
+            :agent-id="authStore.user?.id || 1"
+            :selected-agent-id="selectedTargetAgentId"
+            :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
+            :selected-agent-name="selectedAgentName"
+            :members="session.members || []"
+            :is-new-conversation="isPlaceholderData ? undefined : messages.length === 0"
+            class="flex-shrink-0 sticky bottom-0"
+            @message-sent="handleMessageSent"
+            @scroll-to-bottom="scrollToBottom"
+            @target-agent-changed="handleTargetAgentChanged"
           />
         </div>
 
-        <!-- Typing Indicator - fixed height, doesn't push messages -->
-        <TypingIndicator
-          :typing-users="typingUsers"
-          :thinking-agents="thinkingAgents"
-        />
-
-        <MessageInput
-          v-if="!isOptionsMode"
-          ref="messageInputRef"
-          :session-id="sessionId"
-          :agent-id="authStore.user?.id || 1"
-          :selected-agent-id="selectedTargetAgentId"
-          :selectable-agents="isSingleVirtualAgentSession ? [] : selectableTargetAgents"
-          :selected-agent-name="selectedAgentName"
-          :members="session.members || []"
-          :is-new-conversation="isPlaceholderData ? undefined : messages.length === 0"
-          class="flex-shrink-0 sticky bottom-0"
-          @message-sent="handleMessageSent"
-          @scroll-to-bottom="scrollToBottom"
-          @target-agent-changed="handleTargetAgentChanged"
+        <FocusedMessagesSidebar
+          v-if="!isMobile"
+          v-model:sidebar-open="focusSidebarOpen"
+          :messages="messages"
+          :focused-ids="focusedIds"
+          @toggle-focus="toggleFocus"
+          @clear-all="clearAll"
         />
       </div>
 
@@ -371,6 +397,8 @@ import ManageSessionUsers from '@/app/components/chat/ManageSessionUsers.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { getInitials, getAvatarColor } from '@/app/utils/user'
+import { useMessageFocus } from '@/app/composables/useMessageFocus'
+import FocusedMessagesSidebar from '@/app/components/chat/FocusedMessagesSidebar.vue'
 import { createLogger } from '@/lib/utils/logger'
 
 const logger = createLogger('ChatSession')
@@ -382,6 +410,9 @@ const sessionId = route.params.sessionId as string
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
+
+const { focusedIds, toggleFocus, clearAll } = useMessageFocus(sessionId)
+const focusSidebarOpen = ref(false)
 
 // Consume one-shot flag: skip entrance animation when arriving from /chats/new/*
 chatStore.setActiveSession(sessionId)
