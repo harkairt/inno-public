@@ -209,7 +209,8 @@
   textarea:focus-visible {
     @apply ring-1!;
   }
-  .composer-pill textarea:focus-visible {
+  .composer-pill textarea:focus-visible,
+  .inline-plain-text input:focus-visible {
     @apply ring-0!;
   }
 

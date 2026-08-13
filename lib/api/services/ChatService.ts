@@ -45,12 +45,14 @@ import { ErrorCode } from '@/types/enums'
 class ChatService {
   async uploadFile(
     agentId: number,
+    sessionId: string,
     file: File,
     onProgress: (percent: number) => void,
   ): Promise<Result<UploadFileResponseDTO, AppError>> {
     try {
       const formData = new FormData()
       formData.append('agentId', String(agentId))
+      formData.append('sessionId', sessionId)
       formData.append('file', file)
 
       const response = await apiClient.post<ApiResponse<UploadFileResponseDTO>>(

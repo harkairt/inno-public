@@ -7,6 +7,7 @@ export interface BarRaceData {
   step: number
   sort: 'asc' | 'desc'
   maxBars: number | null
+  stepDuration: number | null
   frames: Record<string, number>[]
 }
 
@@ -20,6 +21,7 @@ export type BarRaceRejectionReason =
   | 'frame-count-mismatch'
   | 'invalid-sort'
   | 'invalid-max-bars'
+  | 'invalid-step-duration'
 
 export interface BarRaceRejection {
   reason: BarRaceRejectionReason
@@ -65,6 +67,12 @@ function validateMaxBars(raw: unknown): number | null | false {
   return false
 }
 
+function validateStepDuration(raw: unknown): number | null | false {
+  if (raw === undefined || raw === null) return null
+  if (isFiniteNumber(raw) && raw > 0) return raw
+  return false
+}
+
 function validateFrames(raw: unknown, categories: Set<string>): Record<string, number>[] | null {
   if (!Array.isArray(raw) || raw.length === 0) return null
 
@@ -104,6 +112,9 @@ export const parseBarRaceData = (json: string): Result<BarRaceData, BarRaceRejec
   const maxBars = validateMaxBars(parsed.maxBars)
   if (maxBars === false) return err({ reason: 'invalid-max-bars' })
 
+  const stepDuration = validateStepDuration(parsed.stepDuration)
+  if (stepDuration === false) return err({ reason: 'invalid-step-duration' })
+
   const categorySet = new Set(categories)
   const frames = validateFrames(parsed.frames, categorySet)
   if (!frames) return err({ reason: 'invalid-frames' })
@@ -118,6 +129,7 @@ export const parseBarRaceData = (json: string): Result<BarRaceData, BarRaceRejec
     ...range,
     sort,
     maxBars,
+    stepDuration,
     frames,
   })
 }

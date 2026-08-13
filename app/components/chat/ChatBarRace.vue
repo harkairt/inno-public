@@ -29,12 +29,12 @@
         @click="toggle"
       />
       <USlider
-        :model-value="currentFrameIndex"
+        :model-value="sliderValue"
         :min="0"
-        :max="lastFrameIndex"
+        :max="SLIDER_RESOLUTION"
         :step="1"
         class="bar-race-slider"
-        @update:model-value="seek"
+        @update:model-value="seekSlider"
       />
       <span class="bar-race-label">{{ currentLabel }}</span>
     </div>
@@ -50,7 +50,7 @@ import type { BarRaceData } from '@/lib/validation/barRace'
 import {
   buildBarRaceOption,
   formatFrameLabel,
-  BAR_RACE_FRAME_INTERVAL_MS,
+  resolveStepDuration,
 } from '@/lib/charts/barRaceOption'
 
 interface Props {
@@ -67,59 +67,92 @@ const { isLoaded, loadECharts, initChart, applyOption } = useECharts()
 
 const containerRef = ref<HTMLElement | null>(null)
 const error = ref<string | null>(null)
-const currentFrameIndex = ref(0)
+const progress = ref(0)
 const isPlaying = ref(false)
 let instance: EChartsInstance | null = null
-let intervalId: ReturnType<typeof setInterval> | null = null
+let rafId: number | null = null
+let lastTimestamp: number | null = null
+let appliedFrameIndex = -1
+
+const SLIDER_RESOLUTION = 1000
 
 const isDark = computed(() => colorMode.value === 'dark')
 const showLoading = computed(() => !isLoaded.value && !error.value)
 const lastFrameIndex = computed(() => props.data.frames.length - 1)
+const currentFrameIndex = computed(() => Math.min(Math.floor(progress.value), lastFrameIndex.value))
 const currentLabel = computed(() => formatFrameLabel(props.data, currentFrameIndex.value))
 const playIcon = computed(() => (isPlaying.value ? 'i-lucide-pause' : 'i-lucide-play'))
 
+const sliderValue = computed(() => {
+  if (lastFrameIndex.value === 0) return 0
+  return Math.round((progress.value / lastFrameIndex.value) * SLIDER_RESOLUTION)
+})
+
 const applyFrame = (idx: number) => {
-  if (!instance) return
+  if (!instance || idx === appliedFrameIndex) return
+  appliedFrameIndex = idx
   const option = buildBarRaceOption(props.data, idx)
   if (!applyOption(instance, option, isDark.value, props.blockIndex)) {
     error.value = t('chat.barRace.renderFailed')
   }
 }
 
+const tick = (timestamp: number) => {
+  if (lastTimestamp === null) {
+    lastTimestamp = timestamp
+    rafId = requestAnimationFrame(tick)
+    return
+  }
+
+  const elapsed = timestamp - lastTimestamp
+  lastTimestamp = timestamp
+  const stepMs = resolveStepDuration(props.data)
+  const delta = elapsed / stepMs
+
+  const next = progress.value + delta
+  if (next >= lastFrameIndex.value) {
+    progress.value = lastFrameIndex.value
+    applyFrame(lastFrameIndex.value)
+    pause()
+    return
+  }
+
+  progress.value = next
+  applyFrame(Math.floor(next))
+  rafId = requestAnimationFrame(tick)
+}
+
 const pause = () => {
   isPlaying.value = false
-  if (intervalId !== null) {
-    clearInterval(intervalId)
-    intervalId = null
+  lastTimestamp = null
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
   }
 }
 
 const play = () => {
-  if (currentFrameIndex.value >= lastFrameIndex.value) {
-    currentFrameIndex.value = 0
+  if (progress.value >= lastFrameIndex.value) {
+    progress.value = 0
+    applyFrame(0)
   }
   isPlaying.value = true
-  intervalId = setInterval(() => {
-    if (currentFrameIndex.value >= lastFrameIndex.value) {
-      pause()
-      return
-    }
-    currentFrameIndex.value++
-  }, BAR_RACE_FRAME_INTERVAL_MS)
+  lastTimestamp = null
+  rafId = requestAnimationFrame(tick)
 }
 
 const toggle = () => {
-  if (isPlaying.value) {
-    pause()
-  } else {
-    play()
-  }
+  if (isPlaying.value) pause()
+  else play()
 }
 
-const seek = (idx: number | undefined) => {
-  if (idx == null) return
+const seekSlider = (val: number | undefined) => {
+  if (val == null) return
   pause()
-  currentFrameIndex.value = idx
+  const mapped = lastFrameIndex.value > 0 ? (val / SLIDER_RESOLUTION) * lastFrameIndex.value : 0
+  const frameIdx = Math.min(Math.round(mapped), lastFrameIndex.value)
+  progress.value = frameIdx
+  applyFrame(frameIdx)
 }
 
 const render = () => {
@@ -134,8 +167,6 @@ const render = () => {
   applyFrame(currentFrameIndex.value)
 }
 
-watch(currentFrameIndex, applyFrame)
-
 watch(
   isLoaded,
   (loaded) => {
@@ -148,12 +179,16 @@ watch(
   () => props.source,
   () => {
     pause()
-    currentFrameIndex.value = 0
+    progress.value = 0
+    appliedFrameIndex = -1
     render()
   },
 )
 
-watch(isDark, () => applyFrame(currentFrameIndex.value))
+watch(isDark, () => {
+  appliedFrameIndex = -1
+  applyFrame(currentFrameIndex.value)
+})
 
 useResizeObserver(containerRef, () => {
   instance?.resize()

@@ -84,16 +84,20 @@ export function useFileAttachments() {
     return null
   }
 
-  function processQueue(agentId: number) {
+  function processQueue(agentId: number, sessionId: string) {
     while (activeUploads < MAX_CONCURRENT_UPLOADS) {
       const next = stagedAttachments.value.find((a) => a.status === 'pending')
       if (!next) break
       activeUploads++
-      void uploadAttachment(next, agentId)
+      void uploadAttachment(next, agentId, sessionId)
     }
   }
 
-  async function uploadAttachment(attachment: StagedAttachment, agentId: number) {
+  async function uploadAttachment(
+    attachment: StagedAttachment,
+    agentId: number,
+    sessionId: string,
+  ) {
     const idx = stagedAttachments.value.findIndex((a) => a.id === attachment.id)
     if (idx === -1) {
       activeUploads--
@@ -106,7 +110,7 @@ export function useFileAttachments() {
       progress: 0,
     }
 
-    const result = await chatService.uploadFile(agentId, attachment.file, (percent) => {
+    const result = await chatService.uploadFile(agentId, sessionId, attachment.file, (percent) => {
       const i = stagedAttachments.value.findIndex((a) => a.id === attachment.id)
       if (i !== -1) {
         stagedAttachments.value[i] = { ...stagedAttachments.value[i]!, progress: percent }
@@ -116,7 +120,7 @@ export function useFileAttachments() {
     const finalIdx = stagedAttachments.value.findIndex((a) => a.id === attachment.id)
     if (finalIdx === -1) {
       activeUploads--
-      processQueue(agentId)
+      processQueue(agentId, sessionId)
       return
     }
 
@@ -139,7 +143,7 @@ export function useFileAttachments() {
     }
 
     activeUploads--
-    processQueue(agentId)
+    processQueue(agentId, sessionId)
   }
 
   type AttachResult = {
@@ -147,7 +151,7 @@ export function useFileAttachments() {
     rejected: Array<{ file: File; error: AppError }>
   }
 
-  function attachFiles(files: FileList | File[], agentId: number): AttachResult {
+  function attachFiles(files: FileList | File[], agentId: number, sessionId: string): AttachResult {
     const accepted: StagedAttachment[] = []
     const rejected: Array<{ file: File; error: AppError }> = []
 
@@ -184,7 +188,7 @@ export function useFileAttachments() {
     }
 
     if (accepted.length > 0) {
-      processQueue(agentId)
+      processQueue(agentId, sessionId)
     }
 
     return { accepted, rejected }
@@ -194,7 +198,7 @@ export function useFileAttachments() {
     stagedAttachments.value = stagedAttachments.value.filter((a) => a.id !== id)
   }
 
-  function retryAttachment(id: string, agentId: number) {
+  function retryAttachment(id: string, agentId: number, sessionId: string) {
     const idx = stagedAttachments.value.findIndex((a) => a.id === id)
     if (idx === -1) return
 
@@ -208,7 +212,7 @@ export function useFileAttachments() {
       error: null,
     }
 
-    processQueue(agentId)
+    processQueue(agentId, sessionId)
   }
 
   function clearAttachments() {
