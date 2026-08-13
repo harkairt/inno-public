@@ -39,6 +39,7 @@
         :members="session?.members || []"
         :disable-signal-r="true"
         :disable-voice="true"
+        :disable-file-upload="true"
         :disabled="!canSend"
         @message-sent="handleMessageSent"
         @scroll-to-bottom="scrollToBottom"
@@ -177,6 +178,7 @@ async function handleOptionSubmitted(answer: string) {
     group: '',
     pquestionType: AIQuestionType.Text,
     options: [],
+    files: [],
   }
   try {
     await mutation.mutateAsync(request)

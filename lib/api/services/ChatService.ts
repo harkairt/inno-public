@@ -28,6 +28,7 @@ import type {
   GetSessionUnreadMessagesRequestDTO,
   StartPublicChatrequestDTO,
   AIPublicChatStartDTO,
+  UploadFileResponseDTO,
 } from '@/types/api/schemas'
 import {
   AISessionHeaderDTOSchema,
@@ -36,11 +37,51 @@ import {
   AIWelcomeMessageDTOSchema,
   GetUnreadMessagesDTOSchema,
   AIPublicChatStartDTOSchema,
+  UploadFileResponseDTOSchema,
 } from '@/types/api/schemas'
 import type { ApiResponse, MutationSuccess } from '@/types/api/base'
 import { ErrorCode } from '@/types/enums'
 
 class ChatService {
+  async uploadFile(
+    agentId: number,
+    file: File,
+    onProgress: (percent: number) => void,
+  ): Promise<Result<UploadFileResponseDTO, AppError>> {
+    try {
+      const formData = new FormData()
+      formData.append('agentId', String(agentId))
+      formData.append('file', file)
+
+      const response = await apiClient.post<ApiResponse<UploadFileResponseDTO>>(
+        '/api/AIWebAPI/uploadFile',
+        formData,
+        {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total))
+            }
+          },
+        },
+      )
+
+      const dataResult = requireData(
+        response.data.data,
+        ErrorCode.UPLOAD_ERROR,
+        'No upload response data',
+      )
+      if (dataResult.isErr()) return dataResult
+
+      return validateApiResponse(
+        dataResult.value,
+        UploadFileResponseDTOSchema,
+        'Invalid upload response format',
+      )
+    } catch (error) {
+      return err(normalizeApiError(error))
+    }
+  }
+
   async sendQuestion(
     request: AiQuestionRequestDTO,
   ): Promise<Result<AISessionMessageDTO, AppError>> {

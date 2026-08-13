@@ -88,6 +88,10 @@
                 :selected-answer="getSelectedAnswer(message)"
               />
             </template>
+            <FileMessage
+              v-else-if="message.messageType === AIAnswerType.File"
+              :message-text="message.messageText"
+            />
             <MarkdownContent
               v-else
               :content="message.messageText"
@@ -140,6 +144,7 @@ import { useMessagePresentation } from '@/app/composables/useMessagePresentation
 import { useAuthStore } from '~/stores/auth'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
+import FileMessage from '@/app/components/chat/FileMessage.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -165,6 +170,7 @@ const MD_TABLE_RE = /^\|.+\|/m
 function hasRichContent(message: AISessionMessageDTO): boolean {
   if (message.messageType === AIAnswerType.Options) return true
   if (message.messageType === AIAnswerType.DataTable) return true
+  if (message.messageType === AIAnswerType.File) return true
   const text = message.messageText
   if (!text) return false
   return WIDE_CONTENT_MARKERS.some((marker) => text.includes(marker)) || MD_TABLE_RE.test(text)

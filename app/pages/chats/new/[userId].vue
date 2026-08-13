@@ -60,8 +60,20 @@
       <!-- Chat Content -->
       <div
         v-else-if="selectedUser"
-        class="flex flex-col h-full min-h-0 overflow-hidden"
+        class="flex flex-col h-full min-h-0 overflow-hidden relative"
+        @dragenter="onDragEnter"
+        @dragleave="onDragLeave"
+        @dragover.prevent="onDragOver"
+        @drop.prevent="onDrop"
       >
+        <div
+          v-if="isDraggingOver"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-[hsl(var(--primary)/0.1)] border-2 border-dashed border-[hsl(var(--primary))] rounded-lg pointer-events-none"
+        >
+          <span class="text-sm font-medium text-[hsl(var(--primary))]">
+            {{ t('chat.messageInput.dropZone') }}
+          </span>
+        </div>
         <div
           ref="messagesContainer"
           class="flex-1 overflow-y-auto min-h-0 py-4 flex flex-col"
@@ -89,6 +101,7 @@
 
         <MessageInput
           v-if="!isOptionsMode"
+          ref="messageInputRef"
           :session-id="sessionId"
           :draft-key="`new-${userId}`"
           :agent-id="agentId"
@@ -269,6 +282,7 @@ async function handleOptionSubmitted(answer: string) {
     group: '',
     pquestionType: AIQuestionType.Text,
     options: [],
+    files: [],
   }
   try {
     await optionMutation.mutateAsync(request)
@@ -315,6 +329,41 @@ const selectedAgentName = computed(() => {
 })
 
 const messagesContainer = ref<HTMLElement | null>(null)
+const messageInputRef = ref<{ handleDroppedFiles: (files: FileList) => void } | null>(null)
+
+const isDraggingOver = ref(false)
+let dragEnterCounter = 0
+
+function onDragEnter(event: DragEvent) {
+  event.preventDefault()
+  dragEnterCounter++
+  if (event.dataTransfer?.types.includes('Files')) {
+    isDraggingOver.value = true
+  }
+}
+
+function onDragLeave() {
+  dragEnterCounter--
+  if (dragEnterCounter <= 0) {
+    dragEnterCounter = 0
+    isDraggingOver.value = false
+  }
+}
+
+function onDragOver(event: DragEvent) {
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+function onDrop(event: DragEvent) {
+  dragEnterCounter = 0
+  isDraggingOver.value = false
+  const files = event.dataTransfer?.files
+  if (files?.length) {
+    messageInputRef.value?.handleDroppedFiles(files)
+  }
+}
 
 function scrollToBottom() {
   void nextTick(() => {

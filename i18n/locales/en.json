@@ -86,13 +86,33 @@
       "anErrorOccurred": "An error occurred while sending your message",
       "pressEnterToSend": "Press Enter to send, Shift+Enter for new line",
       "startRecording": "Start voice recording",
-      "stopRecording": "Stop recording"
+      "stopRecording": "Stop recording",
+      "attachFile": "Attach file",
+      "removeAttachment": "Remove attachment",
+      "retryUpload": "Retry upload",
+      "uploading": "Uploading...",
+      "uploadReady": "Ready",
+      "uploadFailed": "Upload failed",
+      "sendBlockedUploading": "Wait for uploads to finish",
+      "sendBlockedFailed": "Fix or remove failed uploads before sending",
+      "dropZone": "Drop files here",
+      "fileTooLarge": "File exceeds the {limit} MB size limit",
+      "fileTypeNotAllowed": "File type not allowed",
+      "fileCountExceeded": "Maximum {limit} files per message",
+      "fileTotalSizeExceeded": "Total file size exceeds {limit} MB",
+      "duplicateFile": "File already attached"
     },
     "messages": {
       "noMessages": "No messages yet",
       "emptyState": "Be the first to say something!",
+      "sending": "Sending...",
+      "sent": "Sent",
+      "failedToSend": "Failed to send",
       "ariaLabel": "Chat messages",
-      "copyMessage": "Copy message"
+      "copyMessage": "Copy message",
+      "openFile": "Open file",
+      "viewImage": "View image",
+      "downloadFile": "Download file"
     },
     "focus": {
       "toggleSidebar": "Toggle focused messages",

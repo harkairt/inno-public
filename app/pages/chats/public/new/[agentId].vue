@@ -35,6 +35,7 @@
       :members="members"
       :disable-signal-r="true"
       :disable-voice="true"
+      :disable-file-upload="true"
       :disabled="!canSend"
       @scroll-to-bottom="scrollToBottom"
     />

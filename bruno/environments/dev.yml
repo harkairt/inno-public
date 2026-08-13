@@ -1,0 +1,10 @@
+name: dev
+variables:
+  - name: accessToken
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0NiIsImVtYWlsIjoiaGFya2FpLnRhbWFzQGlubm9zbWFydGtmdC5odSIsInVuaXF1ZV9uYW1lIjoiVGFtYXMiLCJuYW1laWQiOiJoYXJrYWkudGFtYXNAaW5ub3NtYXJ0a2Z0Lmh1IiwibmJmIjoxNzg2NjI3NDI2LCJleHAiOjE3ODY2MjgwMjYsImlhdCI6MTc4NjYyNzQyNiwiaXNzIjoiSW5ub3NtYXJ0IEtmdC4iLCJhdWQiOiJJbm5vQ2hhdFVzZXJzIn0.UsysjyGhVMgRM-MLuuV29LFCcdzbOwaMY2KJYoQJ1Jw
+  - name: url
+    value: http://172.22.4.22:8082
+  - name: email
+    value: harkai.tamas@innosmartkft.hu
+  - name: passwordHash
+    value: 3c9909afec25354d551dae21590bb26e38d53f2173b8d3dc3eee4c047e7ab1c1eb8b85103e3be7ba613b31bb5c9c36214dc9f14a42fd7a2fdb84856bca5c44c2

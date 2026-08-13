@@ -231,8 +231,9 @@ export function useWelcomeMessage(
         members: [],
         question: '',
         group: 'default',
-        pquestionType: 0, // Text question
+        pquestionType: 0,
         options: [],
+        files: [],
       })
 
       if (result.isErr()) {
