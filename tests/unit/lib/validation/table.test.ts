@@ -62,6 +62,14 @@ describe('parseRowsBlock', () => {
     expect(parseRowsBlock(huge)).toBeNull()
   })
 
+  it('preserves source key order even when keys are integer-like', () => {
+    const json =
+      '[{"terulet":"Pest","2018":8778,"2019":9492,"mertekegyseg":"db"},' +
+      '{"terulet":"Fejér","2018":1374,"2019":1405,"mertekegyseg":"db"}]'
+    const result = parseRowsBlock(json)
+    expect(result!.columns.map((c) => c.name)).toEqual(['terulet', '2018', '2019', 'mertekegyseg'])
+  })
+
   it('returns null when there are too many columns', () => {
     const row: Record<string, number> = {}
     for (let i = 0; i < 51; i++) row[`c${i}`] = i
@@ -70,9 +78,12 @@ describe('parseRowsBlock', () => {
 })
 
 describe('parsePivotBlock', () => {
-  it('returns the raw validated rows', () => {
+  it('returns data and source key order', () => {
     const data = [{ a: 1 }, { a: 2 }]
-    expect(parsePivotBlock(JSON.stringify(data))).toEqual(data)
+    const result = parsePivotBlock(JSON.stringify(data))
+    expect(result).not.toBeNull()
+    expect(result!.data).toEqual(data)
+    expect(result!.sourceKeyOrder).toEqual(['a'])
   })
 
   it('returns null for invalid input', () => {
@@ -86,6 +97,12 @@ describe('pivotDataToTableData', () => {
     const table = pivotDataToTableData(pivot)
     expect(table.columns.map((c) => c.name)).toEqual(['a', 'b'])
     expect(table.rows[1]).toEqual({ a: 2, b: null })
+  })
+
+  it('uses sourceKeyOrder when provided', () => {
+    const pivot: PivotData = [{ a: 1, b: 'x' }]
+    const table = pivotDataToTableData(pivot, ['b', 'a'])
+    expect(table.columns.map((c) => c.name)).toEqual(['b', 'a'])
   })
 })
 

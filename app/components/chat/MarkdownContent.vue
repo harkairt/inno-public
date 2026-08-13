@@ -28,7 +28,10 @@
       :to="`[data-pivot-id='${pivot.id}']`"
       :defer="true"
     >
-      <ChatPivotTable :data="pivot.data" />
+      <ChatPivotTable
+        :data="pivot.data"
+        :source-key-order="pivot.sourceKeyOrder"
+      />
     </Teleport>
     <Teleport
       v-for="echart in echartEntries"
@@ -121,6 +124,7 @@ interface TableEntry {
 interface PivotEntry {
   id: string
   data: PivotData
+  sourceKeyOrder: string[]
 }
 
 interface EChartEntry {
@@ -222,11 +226,11 @@ const extractPivotBlocks = (html: string): { html: string; entries: PivotEntry[]
 
   const replaced = html.replace(pivotBlockRegex, (match, encoded: string) => {
     const json = decodeHtmlEntities(encoded)
-    const data = parsePivotBlock(json)
-    if (!data) return match
+    const parsed = parsePivotBlock(json)
+    if (!parsed) return match
 
     const id = `${instancePrefix}-pivot-${index++}`
-    entries.push({ id, data })
+    entries.push({ id, data: parsed.data, sourceKeyOrder: parsed.sourceKeyOrder })
     return `<div class="pivot-placeholder" data-pivot-id="${id}"></div>`
   })
 
