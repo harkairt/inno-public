@@ -77,6 +77,7 @@ import ChatTable from '~/components/chat/ChatTable.vue'
 
 interface Props {
   data: PivotData
+  sourceKeyOrder?: string[]
 }
 
 const props = defineProps<Props>()
@@ -90,7 +91,7 @@ const pivotComponent: ShallowRef<Component | null> = shallowRef(null)
 
 const isMobile = computed(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false))
 
-const tableData = computed(() => pivotDataToTableData(props.data))
+const tableData = computed(() => pivotDataToTableData(props.data, props.sourceKeyOrder))
 
 const tabs = computed(() => [
   { label: t('chat.pivot.tabTable'), value: 'table' },

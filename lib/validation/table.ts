@@ -53,6 +53,60 @@ const inferColumnType = (values: unknown[]): ColumnType => {
   return 'string'
 }
 
+const extractSourceKeyOrder = (json: string): string[] => {
+  const keys: string[] = []
+  const seen = new Set<string>()
+  const len = json.length
+  let i = 0
+
+  const ch = () => json.charAt(i)
+
+  const skipString = () => {
+    i++
+    while (i < len) {
+      if (ch() === '\\') {
+        i += 2
+        continue
+      }
+      if (ch() === '"') {
+        i++
+        return
+      }
+      i++
+    }
+  }
+
+  while (i < len) {
+    if (ch() !== '{') {
+      i++
+      continue
+    }
+    i++
+    while (i < len) {
+      while (i < len && ch() !== '"' && ch() !== '}') i++
+      if (i >= len || ch() === '}') break
+
+      const keyStart = i
+      skipString()
+      const key: string = JSON.parse(json.substring(keyStart, i))
+      if (!seen.has(key)) {
+        seen.add(key)
+        keys.push(key)
+      }
+
+      while (i < len && ch() !== ':') i++
+      i++
+      while (i < len && ' \t\r\n'.includes(ch())) i++
+
+      if (i < len && ch() === '"') skipString()
+      else while (i < len && !/[\s,}]/.test(ch())) i++
+    }
+    if (i < len) i++
+  }
+
+  return keys
+}
+
 export const parseRowsBlock = (json: string): TableData | null => {
   if (json.length > MAX_JSON_SIZE) return null
 
@@ -62,14 +116,7 @@ export const parseRowsBlock = (json: string): TableData | null => {
     if (!result.success) return null
 
     const rows = result.data
-    const keySet = new Set<string>()
-    for (const row of rows) {
-      for (const key of Object.keys(row)) {
-        keySet.add(key)
-      }
-    }
-
-    const keys = [...keySet]
+    const keys = extractSourceKeyOrder(json)
     if (keys.length > MAX_COLUMNS) return null
 
     const columns: ColumnMeta[] = keys.map((key) => ({
@@ -93,28 +140,33 @@ export const parseRowsBlock = (json: string): TableData | null => {
 
 export type PivotData = Record<string, CellValue>[]
 
-export const parsePivotBlock = (json: string): PivotData | null => {
+export interface ParsedPivotBlock {
+  data: PivotData
+  sourceKeyOrder: string[]
+}
+
+export const parsePivotBlock = (json: string): ParsedPivotBlock | null => {
   if (json.length > MAX_JSON_SIZE) return null
 
   try {
     const parsed: unknown = JSON.parse(json)
     const result = rowsArraySchema.safeParse(parsed)
     if (!result.success) return null
-    return result.data as PivotData
+    return { data: result.data as PivotData, sourceKeyOrder: extractSourceKeyOrder(json) }
   } catch {
     return null
   }
 }
 
-export const pivotDataToTableData = (data: PivotData): TableData => {
-  const keySet = new Set<string>()
+export const pivotDataToTableData = (data: PivotData, sourceKeyOrder?: string[]): TableData => {
+  const allKeys = new Set<string>()
   for (const row of data) {
     for (const key of Object.keys(row)) {
-      keySet.add(key)
+      allKeys.add(key)
     }
   }
 
-  const keys = [...keySet]
+  const keys = sourceKeyOrder ? sourceKeyOrder.filter((k) => allKeys.has(k)) : [...allKeys]
   const columns: ColumnMeta[] = keys.map((key) => ({
     name: key,
     type: inferColumnType(data.map((r) => r[key])),
