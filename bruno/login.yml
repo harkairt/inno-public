@@ -1,0 +1,40 @@
+info:
+  name: login
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/api/authentication/login"
+  headers:
+    - name: Accept
+      value: application/json
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{email}}",
+        "password": "{{passwordHash}}",
+        "mode": 0
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const token = res.getBody()?.data?.accessToken;
+
+        if (res.getStatus() === 200 && token) {
+          bru.setEnvVar("accessToken", token);
+        } else {
+          console.log("No accessToken found in response");
+        }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

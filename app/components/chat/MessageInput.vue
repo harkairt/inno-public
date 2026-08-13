@@ -21,7 +21,13 @@
           />
         </div>
 
-        <!-- Error Message Display -->
+        <FileAttachmentList
+          v-if="!props.disableFileUpload && fileUpload.stagedAttachments.value.length > 0"
+          :attachments="fileUpload.stagedAttachments.value"
+          @remove="fileUpload.removeAttachment"
+          @retry="(id) => fileUpload.retryAttachment(id, props.selectedAgentId ?? props.agentId)"
+        />
+
         <UAlert
           v-if="mutation.isError.value && mutation.error.value"
           color="error"
@@ -40,9 +46,31 @@
           </template>
         </UAlert>
 
-        <!-- Message Input -->
         <div class="flex items-end gap-2">
-          <!-- Input Area -->
+          <input
+            v-if="!props.disableFileUpload"
+            ref="fileInputRef"
+            type="file"
+            multiple
+            :accept="acceptFilter"
+            class="hidden"
+            data-testid="file-input"
+            @change="handleFileSelected"
+          />
+
+          <UButton
+            v-if="!props.disableFileUpload"
+            icon="i-heroicons-paper-clip-20-solid"
+            variant="ghost"
+            color="neutral"
+            size="lg"
+            class="shrink-0"
+            :disabled="disabled"
+            :aria-label="t('chat.messageInput.attachFile')"
+            data-testid="attach-file-button"
+            @click="triggerFileInput"
+          />
+
           <div
             class="flex-1"
             @keydown="handleKeyDown"
@@ -112,11 +140,14 @@
 
 <script setup lang="ts">
 import { useSendMessage } from '@/app/composables/useChatMutations'
+import { useFileAttachments } from '@/app/composables/useFileAttachments'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useSignalRChat } from '@/app/composables/useSignalRChat'
 import { useVoiceRecording } from '@/app/composables/useVoiceRecording'
 import { useTranscriptionService } from '@/lib/api/services/TranscriptionService'
+import { ALLOWED_EXTENSIONS } from '@/lib/validation/fileAttachment'
+import FileAttachmentList from '@/app/components/chat/FileAttachmentList.vue'
 import type { AiQuestionRequestDTO, UserDTO } from '@/types/api/schemas'
 import { AIQuestionType } from '@/types/enums'
 import { watchDebounced } from '@vueuse/core'
@@ -134,9 +165,10 @@ interface Props {
   selectedAgentId?: number | undefined // undefined = no selection
   selectedAgentName?: string // Name of selected agent for placeholder
   isNewConversation?: boolean | undefined // true = "How can I help?", false = "Reply...", undefined = messages not loaded yet
-  disableSignalR?: boolean // Disable SignalR typing indicators (for public mode)
-  disableVoice?: boolean // Disable voice recording button (for public mode)
-  disabled?: boolean // Disable all input (e.g. while a public send is pending)
+  disableSignalR?: boolean
+  disableVoice?: boolean
+  disableFileUpload?: boolean
+  disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -148,6 +180,7 @@ const props = withDefaults(defineProps<Props>(), {
   isNewConversation: undefined,
   disableSignalR: false,
   disableVoice: false,
+  disableFileUpload: false,
   disabled: false,
 })
 
@@ -205,10 +238,41 @@ watch(
 const isTypingActive = ref(false)
 let typingTimeoutId: ReturnType<typeof setTimeout> | null = null
 
-// Send message mutation
 const mutation = useSendMessage()
 
-// Voice recording setup
+const fileUpload = useFileAttachments()
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const acceptFilter = ALLOWED_EXTENSIONS.join(',')
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function handleFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (!input.files?.length) return
+
+  const targetAgentId = props.selectedAgentId ?? props.agentId
+  const { rejected } = fileUpload.attachFiles(input.files, targetAgentId)
+
+  for (const { error } of rejected) {
+    toast.add({ title: t(error.message), color: 'error' })
+  }
+
+  input.value = ''
+}
+
+function handleDroppedFiles(files: FileList) {
+  if (props.disableFileUpload) return
+
+  const targetAgentId = props.selectedAgentId ?? props.agentId
+  const { rejected } = fileUpload.attachFiles(files, targetAgentId)
+
+  for (const { error } of rejected) {
+    toast.add({ title: t(error.message), color: 'error' })
+  }
+}
+
 const transcriptionService = useTranscriptionService()
 const isTranscriptionEnabled = computed(() => transcriptionService.isConfigured())
 
@@ -329,10 +393,15 @@ const inputPlaceholder = computed(() => {
   return t('chat.messageInput.placeholderReply')
 })
 
-// Computed: Can send message
 const canSend = computed(() => {
-  const trimmed = messageText.value.trim()
-  return trimmed.length > 0
+  const hasText = messageText.value.trim().length > 0
+  const hasFiles = fileUpload.stagedAttachments.value.length > 0
+
+  if (!hasText && !hasFiles) return false
+  if (fileUpload.hasPendingUploads.value) return false
+  if (fileUpload.hasFailedUploads.value) return false
+
+  return true
 })
 
 // Computed: Error message
@@ -342,11 +411,9 @@ const errorMessage = computed(() => {
   return error instanceof Error ? error.message : t('chat.messageInput.anErrorOccurred')
 })
 
-// Handle form submit
 async function handleSubmit() {
   if (props.disabled || !canSend.value) return
 
-  // Clear typing indicator immediately on send (only if SignalR enabled)
   if (!props.disableSignalR) {
     if (typingTimeoutId) clearTimeout(typingTimeoutId)
     if (isTypingActive.value) {
@@ -355,42 +422,35 @@ async function handleSubmit() {
     }
   }
 
-  // Trim and store message, clear input immediately
   const trimmedMessage = messageText.value.trim()
   lastFailedMessage.value = trimmedMessage
   messageText.value = ''
 
-  // Prepare request
   const targetAgentId = props.selectedAgentId ?? props.agentId
+  const files = fileUpload.readyFileIds.value
   const request: AiQuestionRequestDTO = {
     userCode: authStore.user?.email ?? '',
     sessionId: props.sessionId,
     agentId: targetAgentId,
     members: props.members,
     question: trimmedMessage,
-    group: '', // Empty group for regular text messages
+    group: '',
     pquestionType: AIQuestionType.Text,
-    options: [], // No options for text messages
+    options: [],
+    files,
   }
 
-  // Scroll to bottom immediately when user sends message
   emit('scrollToBottom')
 
   try {
-    // Send message
     await mutation.mutateAsync(request)
 
-    // Clear draft on success (CRITICAL - prevents awkward UX)
     chatStore.clearDraft(effectiveDraftKey.value)
-
-    // Clear failed message tracking on success
+    fileUpload.clearAttachments()
     lastFailedMessage.value = ''
-
-    // Emit message sent event after successful send
     emit('messageSent')
   } catch {
-    // Error is handled by mutation error state
-    // Draft remains in store - user can retry
+    // Error handled by mutation error state; attachments preserved for retry
   }
 }
 
@@ -467,5 +527,5 @@ function focus() {
   textareaRef.value?.textareaRef?.focus()
 }
 
-defineExpose({ focus })
+defineExpose({ focus, handleDroppedFiles })
 </script>

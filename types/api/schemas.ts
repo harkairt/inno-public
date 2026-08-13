@@ -21,6 +21,7 @@ const AI_ANSWER_TYPE_VALUES = [
   'text',
   'command',
   'dataTable',
+  'file',
   'options',
   'url',
   'question',
@@ -33,6 +34,7 @@ const aiAnswerTypeMap: Record<(typeof AI_ANSWER_TYPE_VALUES)[number], AIAnswerTy
   text: AIAnswerType.Text,
   command: AIAnswerType.Command,
   dataTable: AIAnswerType.DataTable,
+  file: AIAnswerType.File,
   options: AIAnswerType.Options,
   url: AIAnswerType.URL,
   question: AIAnswerType.Question,
@@ -180,6 +182,7 @@ export const AiQuestionRequestDTOSchema = z.object({
   group: z.string(),
   pquestionType: AIQuestionTypeSchema,
   options: z.array(AIQuestionOptionDTOSchema).default([]),
+  files: z.array(z.string()).default([]),
 })
 
 export const AiQuestionResponseDTOSchema = z.object({
@@ -216,6 +219,28 @@ export const OptionsMessagePayloadSchema = z.object({
   ),
 })
 export type OptionsMessagePayload = z.infer<typeof OptionsMessagePayloadSchema>
+
+export const UploadFileResponseDTOSchema = z.object({
+  id: z.uuid(),
+  mimeType: z.string(),
+  thumbnailUrl: z.string(),
+})
+export type UploadFileResponseDTO = z.infer<typeof UploadFileResponseDTOSchema>
+
+export const ReceivedFileSchema = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  mimeType: z.string(),
+  url: z.string(),
+  thumbnailUrl: z.string().optional(),
+})
+export type ReceivedFile = z.infer<typeof ReceivedFileSchema>
+
+export const FileMessagePayloadSchema = z.object({
+  text: z.string(),
+  files: z.array(ReceivedFileSchema),
+})
+export type FileMessagePayload = z.infer<typeof FileMessagePayloadSchema>
 
 export function parseOptionsPayload(
   messageText: string | null | undefined,

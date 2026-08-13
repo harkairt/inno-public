@@ -99,6 +99,10 @@
                   @submit="(answer) => emit('optionSubmitted', answer)"
                 />
               </template>
+              <FileMessage
+                v-else-if="message.messageType === AIAnswerType.File"
+                :message-text="message.messageText"
+              />
               <MarkdownContent
                 v-else
                 :content="message.messageText"
@@ -194,6 +198,7 @@ import { useMessagePresentation } from '@/app/composables/useMessagePresentation
 import MessageRating from '@/app/components/chat/MessageRating.vue'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
+import FileMessage from '@/app/components/chat/FileMessage.vue'
 
 const { t, locale } = useI18n()
 const { isMobile } = useNavigationVisibility()

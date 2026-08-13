@@ -209,8 +209,20 @@
       <div
         v-else-if="session"
         class="flex h-full min-h-0"
+        @dragenter="onDragEnter"
+        @dragleave="onDragLeave"
+        @dragover.prevent="onDragOver"
+        @drop.prevent="onDrop"
       >
-        <div class="flex flex-col flex-1 min-w-0 h-full">
+        <div
+          v-if="isDraggingOver"
+          class="absolute inset-0 z-10 flex items-center justify-center bg-[hsl(var(--primary)/0.1)] border-2 border-dashed border-[hsl(var(--primary))] rounded-lg pointer-events-none"
+        >
+          <span class="text-sm font-medium text-[hsl(var(--primary))]">
+            {{ t('chat.messageInput.dropZone') }}
+          </span>
+        </div>
+        <div class="flex flex-col flex-1 min-w-0 h-full relative">
           <div class="relative flex-1 overflow-hidden min-h-0">
             <div
               ref="messagesContainer"
@@ -432,8 +444,45 @@ const { isMobile } = useNavigationVisibility()
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
 
-// Message input ref for focus control
-const messageInputRef = ref<{ focus: () => void } | null>(null)
+// Message input ref for focus control and file drop forwarding
+const messageInputRef = ref<{
+  focus: () => void
+  handleDroppedFiles: (files: FileList) => void
+} | null>(null)
+
+const isDraggingOver = ref(false)
+let dragEnterCounter = 0
+
+function onDragEnter(event: DragEvent) {
+  event.preventDefault()
+  dragEnterCounter++
+  if (event.dataTransfer?.types.includes('Files')) {
+    isDraggingOver.value = true
+  }
+}
+
+function onDragLeave() {
+  dragEnterCounter--
+  if (dragEnterCounter <= 0) {
+    dragEnterCounter = 0
+    isDraggingOver.value = false
+  }
+}
+
+function onDragOver(event: DragEvent) {
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+function onDrop(event: DragEvent) {
+  dragEnterCounter = 0
+  isDraggingOver.value = false
+  const files = event.dataTransfer?.files
+  if (files?.length) {
+    messageInputRef.value?.handleDroppedFiles(files)
+  }
+}
 
 // Chat auto-scroll composable
 const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(messagesContainer, {
@@ -590,6 +639,7 @@ async function handleOptionSubmitted(answer: string) {
     group: '',
     pquestionType: AIQuestionType.Text,
     options: [],
+    files: [],
   }
   try {
     await optionMutation.mutateAsync(request)

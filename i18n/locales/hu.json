@@ -86,13 +86,33 @@
       "anErrorOccurred": "Hiba történt az üzenet küldése közben",
       "pressEnterToSend": "Enter a küldéshez, Shift+Enter új sorhoz",
       "startRecording": "Hangfelvétel indítása",
-      "stopRecording": "Felvétel leállítása"
+      "stopRecording": "Felvétel leállítása",
+      "attachFile": "Fájl csatolása",
+      "removeAttachment": "Csatolmány eltávolítása",
+      "retryUpload": "Feltöltés újrapróbálása",
+      "uploading": "Feltöltés...",
+      "uploadReady": "Kész",
+      "uploadFailed": "Feltöltés sikertelen",
+      "sendBlockedUploading": "Várjon a feltöltések befejezéséig",
+      "sendBlockedFailed": "Javítsa vagy távolítsa el a sikertelen feltöltéseket a küldés előtt",
+      "dropZone": "Húzza ide a fájlokat",
+      "fileTooLarge": "A fájl meghaladja a {limit} MB méretkorlátot",
+      "fileTypeNotAllowed": "Nem engedélyezett fájltípus",
+      "fileCountExceeded": "Legfeljebb {limit} fájl üzenetenként",
+      "fileTotalSizeExceeded": "Az összes fájl mérete meghaladja a {limit} MB-ot",
+      "duplicateFile": "A fájl már csatolva van"
     },
     "messages": {
       "noMessages": "Még nincsenek üzenetek",
       "emptyState": "Legyen Ön az első, aki mond valamit!",
+      "sending": "Küldés...",
+      "sent": "Elküldve",
+      "failedToSend": "Nem sikerült elküldeni",
       "ariaLabel": "Chat üzenetek",
-      "copyMessage": "Üzenet másolása"
+      "copyMessage": "Üzenet másolása",
+      "openFile": "Fájl megnyitása",
+      "viewImage": "Kép megtekintése",
+      "downloadFile": "Fájl letöltése"
     },
     "focus": {
       "toggleSidebar": "Kiemelt üzenetek megjelenítése",
