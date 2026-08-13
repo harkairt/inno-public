@@ -94,6 +94,15 @@
       "ariaLabel": "Chat messages",
       "copyMessage": "Copy message"
     },
+    "focus": {
+      "toggleSidebar": "Toggle focused messages",
+      "focusMessage": "Focus message",
+      "unfocusMessage": "Unfocus message",
+      "sidebarTitle": "Focused Messages",
+      "clearAll": "Clear all",
+      "emptyTitle": "No focused messages",
+      "emptyDescription": "Click the bookmark icon on a message to focus it here"
+    },
     "typing": {
       "single": "{name} is typing",
       "double": "{name1} and {name2} are typing",

@@ -94,6 +94,15 @@
       "ariaLabel": "Chat üzenetek",
       "copyMessage": "Üzenet másolása"
     },
+    "focus": {
+      "toggleSidebar": "Kiemelt üzenetek megjelenítése",
+      "focusMessage": "Üzenet kiemelése",
+      "unfocusMessage": "Kiemelés megszüntetése",
+      "sidebarTitle": "Fókusz",
+      "clearAll": "Összes törlése",
+      "emptyTitle": "Nincsenek kiemelt üzenetek",
+      "emptyDescription": "Kattintson a könyvjelző ikonra egy üzenetnél a kiemeléséhez"
+    },
     "typing": {
       "single": "{name} gépel",
       "double": "{name1} és {name2} gépelnek",
