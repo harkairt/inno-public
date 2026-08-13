@@ -106,6 +106,23 @@ const fixtures: OptionsFixture[] = [
     answeredHint: "answers join on ', ', so the comma label cannot re-tick",
   },
   {
+    id: 'multi-plaintext',
+    title: 'Multi-select — custom "other" row (IsPlainTextEnabled)',
+    payload: {
+      ...RADIO_DEFAULTS,
+      MultiSelectEnabled: true,
+      IsPlainTextEnabled: true,
+      Text: 'Which features interest you?',
+      Items: [
+        { Key: 'k1', Value: 'Real-time chat' },
+        { Key: 'k2', Value: 'File sharing' },
+        { Key: 'k3', Value: 'Analytics dashboard' },
+      ],
+    },
+    answer: 'Real-time chat, Custom integration',
+    answeredHint: '"Custom integration" restores into the plain-text row',
+  },
+  {
     id: 'combobox',
     title: 'Combobox — labels flattened by toPlainText',
     payload: {
@@ -119,6 +136,23 @@ const fixtures: OptionsFixture[] = [
       ],
     },
     answer: 'Excel (`.xlsx`) with one sheet per region',
+  },
+  {
+    id: 'combobox-plaintext',
+    title: 'Combobox — custom option (IsPlainTextEnabled)',
+    payload: {
+      ...RADIO_DEFAULTS,
+      UIControlType: OptionsUIControlType.Combobox,
+      IsPlainTextEnabled: true,
+      Text: 'Pick a time zone or type your own:',
+      Items: [
+        { Key: 'k1', Value: 'Europe/Budapest' },
+        { Key: 'k2', Value: 'UTC' },
+        { Key: 'k3', Value: 'America/New_York' },
+      ],
+    },
+    answer: 'Asia/Tokyo',
+    answeredHint: 'custom value entered via the "Other" dropdown entry',
   },
 ]
 

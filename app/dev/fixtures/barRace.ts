@@ -11,6 +11,7 @@ const populationRace: BarRaceData = {
   step: 2,
   sort: 'desc',
   maxBars: 5,
+  stepDuration: null,
   frames: [
     {
       China: 667,
@@ -82,6 +83,7 @@ const revenueRace: BarRaceData = {
   step: 1,
   sort: 'desc',
   maxBars: null,
+  stepDuration: 1500,
   frames: [
     { 'Product A': 120, 'Product B': 95, 'Product C': 80, 'Product D': 60 },
     { 'Product A': 140, 'Product B': 130, 'Product C': 105, 'Product D': 85 },

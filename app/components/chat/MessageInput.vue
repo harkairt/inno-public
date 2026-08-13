@@ -25,7 +25,14 @@
           v-if="!props.disableFileUpload && fileUpload.stagedAttachments.value.length > 0"
           :attachments="fileUpload.stagedAttachments.value"
           @remove="fileUpload.removeAttachment"
-          @retry="(id) => fileUpload.retryAttachment(id, props.selectedAgentId ?? props.agentId)"
+          @retry="
+            (id) =>
+              fileUpload.retryAttachment(
+                id,
+                props.selectedAgentId ?? props.agentId,
+                props.sessionId,
+              )
+          "
         />
 
         <UAlert
@@ -253,7 +260,7 @@ function handleFileSelected(event: Event) {
   if (!input.files?.length) return
 
   const targetAgentId = props.selectedAgentId ?? props.agentId
-  const { rejected } = fileUpload.attachFiles(input.files, targetAgentId)
+  const { rejected } = fileUpload.attachFiles(input.files, targetAgentId, props.sessionId)
 
   for (const { error } of rejected) {
     toast.add({ title: t(error.message), color: 'error' })
@@ -266,7 +273,7 @@ function handleDroppedFiles(files: FileList) {
   if (props.disableFileUpload) return
 
   const targetAgentId = props.selectedAgentId ?? props.agentId
-  const { rejected } = fileUpload.attachFiles(files, targetAgentId)
+  const { rejected } = fileUpload.attachFiles(files, targetAgentId, props.sessionId)
 
   for (const { error } of rejected) {
     toast.add({ title: t(error.message), color: 'error' })

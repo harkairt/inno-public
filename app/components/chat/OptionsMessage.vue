@@ -75,35 +75,38 @@
       </div>
       <div
         v-if="payload.IsPlainTextEnabled"
-        class="px-3 py-2 rounded-lg border border-[hsl(var(--foreground))] transition-all duration-150"
+        class="inline-plain-text flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-text transition-all duration-150"
         :class="[
-          isActive ? 'hover:bg-[hsl(var(--accent))] cursor-pointer' : 'cursor-default',
+          isActive
+            ? 'hover:bg-[hsl(var(--accent))]'
+            : 'opacity-50 cursor-default pointer-events-none',
           selectedSingle === CUSTOM_SENTINEL
-            ? 'shadow-[inset_0_0_0_1.5px_hsl(var(--foreground))]'
-            : '',
-          !isActive && selectedSingle !== CUSTOM_SENTINEL ? 'opacity-50' : '',
+            ? 'border-[hsl(var(--primary))] bg-[hsl(var(--accent))]'
+            : 'border-[hsl(var(--border))]',
         ]"
-        @click="isActive && selectSingle(CUSTOM_SENTINEL)"
+        @click="focusPlainTextInput('single')"
       >
-        <template v-if="selectedSingle === CUSTOM_SENTINEL">
-          <div
-            class="w-full"
-            @click.stop
-          >
-            <UInput
-              v-model="plainText"
-              :placeholder="t('chat.options.plainTextPlaceholder')"
-              :disabled="!isActive"
-              variant="none"
-              class="w-full"
-            />
-          </div>
-        </template>
-        <span
-          v-else
-          class="text-sm"
-          >{{ t('chat.options.customOption') }}</span
+        <div
+          class="w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+          :class="
+            selectedSingle === CUSTOM_SENTINEL
+              ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]'
+              : 'border-[hsl(var(--muted-foreground))]'
+          "
         >
+          <div
+            v-if="selectedSingle === CUSTOM_SENTINEL"
+            class="w-1.5 h-1.5 rounded-full bg-white"
+          />
+        </div>
+        <UInput
+          ref="singlePlainTextInput"
+          v-model="plainText"
+          :placeholder="t('chat.options.plainTextPlaceholder')"
+          :disabled="!isActive"
+          variant="none"
+          class="min-w-0 flex-1 -my-1 [&_input]:px-0"
+        />
       </div>
     </div>
 
@@ -143,6 +146,42 @@
         <div class="option-markdown min-w-0 flex-1">
           <MarkdownContent :content="item.Value" />
         </div>
+      </div>
+      <div
+        v-if="payload.IsPlainTextEnabled"
+        class="inline-plain-text flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-text transition-all duration-150"
+        :class="[
+          isActive
+            ? 'hover:bg-[hsl(var(--accent))]'
+            : 'opacity-50 cursor-default pointer-events-none',
+          selectedMultiple.includes(CUSTOM_SENTINEL)
+            ? 'border-[hsl(var(--primary))] bg-[hsl(var(--accent))]'
+            : 'border-[hsl(var(--border))]',
+        ]"
+        @click="focusPlainTextInput('multi')"
+      >
+        <div
+          class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+          :class="
+            selectedMultiple.includes(CUSTOM_SENTINEL)
+              ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]'
+              : 'border-[hsl(var(--muted-foreground))]'
+          "
+        >
+          <UIcon
+            v-if="selectedMultiple.includes(CUSTOM_SENTINEL)"
+            name="i-heroicons-check"
+            class="size-2.5 text-white"
+          />
+        </div>
+        <UInput
+          ref="multiPlainTextInput"
+          v-model="plainText"
+          :placeholder="t('chat.options.plainTextPlaceholder')"
+          :disabled="!isActive"
+          variant="none"
+          class="min-w-0 flex-1 -my-1 [&_input]:px-0"
+        />
       </div>
     </div>
 
@@ -189,6 +228,8 @@ const selectedMultiple = ref<string[]>([])
 const selectedCombobox = ref<string>('')
 const plainText = ref<string>('')
 const plainTextWrapper = useTemplateRef<HTMLDivElement>('plainTextWrapper')
+const singlePlainTextInput = useTemplateRef('singlePlainTextInput')
+const multiPlainTextInput = useTemplateRef('multiPlainTextInput')
 let pendingFocusRedirect = false
 
 watch(selectedCombobox, (val) => {
@@ -203,6 +244,34 @@ function handleGridFocus(e: FocusEvent) {
     input.focus()
   }
 }
+
+function focusPlainTextInput(mode: 'single' | 'multi') {
+  if (!props.isActive) return
+  const inputRef = mode === 'single' ? singlePlainTextInput : multiPlainTextInput
+  const el = (inputRef.value as { $el?: HTMLElement })?.$el
+  const input = el?.querySelector<HTMLInputElement>('input') ?? el?.closest('input')
+  input?.focus()
+}
+
+watch(plainText, (val) => {
+  if (!props.payload.IsPlainTextEnabled) return
+  const hasText = val.trim() !== ''
+
+  if (props.payload.MultiSelectEnabled) {
+    const idx = selectedMultiple.value.indexOf(CUSTOM_SENTINEL)
+    if (hasText && idx === -1) {
+      selectedMultiple.value.push(CUSTOM_SENTINEL)
+    } else if (!hasText && idx !== -1) {
+      selectedMultiple.value.splice(idx, 1)
+    }
+  } else if (!isCombobox.value) {
+    if (hasText) {
+      selectedSingle.value = CUSTOM_SENTINEL
+    } else if (selectedSingle.value === CUSTOM_SENTINEL) {
+      selectedSingle.value = ''
+    }
+  }
+})
 
 const isCombobox = computed(
   () =>
@@ -222,9 +291,15 @@ const comboboxItems = computed(() => {
 })
 
 function restoreMultiSelect(answer: string) {
-  selectedMultiple.value = answer
-    .split(', ')
-    .filter((v) => props.payload.Items.some((item) => item.Value === v))
+  const parts = answer.split(', ')
+  const matched = parts.filter((v) => props.payload.Items.some((item) => item.Value === v))
+  const unmatched = parts.filter((v) => !props.payload.Items.some((item) => item.Value === v))
+
+  selectedMultiple.value = matched
+  if (unmatched.length > 0 && props.payload.IsPlainTextEnabled) {
+    plainText.value = unmatched.join(', ')
+    selectedMultiple.value.push(CUSTOM_SENTINEL)
+  }
 }
 
 function restoreSingleSelect(answer: string) {
@@ -253,7 +328,12 @@ watchEffect(() => {
 })
 
 const hasSelection = computed(() => {
-  if (props.payload.MultiSelectEnabled) return selectedMultiple.value.length > 0
+  if (props.payload.MultiSelectEnabled) {
+    const nonCustom = selectedMultiple.value.filter((v) => v !== CUSTOM_SENTINEL)
+    const hasCustom =
+      selectedMultiple.value.includes(CUSTOM_SENTINEL) && plainText.value.trim() !== ''
+    return nonCustom.length > 0 || hasCustom
+  }
   if (isCombobox.value) {
     if (selectedCombobox.value === CUSTOM_SENTINEL) return plainText.value.trim() !== ''
     return selectedCombobox.value !== ''
@@ -295,7 +375,10 @@ function onMultiRowClick(e: MouseEvent, value: string) {
 function handleSubmit() {
   if (!hasSelection.value) return
   if (props.payload.MultiSelectEnabled) {
-    emit('submit', selectedMultiple.value.join(', '))
+    const answers = selectedMultiple.value.map((v) =>
+      v === CUSTOM_SENTINEL ? plainText.value.trim() : v,
+    )
+    emit('submit', answers.filter(Boolean).join(', '))
     return
   }
   const isCustom = isCombobox.value

@@ -1,7 +1,10 @@
 import type { BarRaceData } from '@/lib/validation/barRace'
 
-export const BAR_RACE_FRAME_INTERVAL_MS = 1000
-export const BAR_RACE_UPDATE_DURATION_MS = 800
+export const BAR_RACE_DEFAULT_STEP_DURATION_MS = 1000
+
+export function resolveStepDuration(data: BarRaceData): number {
+  return data.stepDuration ?? BAR_RACE_DEFAULT_STEP_DURATION_MS
+}
 
 export function formatFrameLabel(data: BarRaceData, frameIndex: number): string {
   const value = data.start + frameIndex * data.step
@@ -50,7 +53,7 @@ export function buildBarRaceOption(data: BarRaceData, frameIndex: number): Recor
       containLabel: true,
     },
     animationDuration: 0,
-    animationDurationUpdate: BAR_RACE_UPDATE_DURATION_MS,
+    animationDurationUpdate: resolveStepDuration(data) * 0.8,
     animationEasingUpdate: 'linear' as const,
   }
 }
