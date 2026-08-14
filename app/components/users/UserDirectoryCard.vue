@@ -10,8 +10,8 @@
           :dark-image="user.darkImage"
           :alt="user.name"
           size="xl"
+          :round="user.isVirtual"
           class="directory-avatar size-[50px]! ring-2 ring-[hsl(var(--brand-soft))] transition-transform duration-200"
-          :class="user.isVirtual ? 'rounded-[15px]!' : 'rounded-full!'"
         />
         <span
           class="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 border-[hsl(var(--card))]"

@@ -30,6 +30,7 @@
           :image="headerAgent.image"
           :dark-image="headerAgent.darkImage"
           :alt="headerAgent.name"
+          :round="headerAgent.isVirtual"
           size="md"
           class="flex-shrink-0"
           :style="!headerAgent.image ? { backgroundColor: headerAvatarColor } : undefined"

@@ -42,6 +42,7 @@
           :image="authStore.user?.image"
           :dark-image="authStore.user?.darkImage"
           :alt="authStore.userDisplayName"
+          :round="false"
           size="sm"
           class="size-[34px] border-2 text-xs font-bold transition-shadow duration-150"
           :class="

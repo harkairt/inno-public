@@ -18,9 +18,13 @@
 
 <script setup lang="ts">
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
+import { useChatStore } from '~/stores/chat'
 import ChatListPanel from '~/components/chat/ChatListPanel.vue'
 
 const { isMobile } = useNavigationVisibility()
+const chatStore = useChatStore()
+
+chatStore.setActiveSession(null)
 
 definePageMeta({
   title: 'Chat History',

@@ -7,6 +7,7 @@
       :image="member.image"
       :dark-image="member.darkImage"
       :alt="member.name || member.email"
+      :round="member.isVirtual"
       :size="size"
       :class="{ [overlapClass]: index > 0 }"
     >

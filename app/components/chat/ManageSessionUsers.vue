@@ -83,6 +83,7 @@
                 :image="user.image"
                 :dark-image="user.darkImage"
                 :alt="user.name || user.email"
+                :round="user.isVirtual"
                 size="sm"
               >
                 {{ getInitials(user.name || user.email) }}
