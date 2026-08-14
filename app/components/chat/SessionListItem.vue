@@ -10,6 +10,7 @@
         :image="primaryMember?.image"
         :dark-image="primaryMember?.darkImage"
         :alt="primaryMemberName"
+        :round="primaryMember?.isVirtual ?? true"
         size="md"
         :style="!primaryMember?.image ? { backgroundColor: avatarColor } : undefined"
         class="flex-shrink-0"

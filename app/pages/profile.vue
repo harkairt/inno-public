@@ -13,6 +13,7 @@
           :image="authStore.userAvatar"
           :dark-image="authStore.userDarkAvatar"
           :alt="authStore.userDisplayName"
+          :round="false"
           size="xl"
         />
         <div class="min-w-0">

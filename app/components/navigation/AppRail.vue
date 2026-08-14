@@ -96,6 +96,7 @@
           :image="authStore.user?.image"
           :dark-image="authStore.user?.darkImage"
           :alt="authStore.userDisplayName"
+          :round="false"
           size="lg"
           class="size-11 border-2 text-sm font-bold transition-shadow duration-150"
           :class="

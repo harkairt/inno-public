@@ -4,6 +4,7 @@
     :src="avatarSrc"
     :alt="alt"
     :size="size"
+    :class="round ? undefined : 'rounded-[15px]!'"
   >
     <slot />
   </UAvatar>
@@ -14,12 +15,18 @@ defineOptions({
   inheritAttrs: false,
 })
 
-const props = defineProps<{
-  image?: string | null
-  darkImage?: string | null
-  alt?: string
-  size?: '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
-}>()
+const props = withDefaults(
+  defineProps<{
+    image?: string | null
+    darkImage?: string | null
+    alt?: string
+    size?: '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
+    round?: boolean
+  }>(),
+  {
+    round: true,
+  },
+)
 
 const colorMode = useColorMode()
 
