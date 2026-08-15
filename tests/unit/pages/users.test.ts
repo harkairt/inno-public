@@ -195,6 +195,29 @@ describe('users page', () => {
     expect(screen.getByTestId('users-empty').textContent).toContain('users.noUsers')
   })
 
+  it('persists the active filter to localStorage and restores it on re-render', async () => {
+    const authUserId = 888
+    mockUsers([
+      makeUser({ id: 701, name: 'Person', isVirtual: false }),
+      makeUser({ id: 702, name: 'Bot', isVirtual: true }),
+    ])
+
+    const { unmount } = renderPage(authUserId)
+    await screen.findByTestId('user-item-701')
+
+    await fireEvent.click(screen.getByTestId('user-filter-ai'))
+    expect(localStorage.getItem(`innochat-users-filter:${authUserId}`)).toBe('ai')
+
+    unmount()
+
+    renderPage(authUserId)
+    await screen.findByTestId('user-item-702')
+
+    expect(screen.getByTestId('user-filter-ai').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.queryByTestId('user-item-701')).toBeNull()
+    expect(screen.getByTestId('users-result-count').textContent).toBe('1')
+  })
+
   it('shows an error alert when the user query fails', async () => {
     server.use(http.get(GET_USERS, () => apiError(500)))
     renderPage()
