@@ -4,8 +4,7 @@ import { useChatStore } from '@/app/stores/chat'
 import { useAuthStore } from '@/app/stores/auth'
 import { useSignalR } from '@/app/composables/useSignalR'
 import { chatQueryKeys } from './useChatQueries'
-import { userQueryKeys } from './useUsers'
-import { publicChatAgentQueryKeys } from './usePublicChatAgent'
+import { applyOptimisticSend, confirmSend, rollbackSend } from './sendMessageOptimistic'
 import type {
   AISessionMessageDTO,
   AiQuestionRequestDTO,
@@ -17,115 +16,11 @@ import type {
   AISessionDTO,
   AISessionHeaderDTO,
   GetUnreadMessagesDTO,
-  UserDTO,
   StartPublicChatrequestDTO,
   AIPublicChatStartDTO,
 } from '@/types/api/schemas'
 import type { MutationSuccess } from '@/types/api/base'
 import type { AppError } from '@/lib/errors/types'
-import { AIAnswerType, MessageStatus } from '@/types/enums'
-
-// Create a temporary message ID generator
-function generateTempId(): string {
-  // Stryker disable next-line all: temp-id suffix is cosmetic uniqueness; no observable behavior depends on the exact substring bounds
-  return `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-}
-
-function isEmptyResponse(message: AISessionMessageDTO): boolean {
-  return (
-    message.messageType === AIAnswerType.Empty ||
-    !message.messageText ||
-    message.messageText.trim() === ''
-  )
-}
-
-// Look up agent from cached selectable users or public chat agent
-function getAgentFromCache(
-  queryClient: ReturnType<typeof useQueryClient>,
-  agentId: number,
-): UserDTO | undefined {
-  // First check selectable users (regular chat)
-  const selectableUsers = queryClient.getQueryData<UserDTO[]>(userQueryKeys.selectable())
-  const fromSelectable = selectableUsers?.find((user) => user.id === agentId)
-  if (fromSelectable) return fromSelectable
-
-  // Fallback: check public chat agent cache
-  const publicChatData = queryClient.getQueryData<AIPublicChatStartDTO>(
-    publicChatAgentQueryKeys.agent(agentId),
-  )
-  return publicChatData?.agent ?? undefined
-}
-
-// --- useSendMessage helpers ---
-
-interface SendMessageMutateContext {
-  previousSession: AISessionDTO | undefined
-  tempMessageId: string
-  tempMessageDTO: AISessionMessageDTO
-  userMessageTimestamp: Date
-  isNewSession: boolean
-  thinkingAgentName: string | undefined
-}
-
-function createTempMessageDTO(
-  request: AiQuestionRequestDTO,
-  tempMessageId: string,
-  timestamp: Date,
-  authStore: ReturnType<typeof useAuthStore>,
-): AISessionMessageDTO {
-  return {
-    messageID: tempMessageId,
-    messageText: request.question,
-    messageType: AIAnswerType.Text,
-    senderUserCode: authStore.user?.email ?? 'unknown',
-    senderName: authStore.user?.name ?? 'You',
-    sendDate: timestamp.toISOString(),
-    isRated: false,
-    rating: null,
-    readByUsers: [authStore.user?.email ?? 'unknown'],
-    sessionId: request.sessionId,
-  }
-}
-
-function createSyntheticSession(
-  request: AiQuestionRequestDTO,
-  authStore: ReturnType<typeof useAuthStore>,
-  timestamp: string,
-): AISessionDTO {
-  return {
-    sessionId: request.sessionId,
-    agentId: request.agentId,
-    agentImage: null,
-    agentDarkImage: null,
-    userCode: authStore.user?.email ?? 'unknown',
-    members: request.members,
-    sessionName: '',
-    insertDate: timestamp,
-    modifiedAt: timestamp,
-    messages: [],
-  }
-}
-
-function truncateSessionTitle(text: string, maxLength: number): string {
-  return text.length > maxLength ? text.slice(0, maxLength) : text
-}
-
-function createSyntheticSessionHeader(
-  request: AiQuestionRequestDTO,
-  timestamp: string,
-): AISessionHeaderDTO {
-  return {
-    sessionId: request.sessionId,
-    agentId: request.agentId,
-    agentImage: null,
-    agentDarkImage: null,
-    userCode: request.userCode,
-    members: request.members,
-    sessionName: truncateSessionTitle(request.question, 60), // temp title until server names it
-    insertDate: timestamp,
-    modifiedAt: timestamp,
-  }
-}
 
 function notifyMembersViaSignalR(
   request: AiQuestionRequestDTO,
@@ -140,208 +35,11 @@ function notifyMembersViaSignalR(
   }
 }
 
-interface SendMessageSuccessParams {
-  queryClient: ReturnType<typeof useQueryClient>
-  chatStore: ReturnType<typeof useChatStore>
-  authStore: ReturnType<typeof useAuthStore>
-  serverMessage: AISessionMessageDTO
-  request: AiQuestionRequestDTO
-  context: SendMessageMutateContext | undefined
-}
-
-async function handleSendMessageSuccess(params: SendMessageSuccessParams): Promise<void> {
-  const { chatStore, authStore, serverMessage, request, context, queryClient } = params
-  if (context?.thinkingAgentName) {
-    chatStore.stopAgentThinking(request.sessionId, context.thinkingAgentName)
-  }
-
-  notifyMembersViaSignalR(request, authStore)
-
-  if (!context?.isNewSession) {
-    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
-
-    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
-      old?.map((s) =>
-        s.sessionId === request.sessionId ? { ...s, modifiedAt: serverMessage.sendDate } : s,
-      ),
-    )
-  }
-
-  if (context?.tempMessageId) {
-    chatStore.removePendingMessage(request.sessionId, context.tempMessageId)
-  }
-}
-
-async function handleNewSessionCacheUpdate(params: SendMessageSuccessParams): Promise<void> {
-  const { queryClient, chatStore, authStore, serverMessage, request, context } = params
-  const userMessageTimestamp =
-    context?.userMessageTimestamp?.toISOString() ?? new Date().toISOString()
-
-  const syntheticUserMessage: AISessionMessageDTO = {
-    messageID: `temp-user-${Date.now()}`,
-    messageText: request.question,
-    messageType: AIAnswerType.Text,
-    senderUserCode: request.userCode,
-    senderName: authStore.user?.name ?? '',
-    sendDate: userMessageTimestamp,
-    isRated: false,
-    rating: null,
-    readByUsers: [],
-    sessionId: request.sessionId,
-  }
-
-  const syntheticSession: AISessionDTO = {
-    sessionId: request.sessionId,
-    agentId: request.agentId,
-    agentImage: null,
-    agentDarkImage: null,
-    userCode: request.userCode,
-    members: request.members,
-    sessionName: '', // Will be filled by background refetch
-    insertDate: userMessageTimestamp,
-    modifiedAt: userMessageTimestamp,
-    messages: isEmptyResponse(serverMessage)
-      ? [syntheticUserMessage] // Only user message, no empty response
-      : [syntheticUserMessage, serverMessage], // Both messages
-  }
-
-  if (context?.isNewSession) {
-    // Synthetic data gives an instant render; the server now has the session, so pull
-    // authoritative data (real message ids, sessionName) via GetSessionById. This no
-    // longer depends on a SignalR ReceiveMessage echo firing for the sender.
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), (old) => {
-      // A SignalR-triggered refetch may have already populated the cache (e.g. the
-      // backend's "working on it" message) — merge, don't clobber.
-      if (old?.messages?.length) {
-        if (isEmptyResponse(serverMessage)) return old
-        if (old.messages.some((m) => m.messageID === serverMessage.messageID)) return old
-        return { ...old, messages: [...old.messages, serverMessage] }
-      }
-      return syntheticSession
-    })
-
-    // exact:true so the sessions() list refetch does NOT cascade into every
-    // session(id) detail query (session(id) is a key-prefix child of sessions()).
-    // invalidateQueries already refetches active observers, so no separate
-    // refetchQueries is needed. Result: 1 GetSessionHeaders + 1 GetSessionById.
-    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
-    await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
-
-    chatStore.executeNewSessionCallback(request.sessionId)
-  }
-}
-
-interface SendMessageOnMutateParams {
-  queryClient: ReturnType<typeof useQueryClient>
-  chatStore: ReturnType<typeof useChatStore>
-  authStore: ReturnType<typeof useAuthStore>
-}
-
-async function handleSendMessageOnMutate(
-  request: AiQuestionRequestDTO,
-  params: SendMessageOnMutateParams,
-): Promise<SendMessageMutateContext> {
-  const { queryClient, chatStore, authStore } = params
-
-  const existingSession = queryClient.getQueryData<AISessionDTO>(
-    chatQueryKeys.session(request.sessionId),
-  )
-  const isNewSession = !existingSession
-  const previousSession = existingSession
-
-  const tempMessageId = generateTempId()
-  const userMessageTimestamp = new Date()
-
-  const agent = getAgentFromCache(queryClient, request.agentId)
-  const thinkingAgentName = agent?.isVirtual ? agent.name : undefined
-  if (thinkingAgentName) {
-    chatStore.startAgentThinking(request.sessionId, thinkingAgentName)
-  }
-
-  const tempMessageDTO = createTempMessageDTO(
-    request,
-    tempMessageId,
-    userMessageTimestamp,
-    authStore,
-  )
-
-  // Count same-content messages already in the session so a repeated message (e.g. "ok"
-  // sent twice) isn't reconciled against an older identical one. See
-  // chatStore.getUnconfirmedPendingMessages.
-  const baselineCount = (existingSession?.messages ?? []).filter(
-    (m) =>
-      m.senderUserCode === tempMessageDTO.senderUserCode &&
-      m.messageText === tempMessageDTO.messageText,
-  ).length
-
-  chatStore.addPendingMessage(request.sessionId, tempMessageDTO, baselineCount)
-
-  if (isNewSession) {
-    await queryClient.cancelQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
-    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), {
-      ...createSyntheticSession(request, authStore, userMessageTimestamp.toISOString()),
-      messages: [],
-    })
-
-    // Optimistically insert a sidebar entry so the new session shows immediately on send
-    // (the sendQuestion response resolves only with the agent's reply, which can be slow).
-    // onSuccess force-refetches sessions(), replacing this with the server's real sessionName.
-    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) => {
-      const header = createSyntheticSessionHeader(request, userMessageTimestamp.toISOString())
-      if (!old) return [header]
-      if (old.some((s) => s.sessionId === request.sessionId)) return old // dedupe
-      return [header, ...old]
-    })
-  } else {
-    queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
-      old?.map((s) =>
-        s.sessionId === request.sessionId
-          ? { ...s, modifiedAt: userMessageTimestamp.toISOString() }
-          : s,
-      ),
-    )
-  }
-
-  return {
-    previousSession,
-    tempMessageId,
-    tempMessageDTO,
-    userMessageTimestamp,
-    isNewSession,
-    thinkingAgentName,
-  }
-}
-
-function handleSendMessageOnError(
-  request: AiQuestionRequestDTO,
-  context: SendMessageMutateContext | undefined,
-  params: SendMessageOnMutateParams,
-): void {
-  const { chatStore } = params
-
-  // Stryker disable next-line OptionalChaining: context is provably non-null in every reachable onError path
-  if (context?.thinkingAgentName) {
-    chatStore.stopAgentThinking(request.sessionId, context.thinkingAgentName)
-  }
-
-  if (context?.tempMessageId) {
-    chatStore.removePendingMessage(request.sessionId, context.tempMessageId)
-
-    // Stryker disable next-line OptionalChaining: context is provably non-null here (tempMessageId branch already entered)
-    if (context?.tempMessageDTO) {
-      chatStore.addFailedMessage(request.sessionId, {
-        ...context.tempMessageDTO,
-        status: MessageStatus.FAILED,
-      })
-    }
-  }
-}
-
 export function useSendMessage() {
   const queryClient = useQueryClient()
   const chatStore = useChatStore()
   const authStore = useAuthStore()
-  const mutateParams = { queryClient, chatStore, authStore }
+  const deps = { queryClient, chatStore, authStore }
 
   return useMutation({
     mutationFn: async (request: AiQuestionRequestDTO): Promise<AISessionMessageDTO> => {
@@ -350,24 +48,17 @@ export function useSendMessage() {
       return result.value
     },
 
-    onMutate: (request) => handleSendMessageOnMutate(request, mutateParams),
+    onMutate: (request) => applyOptimisticSend(request, deps),
 
     onSuccess: async (serverMessage, request, context) => {
-      await handleSendMessageSuccess({ ...mutateParams, serverMessage, request, context })
-      await handleNewSessionCacheUpdate({ ...mutateParams, serverMessage, request, context })
+      await confirmSend({ ...deps, serverMessage, request, context })
+      notifyMembersViaSignalR(request, authStore)
     },
 
-    onError: (_error, request, context) => handleSendMessageOnError(request, context, mutateParams),
-
-    // NOTE: No onSettled — was causing 26+ request cascade.
-    // Session cache updated in onSuccess; sidebar syncs on poll/navigation.
+    onError: (_error, request, context) => rollbackSend(request, context, deps),
   })
 }
 
-/**
- * Update session name mutation composable
- * Uses pessimistic updates - cache is only updated after server confirms success
- */
 export function useUpdateSessionName() {
   const queryClient = useQueryClient()
 
@@ -382,9 +73,19 @@ export function useUpdateSessionName() {
       return result.value
     },
 
-    // Update cache only after server confirms success
-    onSuccess: (_, params) => {
-      // Update sessions list cache
+    onMutate: async (params) => {
+      await queryClient.cancelQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
+      await queryClient.cancelQueries({
+        queryKey: chatQueryKeys.session(params.sessionId),
+      })
+
+      const previousSessions = queryClient.getQueryData<AISessionHeaderDTO[]>(
+        chatQueryKeys.sessions(),
+      )
+      const previousSession = queryClient.getQueryData<AISessionDTO>(
+        chatQueryKeys.session(params.sessionId),
+      )
+
       queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
         old?.map((session) =>
           session.sessionId === params.sessionId
@@ -393,17 +94,22 @@ export function useUpdateSessionName() {
         ),
       )
 
-      // Update individual session cache
       queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(params.sessionId), (old) =>
         old ? { ...old, sessionName: params.sessionName } : old,
       )
+
+      return { previousSessions, previousSession }
     },
 
-    onError: (_error: AppError) => {
-      // Error handled by mutation error state
+    onError: (_error: AppError, params, context) => {
+      if (context?.previousSessions) {
+        queryClient.setQueryData(chatQueryKeys.sessions(), context.previousSessions)
+      }
+      if (context?.previousSession) {
+        queryClient.setQueryData(chatQueryKeys.session(params.sessionId), context.previousSession)
+      }
     },
 
-    // Always refetch after mutation settles to ensure server sync
     onSettled: (_, __, params) => {
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
       void queryClient.invalidateQueries({
@@ -413,9 +119,6 @@ export function useUpdateSessionName() {
   })
 }
 
-/**
- * Delete session mutation composable
- */
 export function useDeleteSession() {
   const queryClient = useQueryClient()
   const chatStore = useChatStore()
@@ -432,12 +135,10 @@ export function useDeleteSession() {
     },
 
     onSuccess: (_, params) => {
-      // Pessimistically update sessions list cache
       queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
         old?.filter((session) => session.sessionId !== params.sessionId),
       )
 
-      // Remove individual session and messages from cache
       queryClient.removeQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
@@ -445,7 +146,6 @@ export function useDeleteSession() {
         queryKey: chatQueryKeys.messages(params.sessionId),
       })
 
-      // Clean up pending and failed messages for this session
       chatStore.removeAllPendingMessages(params.sessionId)
       chatStore.removeAllFailedMessages(params.sessionId)
 
@@ -453,20 +153,13 @@ export function useDeleteSession() {
         chatStore.setActiveSession(null)
       }
 
-      // Invalidate unread counts
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.unread() })
     },
 
-    onError: (_error: AppError) => {
-      // Error handled by mutation error state
-    },
+    onError: (_error: AppError) => {},
   })
 }
 
-/**
- * Rate message mutation composable
- * Uses optimistic updates for instant UI feedback
- */
 export function useRateMessage() {
   const queryClient = useQueryClient()
 
@@ -482,18 +175,15 @@ export function useRateMessage() {
     },
 
     onMutate: async (params) => {
-      // Cancel any outgoing refetches to avoid overwriting optimistic update
       // Stryker disable next-line all: cancelQueries only matters under a concurrent in-flight refetch — a race not observable in tests
       await queryClient.cancelQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
 
-      // Snapshot the previous session data
       const previousSession = queryClient.getQueryData<AISessionDTO>(
         chatQueryKeys.session(params.sessionId),
       )
 
-      // Optimistically update the message rating
       queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(params.sessionId), (old) => {
         if (!old) return old
         return {
@@ -506,24 +196,17 @@ export function useRateMessage() {
         }
       })
 
-      // Return context with previous value for rollback
       return { previousSession }
     },
 
     onError: (error: AppError, params, context) => {
-      // Rollback to previous state on error
       // Stryker disable next-line OptionalChaining: context is provably non-null (onMutate always returns it before onError can run)
       if (context?.previousSession) {
         queryClient.setQueryData(chatQueryKeys.session(params.sessionId), context.previousSession)
       }
-      // Error handled by mutation error state
     },
 
     onSettled: (_, __, params) => {
-      // Always refetch after mutation to ensure server sync. Only session(id) is
-      // invalidated — messages(id) is a key-prefix child of session(id), so the
-      // non-exact session(id) invalidation already covers it (a separate
-      // messages(id) invalidation was a redundant double refetch).
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
@@ -531,10 +214,6 @@ export function useRateMessage() {
   })
 }
 
-/**
- * Mark messages as read mutation composable
- * Uses optimistic updates to immediately clear unread count in UI
- */
 export function useMarkMessagesRead() {
   const queryClient = useQueryClient()
   const authStore = useAuthStore()
@@ -558,18 +237,14 @@ export function useMarkMessagesRead() {
       return result.value
     },
 
-    // Optimistic update - immediately set unread count to 0
     onMutate: async (params) => {
-      // Cancel outgoing refetches
       // Stryker disable next-line all: cancelQueries only matters under a concurrent in-flight refetch — a race not observable in tests
       await queryClient.cancelQueries({ queryKey: chatQueryKeys.unread() })
 
-      // Snapshot previous value
       const previousUnread = queryClient.getQueryData<GetUnreadMessagesDTO[]>(
         chatQueryKeys.unread(),
       )
 
-      // Optimistically update unread counts
       queryClient.setQueryData<GetUnreadMessagesDTO[]>(chatQueryKeys.unread(), (old) =>
         old?.map((entry) =>
           entry.sessionId === params.sessionId ? { ...entry, unreadMessageCount: 0 } : entry,
@@ -580,17 +255,13 @@ export function useMarkMessagesRead() {
     },
 
     onError: (error: AppError, params, context) => {
-      // Rollback on error
       // Stryker disable next-line all: equivalent in reachable states — previousUnread is set whenever the cache held data; a null snapshot rolls back to the same empty state
       if (context?.previousUnread) {
         queryClient.setQueryData(chatQueryKeys.unread(), context.previousUnread)
       }
-      // Error handled by mutation error state
     },
 
     onSuccess: (_, params) => {
-      // Optimistically update the session's messages as read in cache
-      // This avoids invalidating the session query which would cause a cascade loop
       const userCode = params.userCode ?? authStore.user?.email ?? ''
       queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(params.sessionId), (old) => {
         if (!old) return old
@@ -607,16 +278,11 @@ export function useMarkMessagesRead() {
     },
 
     onSettled: () => {
-      // Only invalidate unread counts - session is already updated optimistically
-      // IMPORTANT: Do NOT invalidate session here - it causes a cascade loop
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.unread() })
     },
   })
 }
 
-/**
- * React to message mutation composable
- */
 export function useReactToMessage() {
   const queryClient = useQueryClient()
 
@@ -640,7 +306,6 @@ export function useReactToMessage() {
     },
 
     onSuccess: (_, params) => {
-      // Invalidate related queries
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.messages(params.sessionId),
       })
@@ -649,15 +314,10 @@ export function useReactToMessage() {
       })
     },
 
-    onError: (_error: AppError) => {
-      // Error handled by mutation error state
-    },
+    onError: (_error: AppError) => {},
   })
 }
 
-/**
- * Add user to session mutation composable
- */
 export function useAddUserToSession() {
   const queryClient = useQueryClient()
 
@@ -673,24 +333,16 @@ export function useAddUserToSession() {
     },
 
     onSuccess: (_, params) => {
-      // Invalidate session data to refresh member list. exact:true on sessions()
-      // so the list refetch doesn't cascade into session(id) (its prefix-child)
-      // — that would double-fetch the detail alongside the line above.
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
     },
 
-    onError: (_error: AppError) => {
-      // Error handled by mutation error state
-    },
+    onError: (_error: AppError) => {},
   })
 }
 
-/**
- * Remove user from session mutation composable
- */
 export function useRemoveUserFromSession() {
   const queryClient = useQueryClient()
 
@@ -706,25 +358,16 @@ export function useRemoveUserFromSession() {
     },
 
     onSuccess: (_, params) => {
-      // Invalidate session data to refresh member list. exact:true on sessions()
-      // so the list refetch doesn't cascade into session(id) (its prefix-child)
-      // — that would double-fetch the detail alongside the line above.
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(params.sessionId),
       })
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions(), exact: true })
     },
 
-    onError: (_error: AppError) => {
-      // Error handled by mutation error state
-    },
+    onError: (_error: AppError) => {},
   })
 }
 
-/**
- * Start public chat mutation composable
- * Initializes a public/anonymous chat session
- */
 export function useStartPublicChat() {
   const queryClient = useQueryClient()
 
@@ -740,12 +383,9 @@ export function useStartPublicChat() {
     },
 
     onSuccess: () => {
-      // Invalidate sessions to include new public chat session
       void queryClient.invalidateQueries({ queryKey: chatQueryKeys.sessions() })
     },
 
-    onError: (_error: AppError) => {
-      // Error handled by mutation error state
-    },
+    onError: (_error: AppError) => {},
   })
 }

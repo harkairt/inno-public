@@ -1,12 +1,9 @@
 import type { Result } from 'neverthrow'
-import { err, ok } from 'neverthrow'
+import { err } from 'neverthrow'
+import { z } from 'zod'
 import { apiClient } from '../client'
-import {
-  validateApiResponse,
-  validateApiArray,
-  requireData,
-  validateMutationSuccess,
-} from '../validation'
+import { requireData, validateApiResponse } from '../validation'
+import { safePost, safePostArray, safeMutation, safeVoid } from './safeRequest'
 import { normalizeApiError } from '@/lib/errors/normalize'
 import type { AppError } from '@/lib/errors/types'
 import type {
@@ -41,6 +38,8 @@ import {
 } from '@/types/api/schemas'
 import type { ApiResponse, MutationSuccess } from '@/types/api/base'
 import { ErrorCode } from '@/types/enums'
+
+const UnreadCountSchema = z.number()
 
 class ChatService {
   async uploadFile(
@@ -84,266 +83,132 @@ class ChatService {
     }
   }
 
-  async sendQuestion(
-    request: AiQuestionRequestDTO,
-  ): Promise<Result<AISessionMessageDTO, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AISessionMessageDTO>>(
-        '/api/AIWebAPI/question/text',
-        request,
-      )
-
-      const dataResult = requireData(
-        response.data.data,
-        ErrorCode.EMPTY_RESPONSE,
-        'No response from AI',
-      )
-      if (dataResult.isErr()) return dataResult
-
-      return validateApiResponse(
-        dataResult.value,
-        AISessionMessageDTOSchema,
-        'Invalid AI response format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  sendQuestion(request: AiQuestionRequestDTO): Promise<Result<AISessionMessageDTO, AppError>> {
+    return safePost({
+      url: '/api/AIWebAPI/question/text',
+      body: request,
+      schema: AISessionMessageDTOSchema,
+      errorCode: ErrorCode.EMPTY_RESPONSE,
+      errorMessage: 'No response from AI',
+    })
   }
 
-  async getWelcomeMessage(
-    request: AiQuestionRequestDTO,
-  ): Promise<Result<AIWelcomeMessageDTO, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AIWelcomeMessageDTO>>(
-        '/api/AIWebAPI/welcomeText',
-        request,
-      )
-
-      const dataResult = requireData(
-        response.data.data,
-        ErrorCode.EMPTY_RESPONSE,
-        'No welcome message',
-      )
-      if (dataResult.isErr()) return dataResult
-
-      return validateApiResponse(
-        dataResult.value,
-        AIWelcomeMessageDTOSchema,
-        'Invalid welcome message format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  getWelcomeMessage(request: AiQuestionRequestDTO): Promise<Result<AIWelcomeMessageDTO, AppError>> {
+    return safePost({
+      url: '/api/AIWebAPI/welcomeText',
+      body: request,
+      schema: AIWelcomeMessageDTOSchema,
+      errorCode: ErrorCode.EMPTY_RESPONSE,
+      errorMessage: 'No welcome message',
+    })
   }
 
-  async getSessionHeaders(
+  getSessionHeaders(
     request: GetSessionHeadersByUserIdRequestDTO,
   ): Promise<Result<AISessionHeaderDTO[], AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AISessionHeaderDTO[]>>(
-        '/api/AIWebAPI/GetSessionHeadersByUserId',
-        request,
-      )
-
-      return validateApiArray(
-        response.data.data,
-        AISessionHeaderDTOSchema,
-        'Invalid session header data format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+    return safePostArray(
+      '/api/AIWebAPI/GetSessionHeadersByUserId',
+      request,
+      AISessionHeaderDTOSchema,
+      'Invalid session header data format',
+    )
   }
 
-  async getSessionById(sessionId: string): Promise<Result<AISessionDTO, AppError>> {
-    try {
-      const request: GetSessionByIdRequestDTO = { sessionId, agentId: 1 }
-
-      const response = await apiClient.post<ApiResponse<AISessionDTO>>(
-        '/api/AIWebAPI/GetSessionById',
-        request,
-      )
-
-      const dataResult = requireData(response.data.data, ErrorCode.NOT_FOUND, 'Session not found')
-      if (dataResult.isErr()) return dataResult
-
-      return validateApiResponse(
-        dataResult.value,
-        AISessionDTOSchema,
-        'Invalid session data format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  getSessionById(sessionId: string): Promise<Result<AISessionDTO, AppError>> {
+    const request: GetSessionByIdRequestDTO = { sessionId, agentId: 1 }
+    return safePost({
+      url: '/api/AIWebAPI/GetSessionById',
+      body: request,
+      schema: AISessionDTOSchema,
+      errorCode: ErrorCode.NOT_FOUND,
+      errorMessage: 'Session not found',
+    })
   }
 
-  async updateSessionName(
-    request: SetSessionNameRequestDTO,
-  ): Promise<Result<MutationSuccess, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<string>>(
-        '/api/AIWebAPI/SetSessionName',
-        request,
-      )
-      return validateMutationSuccess(response.data.data)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  updateSessionName(request: SetSessionNameRequestDTO): Promise<Result<MutationSuccess, AppError>> {
+    return safeMutation('/api/AIWebAPI/SetSessionName', request)
   }
 
-  async deleteSession(
-    request: DeleteSessionByIdrequestDTO,
-  ): Promise<Result<MutationSuccess, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<string>>(
-        '/api/AIWebAPI/DeleteSessionById',
-        request,
-      )
-      return validateMutationSuccess(response.data.data)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  deleteSession(request: DeleteSessionByIdrequestDTO): Promise<Result<MutationSuccess, AppError>> {
+    return safeMutation('/api/AIWebAPI/DeleteSessionById', request)
   }
 
-  async rateMessage(request: SetSessionMessageRatingRequestDTO): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/AIWebAPI/SetSessionMessageRating', request)
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  rateMessage(request: SetSessionMessageRatingRequestDTO): Promise<Result<void, AppError>> {
+    return safeVoid('/api/AIWebAPI/SetSessionMessageRating', request)
   }
 
-  async markMessagesRead(
+  markMessagesRead(
     sessionId: string,
     agentId: number,
     userCode: string,
   ): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/AIWebAPI/Set_SessionMessagesRead', {
-        sessionID: sessionId,
-        agent: agentId,
-        userCode,
-      })
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+    return safeVoid('/api/AIWebAPI/Set_SessionMessagesRead', {
+      sessionID: sessionId,
+      agent: agentId,
+      userCode,
+    })
   }
 
-  async getUnreadMessages(
+  getUnreadMessages(
     request: GetUnreadMessagesRequestDTO,
   ): Promise<Result<GetUnreadMessagesDTO[], AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<GetUnreadMessagesDTO[]>>(
-        '/api/AIWebAPI/GetUnreadMessages',
-        request,
-      )
-
-      return validateApiArray(
-        response.data.data,
-        GetUnreadMessagesDTOSchema,
-        'Invalid unread message data format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+    return safePostArray(
+      '/api/AIWebAPI/GetUnreadMessages',
+      request,
+      GetUnreadMessagesDTOSchema,
+      'Invalid unread message data format',
+    )
   }
 
-  async reactToMessage(
+  reactToMessage(
     sessionId: string,
     messageId: string,
     agentId: number,
   ): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/AIWebAPI/react', { sessionId, messageId, agentId })
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+    return safeVoid('/api/AIWebAPI/react', { sessionId, messageId, agentId })
   }
 
-  async addUserToSession(request: AddUserToSessionRequestDTO): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/AIWebAPI/addUserToSession', request)
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  addUserToSession(request: AddUserToSessionRequestDTO): Promise<Result<void, AppError>> {
+    return safeVoid('/api/AIWebAPI/addUserToSession', request)
   }
 
-  async removeUserFromSession(
-    request: RemoveUserFromSessionRequestDTO,
-  ): Promise<Result<void, AppError>> {
-    try {
-      await apiClient.post('/api/AIWebAPI/removeUserFromSession', request)
-      return ok(undefined)
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  removeUserFromSession(request: RemoveUserFromSessionRequestDTO): Promise<Result<void, AppError>> {
+    return safeVoid('/api/AIWebAPI/removeUserFromSession', request)
   }
 
-  async getMessage(request: GetMessageRequestDTO): Promise<Result<AISessionMessageDTO, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AISessionMessageDTO>>(
-        '/api/AIWebAPI/getMessage',
-        request,
-      )
-
-      const dataResult = requireData(response.data.data, ErrorCode.NOT_FOUND, 'Message not found')
-      if (dataResult.isErr()) return dataResult
-
-      return validateApiResponse(
-        dataResult.value,
-        AISessionMessageDTOSchema,
-        'Invalid message data format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+  getMessage(request: GetMessageRequestDTO): Promise<Result<AISessionMessageDTO, AppError>> {
+    return safePost({
+      url: '/api/AIWebAPI/getMessage',
+      body: request,
+      schema: AISessionMessageDTOSchema,
+      errorCode: ErrorCode.NOT_FOUND,
+      errorMessage: 'Message not found',
+    })
   }
 
-  async getSessionUnreadMessages(
+  getSessionUnreadMessages(
     request: GetSessionUnreadMessagesRequestDTO,
   ): Promise<Result<number, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<number>>(
-        '/api/AIWebAPI/GetSessionUnreadMessages',
-        request,
-      )
-
-      return requireData(response.data.data, ErrorCode.EMPTY_RESPONSE, 'No unread count returned')
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+    return safePost({
+      url: '/api/AIWebAPI/GetSessionUnreadMessages',
+      body: request,
+      schema: UnreadCountSchema,
+      errorCode: ErrorCode.EMPTY_RESPONSE,
+      errorMessage: 'No unread count returned',
+    })
   }
 
-  async startPublicChat(
+  startPublicChat(
     request: StartPublicChatrequestDTO,
   ): Promise<Result<AIPublicChatStartDTO, AppError>> {
-    try {
-      const response = await apiClient.post<ApiResponse<AIPublicChatStartDTO>>(
-        '/api/AIWebAPI/startPublicChat',
-        request,
-      )
-
-      const dataResult = requireData(
-        response.data.data,
-        ErrorCode.EMPTY_RESPONSE,
-        'No public chat data returned',
-      )
-      if (dataResult.isErr()) return dataResult
-
-      return validateApiResponse(
-        dataResult.value,
-        AIPublicChatStartDTOSchema,
-        'Invalid public chat data format',
-      )
-    } catch (error) {
-      return err(normalizeApiError(error))
-    }
+    return safePost({
+      url: '/api/AIWebAPI/startPublicChat',
+      body: request,
+      schema: AIPublicChatStartDTOSchema,
+      errorCode: ErrorCode.EMPTY_RESPONSE,
+      errorMessage: 'No public chat data returned',
+    })
   }
 }
 
-// Singleton
 export const chatService = new ChatService()

@@ -396,10 +396,13 @@ describe('useSendMessage — sidebar header insert', () => {
 })
 
 describe('useUpdateSessionName', () => {
-  it('rejects and leaves the cached name unchanged when the server errors', async () => {
+  it('rolls back both caches when the server errors', async () => {
     server.use(http.post('/api/AIWebAPI/SetSessionName', () => apiError(500)))
 
     const queryClient = testQueryClient()
+    queryClient.setQueryData(chatQueryKeys.sessions(), [
+      { sessionId: 'session-1', sessionName: 'Old Name', agentId: 1 } as AISessionHeaderDTO,
+    ])
     queryClient.setQueryData(
       chatQueryKeys.session('session-1'),
       existingSession({ sessionName: 'Old Name' }),
@@ -410,11 +413,15 @@ describe('useUpdateSessionName', () => {
       mutation.mutateAsync({ sessionId: 'session-1', sessionName: 'New Name', agentId: 1 }),
     ).rejects.toBeDefined()
 
-    const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
-    expect(session?.sessionName).toBe('Old Name')
+    expect(
+      queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))?.sessionName,
+    ).toBe('Old Name')
+    expect(
+      queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())?.[0]?.sessionName,
+    ).toBe('Old Name')
   })
 
-  it('updates both caches and invalidates only the affected queries on success', async () => {
+  it('optimistically updates both caches and invalidates only affected queries on success', async () => {
     server.use(http.post('/api/AIWebAPI/SetSessionName', () => mutationOk()))
 
     const queryClient = testQueryClient()
@@ -433,17 +440,14 @@ describe('useUpdateSessionName', () => {
 
     await mutation.mutateAsync({ sessionId: 'session-1', sessionName: 'New', agentId: 1 })
 
-    // onSuccess pessimistic cache update.
     const headers = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions())
     expect(headers?.[0]?.sessionName).toBe('New')
     expect(
       queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))?.sessionName,
     ).toBe('New')
 
-    // onSettled invalidation: sessions() (exact) + session('session-1') only.
     expect(queryClient.getQueryState(chatQueryKeys.sessions())?.isInvalidated).toBe(true)
     expect(queryClient.getQueryState(chatQueryKeys.session('session-1'))?.isInvalidated).toBe(true)
-    // exact:true keeps the sibling detail query untouched.
     expect(queryClient.getQueryState(chatQueryKeys.session('other'))?.isInvalidated).toBe(false)
   })
 })
