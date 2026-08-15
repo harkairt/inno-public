@@ -2,7 +2,14 @@
   <div class="flex flex-1 h-full overflow-hidden">
     <ChatListPanel
       v-if="!isMobile"
-      class="w-80 border-r border-[hsl(var(--border)/0.5)] flex-shrink-0"
+      class="flex-shrink-0"
+      :style="{ width: `${sidebarWidth}px` }"
+    />
+    <div
+      v-if="!isMobile"
+      class="w-1 flex-shrink-0 cursor-col-resize hover:bg-[hsl(var(--primary)/0.3)] active:bg-[hsl(var(--primary)/0.5)] transition-colors border-r border-[hsl(var(--border)/0.5)]"
+      @mousedown="onResizeStart"
+      @touchstart="onResizeStart"
     />
     <div class="relative flex-1 min-w-0 overflow-hidden">
       <RouterView v-slot="{ Component, route }">
@@ -24,9 +31,17 @@
 
 <script setup lang="ts">
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
+import { usePanelResize } from '~/composables/usePanelResize'
 import ChatListPanel from '~/components/chat/ChatListPanel.vue'
 
 const { isMobile } = useNavigationVisibility()
+const { width: sidebarWidth, onResizeStart } = usePanelResize({
+  defaultWidth: 320,
+  minWidth: 240,
+  maxWidthFraction: 0.3,
+  direction: 'left',
+  storageKey: 'innochat-sidebar-width',
+})
 const router = useRouter()
 const slideDirection = ref<'left' | 'right' | 'none'>('none')
 

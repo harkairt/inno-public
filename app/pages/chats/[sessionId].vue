@@ -385,22 +385,18 @@
 </template>
 
 <script setup lang="ts">
-import {
-  useChatSession,
-  useChatSessions,
-  useWelcomeMessage,
-} from '@/app/composables/useChatQueries'
-import {
-  useMarkMessagesRead,
-  useUpdateSessionName,
-  useSendMessage,
-} from '@/app/composables/useChatMutations'
+import { useChatSession, useChatSessions } from '@/app/composables/useChatQueries'
+import { useMarkMessagesRead, useSendMessage } from '@/app/composables/useChatMutations'
+import { useChatMessages } from '@/app/composables/useChatMessages'
+import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
+import { useFileDrop } from '@/app/composables/useFileDrop'
+import { useTitleEdit } from '@/app/composables/useTitleEdit'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { usePrimarySession } from '@/app/composables/usePrimarySession'
-import { AIAnswerType, AIQuestionType } from '@/types/enums'
+import { AIQuestionType } from '@/types/enums'
 import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import { resolveWelcomeAgent } from '@/app/utils/welcomeAgent'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
@@ -451,39 +447,9 @@ const messageInputRef = ref<{
   handleDroppedFiles: (files: FileList) => void
 } | null>(null)
 
-const isDraggingOver = ref(false)
-let dragEnterCounter = 0
-
-function onDragEnter(event: DragEvent) {
-  event.preventDefault()
-  dragEnterCounter++
-  if (event.dataTransfer?.types.includes('Files')) {
-    isDraggingOver.value = true
-  }
-}
-
-function onDragLeave() {
-  dragEnterCounter--
-  if (dragEnterCounter <= 0) {
-    dragEnterCounter = 0
-    isDraggingOver.value = false
-  }
-}
-
-function onDragOver(event: DragEvent) {
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'copy'
-  }
-}
-
-function onDrop(event: DragEvent) {
-  dragEnterCounter = 0
-  isDraggingOver.value = false
-  const files = event.dataTransfer?.files
-  if (files?.length) {
-    messageInputRef.value?.handleDroppedFiles(files)
-  }
-}
+const { isDraggingOver, onDragEnter, onDragLeave, onDragOver, onDrop } = useFileDrop((files) =>
+  messageInputRef.value?.handleDroppedFiles(files),
+)
 
 // Chat auto-scroll composable
 const { isAtBottom, scrollToBottom, scrollToElement } = useChatAutoScroll(messagesContainer, {
@@ -497,11 +463,6 @@ const wasAtBottomWhenUserSentMessage = ref(true)
 
 // Track whether initial scroll-to-bottom has happened (prevents duplicate scrolls)
 const hasInitiallyScrolled = ref(false)
-
-// Inline edit state
-const isEditingTitle = ref(false)
-const editedTitle = ref('')
-const titleInputRef = ref<HTMLInputElement | null>(null)
 
 // Fetch session with messages
 // The composable handles enabled logic internally (auth + sessionId check)
@@ -519,9 +480,6 @@ const { data: allSessions } = useChatSessions()
 
 // Mark messages as read mutation
 const { mutate: markMessagesRead } = useMarkMessagesRead()
-
-// Update session name mutation
-const { mutate: updateSessionName, isPending: isUpdatingTitle } = useUpdateSessionName()
 
 // Track whether we've already marked messages as read for this session
 // This prevents the cascade loop when session cache updates trigger the watcher
@@ -568,19 +526,8 @@ const { isPrimarySession, otherMemberName, otherMemberId } = usePrimarySession(
   currentUserEmail,
 )
 
-// Use messages from session + pending (optimistic) + failed messages from store.
-// Pending messages are reconciled against server data by content (not id) so a message
-// echoed back by GetSessionById mid-send isn't rendered twice.
-const messages = computed(() => {
-  const queryMessages = session.value?.messages ?? []
-  const pending = chatStore.getUnconfirmedPendingMessages(sessionId, queryMessages)
-  const failed = chatStore.getFailedMessages(sessionId)
-  return [...queryMessages, ...pending, ...failed]
-})
-
-// Get typing users for this session
-const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
-const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId))
+const { messages, typingUsers, thinkingAgents, lastUnansweredOptionsMessageId, isOptionsMode } =
+  useChatMessages(sessionId, session)
 
 // Header title: server-assigned name, or the user's first message for a freshly
 // created session the server hasn't named yet (mirrors the optimistic sidebar entry).
@@ -594,6 +541,20 @@ const headerTitle = computed(() => {
 // Renaming is only offered once the server has named the session — not for primary
 // sessions, and not while the header shows the temporary optimistic title.
 const canEditTitle = computed(() => !isPrimarySession.value && !!session.value?.sessionName)
+
+const {
+  isEditingTitle,
+  editedTitle,
+  isUpdatingTitle,
+  startEditingTitle,
+  saveTitle,
+  handleTitleKeydown,
+  titleInputRef,
+} = useTitleEdit(sessionId, {
+  canEdit: canEditTitle,
+  sessionName: computed(() => session.value?.sessionName),
+  agentId: computed(() => session.value?.agentId),
+})
 
 // Compute selectable target agents from session members (only virtual agents)
 const selectableTargetAgents = computed(() => {
@@ -612,21 +573,6 @@ const selectedTargetAgentId = ref<number | undefined>(undefined)
 
 // Options message mutation + logic
 const optionMutation = useSendMessage()
-
-const lastUnansweredOptionsMessageId = computed(() => {
-  const msgs = messages.value
-  const userEmail = authStore.user?.email
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    const msg = msgs[i]
-    if (msg?.messageType === AIAnswerType.Options) {
-      const hasUserAfter = msgs.slice(i + 1).some((m) => m.senderUserCode === userEmail)
-      return hasUserAfter ? undefined : msg.messageID
-    }
-  }
-  return undefined
-})
-
-const isOptionsMode = computed(() => !!lastUnansweredOptionsMessageId.value)
 
 async function handleOptionSubmitted(answer: string) {
   if (!session.value) return
@@ -660,29 +606,14 @@ const virtualAgentFromSession = computed(() =>
   ),
 )
 
-// Fetch the agent greeting only for a conversation the user just created. An existing
-// conversation must not trigger a welcomeText request at all.
-const { data: welcomeMessageData, isLoading: isWelcomeMessageLoading } = useWelcomeMessage(
+const { trimmedWelcomeMessage, isLoading: isWelcomeMessageLoading } = useTrimmedWelcomeMessage(
   computed(() => virtualAgentFromSession.value?.agentId ?? 0),
   {
     enabled: computed(() => !!virtualAgentFromSession.value && isFreshlyCreatedSession),
     sessionId: sessionId,
+    showOnlyWhen: isFreshlyCreatedSession,
   },
 )
-
-// Trim quotes from welcome message (same pattern as /chats/new.vue)
-const trimmedWelcomeMessage = computed(() => {
-  // Second gate, and not redundant: gcTime keeps this conversation's greeting cached for
-  // 30 minutes, and a disabled query still reads the cache. Without this, revisiting the
-  // same conversation inside that window would show the greeting again.
-  if (!isFreshlyCreatedSession) return undefined
-  if (!welcomeMessageData.value?.message) return undefined
-  let msg = welcomeMessageData.value.message
-  if (msg.startsWith('"') && msg.endsWith('"')) {
-    msg = msg.slice(1, -1)
-  }
-  return msg
-})
 
 // Determine if all data needed for messages is ready (prevents layout jump).
 // The welcome-message gate is scoped to an EMPTY thread only: on revisit the
@@ -772,63 +703,6 @@ const headerAvatarColor = computed(() => getAvatarColor(headerAgent.value?.name 
 // Handle target agent change
 function handleTargetAgentChanged(agentId: number | undefined) {
   selectedTargetAgentId.value = agentId
-}
-
-// Inline title edit functions
-function startEditingTitle() {
-  if (!session.value) return
-  editedTitle.value = session.value.sessionName
-  isEditingTitle.value = true
-  void nextTick(() => {
-    const input = titleInputRef.value
-    if (input) {
-      input.focus()
-      input.setSelectionRange(input.value.length, input.value.length)
-    }
-  })
-}
-
-function cancelEditingTitle() {
-  isEditingTitle.value = false
-  editedTitle.value = ''
-}
-
-function saveTitle() {
-  // Guard against double-fire (Enter triggers blur which would call this again)
-  if (!isEditingTitle.value || isUpdatingTitle.value) return
-
-  if (!session.value || !editedTitle.value.trim()) {
-    cancelEditingTitle()
-    return
-  }
-
-  const trimmedTitle = editedTitle.value.trim()
-  if (trimmedTitle === session.value.sessionName) {
-    cancelEditingTitle()
-    return
-  }
-
-  updateSessionName(
-    {
-      sessionId: session.value.sessionId,
-      sessionName: trimmedTitle,
-      agentId: session.value.agentId,
-    },
-    {
-      onSuccess: () => cancelEditingTitle(),
-      onError: () => cancelEditingTitle(),
-    },
-  )
-}
-
-function handleTitleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    saveTitle()
-  } else if (event.key === 'Escape') {
-    event.preventDefault()
-    cancelEditingTitle()
-  }
 }
 
 // Error message

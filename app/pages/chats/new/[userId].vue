@@ -155,13 +155,17 @@
 </template>
 
 <script setup lang="ts">
-import { useWelcomeMessage, useChatSession } from '@/app/composables/useChatQueries'
+import { useChatSession } from '@/app/composables/useChatQueries'
 import { useSendMessage } from '@/app/composables/useChatMutations'
+import { useChatMessages } from '@/app/composables/useChatMessages'
+import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
+import { useFileDrop } from '@/app/composables/useFileDrop'
+import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { generateUUID } from '@/lib/utils/uuid'
-import { AIAnswerType, AIQuestionType } from '@/types/enums'
+import { AIQuestionType } from '@/types/enums'
 import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
@@ -196,22 +200,10 @@ watchEffect(() => {
 
 const agentId = computed(() => selectedUser.value?.id ?? 1)
 
-const { data: welcomeMsg } = useWelcomeMessage(agentId, {
+const { trimmedWelcomeMessage } = useTrimmedWelcomeMessage(agentId, {
   enabled: computed(() => !!selectedUser.value && selectedUser.value.isVirtual === true),
-  // The session doesn't exist server-side yet, so the backend still gets an empty id.
   sessionId: '',
-  // Scope the cache to this conversation: remounting the page mints a fresh UUID, so
-  // every new conversation re-fetches the greeting instead of reusing the previous one.
   cacheScope: sessionId,
-})
-
-const trimmedWelcomeMessage = computed(() => {
-  if (!welcomeMsg.value?.message) return undefined
-  let msg = welcomeMsg.value.message
-  if (msg.startsWith('"') && msg.endsWith('"')) {
-    msg = msg.slice(1, -1)
-  }
-  return msg
 })
 
 const members = computed(() => {
@@ -227,12 +219,8 @@ const { data: sessionData } = useChatSession(sessionId.value, {
   enabled: sessionQueryEnabled,
 })
 
-const messages = computed(() => {
-  const queryMessages = sessionData.value?.messages ?? []
-  const pending = chatStore.getUnconfirmedPendingMessages(sessionId.value, queryMessages)
-  const failed = chatStore.getFailedMessages(sessionId.value)
-  return [...queryMessages, ...pending, ...failed]
-})
+const { messages, typingUsers, thinkingAgents, lastUnansweredOptionsMessageId, isOptionsMode } =
+  useChatMessages(sessionId, sessionData)
 
 watch(
   () => messages.value.length > 0,
@@ -254,23 +242,8 @@ watch(
   },
 )
 
-// Options message logic
+// Options message mutation
 const optionMutation = useSendMessage()
-
-const lastUnansweredOptionsMessageId = computed(() => {
-  const msgs = messages.value
-  const userEmail = authStore.user?.email
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    const msg = msgs[i]
-    if (msg?.messageType === AIAnswerType.Options) {
-      const hasUserAfter = msgs.slice(i + 1).some((m) => m.senderUserCode === userEmail)
-      return hasUserAfter ? undefined : msg.messageID
-    }
-  }
-  return undefined
-})
-
-const isOptionsMode = computed(() => !!lastUnansweredOptionsMessageId.value)
 
 async function handleOptionSubmitted(answer: string) {
   const request: AiQuestionRequestDTO = {
@@ -291,10 +264,6 @@ async function handleOptionSubmitted(answer: string) {
     logger.error('Failed to send option answer:', error)
   }
 }
-
-// Typing indicator
-const typingUsers = computed(() => chatStore.getTypingUsers(sessionId.value))
-const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId.value))
 
 // Check if single virtual agent session - hide buttons if so
 const isSingleVirtualAgentSession = computed(() => {
@@ -331,47 +300,11 @@ const selectedAgentName = computed(() => {
 const messagesContainer = ref<HTMLElement | null>(null)
 const messageInputRef = ref<{ handleDroppedFiles: (files: FileList) => void } | null>(null)
 
-const isDraggingOver = ref(false)
-let dragEnterCounter = 0
+const { isDraggingOver, onDragEnter, onDragLeave, onDragOver, onDrop } = useFileDrop((files) =>
+  messageInputRef.value?.handleDroppedFiles(files),
+)
 
-function onDragEnter(event: DragEvent) {
-  event.preventDefault()
-  dragEnterCounter++
-  if (event.dataTransfer?.types.includes('Files')) {
-    isDraggingOver.value = true
-  }
-}
-
-function onDragLeave() {
-  dragEnterCounter--
-  if (dragEnterCounter <= 0) {
-    dragEnterCounter = 0
-    isDraggingOver.value = false
-  }
-}
-
-function onDragOver(event: DragEvent) {
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'copy'
-  }
-}
-
-function onDrop(event: DragEvent) {
-  dragEnterCounter = 0
-  isDraggingOver.value = false
-  const files = event.dataTransfer?.files
-  if (files?.length) {
-    messageInputRef.value?.handleDroppedFiles(files)
-  }
-}
-
-function scrollToBottom() {
-  void nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
-}
+const { scrollToBottom } = useChatAutoScroll(messagesContainer)
 
 function handleError(error: unknown) {
   logger.error('New chat error:', error)

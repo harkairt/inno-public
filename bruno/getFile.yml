@@ -5,16 +5,12 @@ info:
 
 http:
   method: GET
-  url: http://172.22.4.22:8082/api/user/get-selectable-users?email={{email}}
+  url: "{{url}}/api/storage/55b04a4d-0a29-4eb2-b50c-24b0ebe4a9e5"
   headers:
     - name: Accept
       value: application/json
     - name: Authorization
       value: Bearer {{accessToken}}
-  params:
-    - name: email
-      value: "{{email}}"
-      type: query
   auth: inherit
 
 settings:

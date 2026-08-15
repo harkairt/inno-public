@@ -1,11 +1,11 @@
 info:
   name: uploadFile
   type: http
-  seq: 8
+  seq: 7
 
 http:
   method: POST
-  url: http://172.22.4.22:8082/api/AIWebAPI/uploadFile
+  url: "{{url}}/api/AIWebAPI/uploadFile"
   headers:
     - name: Authorization
       value: Bearer {{accessToken}}
@@ -19,6 +19,9 @@ http:
       - name: agentId
         type: text
         value: "148"
+      - name: sessionId
+        type: text
+        value: b6f737e9-9f67-4731-ae49-71cd7ed032ed
   auth: inherit
 
 settings:

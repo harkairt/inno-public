@@ -1,11 +1,11 @@
 info:
-  name: GetUnreadMessages
+  name: removeUserFromSession
   type: http
-  seq: 5
+  seq: 10
 
 http:
   method: POST
-  url: "{{url}}/api/AIWebAPI/GetUnreadMessages"
+  url: "{{url}}/api/AIWebAPI/removeUserFromSession"
   headers:
     - name: Accept
       value: application/json
@@ -17,7 +17,9 @@ http:
     type: json
     data: |-
       {
-        "userCode": "{{email}}"
+        "sessionId": "{{sessionId}}",
+        "userCode": "DEV_iagent_agent8200@innochat.hu",
+        "agentId": 1
       }
   auth: inherit
 

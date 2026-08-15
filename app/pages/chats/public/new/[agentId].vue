@@ -43,8 +43,10 @@
 </template>
 
 <script setup lang="ts">
-import { useWelcomeMessage, useChatSession } from '@/app/composables/useChatQueries'
+import { useChatSession } from '@/app/composables/useChatQueries'
 import { useSendMessage } from '@/app/composables/useChatMutations'
+import { useChatMessages } from '@/app/composables/useChatMessages'
+import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { usePublicMode } from '@/app/composables/usePublicMode'
@@ -100,24 +102,10 @@ const { data: publicChatData } = usePublicChatAgent(agentId, {
 // Get agent name from public chat data
 const agentName = computed(() => publicChatData.value?.agent?.name)
 
-// Fetch welcome message for the agent
-const { data: welcomeMsg } = useWelcomeMessage(agentId, {
+const { trimmedWelcomeMessage } = useTrimmedWelcomeMessage(agentId, {
   enabled: computed(() => !!agentId.value && authStore.isAuthenticated),
-  // The session doesn't exist server-side yet, so the backend still gets an empty id.
   sessionId: '',
-  // Scope the cache to this conversation: remounting the page mints a fresh UUID, so
-  // every new conversation re-fetches the greeting instead of reusing the previous one.
   cacheScope: sessionId,
-})
-
-// Trim quotes from welcome message
-const trimmedWelcomeMessage = computed(() => {
-  if (!welcomeMsg.value?.message) return undefined
-  let msg = welcomeMsg.value.message
-  if (msg.startsWith('"') && msg.endsWith('"')) {
-    msg = msg.slice(1, -1)
-  }
-  return msg
 })
 
 // Members for this session (user email + agent email from startPublicChat)
@@ -135,11 +123,7 @@ const { data: sessionData } = useChatSession(sessionId.value, {
   enabled: sessionQueryEnabled,
 })
 
-const messages = computed(() => {
-  const queryMessages = sessionData.value?.messages || []
-  const failedMessages = chatStore.getFailedMessages(sessionId.value)
-  return [...queryMessages, ...failedMessages]
-})
+const { messages, typingUsers, thinkingAgents } = useChatMessages(sessionId, sessionData)
 
 watch(
   () => messages.value.length > 0,
@@ -153,10 +137,6 @@ const mutation = useSendMessage()
 
 // Disable send button while waiting for AI response
 const canSend = computed(() => !mutation.isPending.value)
-
-// Typing indicator users
-const typingUsers = computed(() => chatStore.getTypingUsers(sessionId.value))
-const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId.value))
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)

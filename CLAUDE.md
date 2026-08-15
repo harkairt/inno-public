@@ -90,3 +90,19 @@ Default language is Hungarian (`hu`). Always add keys to both `i18n/locales/en.j
 - State reset: `tests/utils/resetAllState.ts` runs in a global `beforeEach` in `tests/setup.ts` (fresh Pinia + reset module singletons per test).
 - Render components/pages via `renderWithProviders` from `tests/utils/render.ts`.
 - Coverage: thresholds are ratcheted in `vitest.config.ts` (source of truth) and raised per backfill wave. 80% is the goal, not an enforced flat gate.
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as local markdown files in `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout. See `docs/agents/domain.md`.

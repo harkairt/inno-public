@@ -1,11 +1,11 @@
 info:
   name: GetSessionHeadersByUserId
   type: http
-  seq: 4
+  seq: 3
 
 http:
   method: POST
-  url: http://172.22.4.22:8082/api/AIWebAPI/GetSessionHeadersByUserId
+  url: "{{url}}/api/AIWebAPI/GetSessionHeadersByUserId"
   headers:
     - name: Accept
       value: application/json

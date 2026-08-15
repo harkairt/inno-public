@@ -10,6 +10,7 @@
     <div
       class="w-1 cursor-col-resize hover:bg-[hsl(var(--primary)/0.3)] active:bg-[hsl(var(--primary)/0.5)] transition-colors flex-shrink-0"
       @mousedown="onResizeStart"
+      @touchstart="onResizeStart"
     />
 
     <div
@@ -136,11 +137,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { parseOptionsPayload } from '@/types/api/schemas'
 import { AIAnswerType } from '@/types/enums'
 import { useMessagePresentation } from '@/app/composables/useMessagePresentation'
+import { usePanelResize } from '~/composables/usePanelResize'
 import { useAuthStore } from '~/stores/auth'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
@@ -202,44 +204,22 @@ const emit = defineEmits<{
   'update:sidebarOpen': [value: boolean]
 }>()
 
-const sidebarWidth = ref(380)
-const isResizing = ref(false)
+const {
+  width: sidebarWidth,
+  isResizing,
+  onResizeStart,
+} = usePanelResize({
+  defaultWidth: 380,
+  minWidth: 280,
+  maxWidthFraction: 0.5,
+  direction: 'right',
+})
 
 const focusedMessages = computed(() =>
   props.messages
     .filter((m) => props.focusedIds.includes(m.messageID))
     .sort((a, b) => new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime()),
 )
-
-let cleanupResize: (() => void) | null = null
-
-function onResizeStart(e: MouseEvent) {
-  e.preventDefault()
-  isResizing.value = true
-  const startX = e.clientX
-  const startWidth = sidebarWidth.value
-
-  function onMouseMove(ev: MouseEvent) {
-    const delta = startX - ev.clientX
-    const maxWidth = Math.floor(window.innerWidth * 0.5)
-    sidebarWidth.value = Math.min(maxWidth, Math.max(280, startWidth + delta))
-  }
-
-  function onMouseUp() {
-    isResizing.value = false
-    document.removeEventListener('mousemove', onMouseMove)
-    document.removeEventListener('mouseup', onMouseUp)
-    cleanupResize = null
-  }
-
-  document.addEventListener('mousemove', onMouseMove)
-  document.addEventListener('mouseup', onMouseUp)
-  cleanupResize = onMouseUp
-}
-
-onBeforeUnmount(() => {
-  cleanupResize?.()
-})
 </script>
 
 <style scoped>
