@@ -119,16 +119,46 @@
 <script setup lang="ts">
 import type { UserDTO } from '@/types/api/schemas'
 import { useChatListData } from '~/composables/useChatListData'
+import { useAuthStore } from '~/stores/auth'
 import { useUserFavorites } from '~/composables/useUserFavorites'
 import UserDirectoryCard from '~/components/users/UserDirectoryCard.vue'
 
 type DirectoryFilter = 'all' | 'ai' | 'human' | 'favorites'
 
+const FILTER_STORAGE_KEY = 'innochat-users-filter'
+const VALID_FILTERS: ReadonlySet<string> = new Set<DirectoryFilter>([
+  'all',
+  'ai',
+  'human',
+  'favorites',
+])
+
+function loadSavedFilter(userId: number | undefined): DirectoryFilter {
+  if (typeof window === 'undefined' || userId === undefined) return 'all'
+  try {
+    const raw = localStorage.getItem(`${FILTER_STORAGE_KEY}:${userId}`)
+    return raw && VALID_FILTERS.has(raw) ? (raw as DirectoryFilter) : 'all'
+  } catch {
+    return 'all'
+  }
+}
+
 const { t } = useI18n()
 const router = useRouter()
 const directoryHeadingId = 'users-directory-heading'
 
-const activeFilter = ref<DirectoryFilter>('all')
+const authStore = useAuthStore()
+const activeFilter = ref<DirectoryFilter>(loadSavedFilter(authStore.user?.id))
+
+watch(activeFilter, (value) => {
+  const userId = authStore.user?.id
+  if (typeof window === 'undefined' || userId === undefined) return
+  try {
+    localStorage.setItem(`${FILTER_STORAGE_KEY}:${userId}`, value)
+  } catch {
+    /* storage full or blocked */
+  }
+})
 
 const { filteredUsers, isLoadingUsers, usersError, userSearchQuery, handleUserClick } =
   useChatListData()
