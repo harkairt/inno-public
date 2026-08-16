@@ -9,6 +9,7 @@
       :alt="member.name || member.email"
       :round="member.isVirtual"
       :size="size"
+      :style="!hasAvatar(member.image) ? getAvatarStyle(member.email) : undefined"
       :class="{ [overlapClass]: index > 0 }"
     >
       {{ getInitials(member.name || member.email) }}
@@ -26,7 +27,7 @@
 
 <script setup lang="ts">
 import type { UserDTO } from '@/types/api/schemas'
-import { getInitials } from '@/app/utils/user'
+import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 
 const props = withDefaults(
   defineProps<{

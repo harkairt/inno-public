@@ -11,8 +11,11 @@
           :alt="user.name"
           size="xl"
           :round="user.isVirtual"
-          class="directory-avatar size-[50px]! ring-2 ring-[hsl(var(--brand-soft))] transition-transform duration-200"
-        />
+          :style="!hasAvatar(user.image) ? avatarStyle : undefined"
+          class="directory-avatar size-[50px]! transition-transform duration-200"
+        >
+          {{ initials }}
+        </UserAvatar>
         <span
           class="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 border-[hsl(var(--card))]"
           :class="user.isAvailable ? 'bg-[hsl(var(--success))]' : 'bg-[hsl(var(--ink-3))]'"
@@ -75,8 +78,9 @@
 <script setup lang="ts">
 import UserAvatar from '~/components/UserAvatar.vue'
 import type { UserDTO } from '@/types/api/schemas'
+import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 
-defineProps<{
+const props = defineProps<{
   user: UserDTO
   favorite: boolean
 }>()
@@ -87,6 +91,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+const initials = computed(() => getInitials(props.user.name))
+const avatarStyle = computed(() => getAvatarStyle(props.user.email))
 </script>
 
 <style scoped>

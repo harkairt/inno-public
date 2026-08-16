@@ -117,6 +117,7 @@ import { computed } from 'vue'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { useAuthStore } from '~/stores/auth'
 import { useChatStore } from '~/stores/chat'
+import { getInitials } from '@/app/utils/user'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -146,15 +147,8 @@ const navItems = computed(() => [
   },
 ])
 
-const userInitials = computed(() => initialsFromName(authStore.user?.name))
+const userInitials = computed(() => getInitials(authStore.user?.name))
 const profileLabel = computed(() => `${authStore.userDisplayName} — ${t('navigation.profile')}`)
-
-function initialsFromName(name?: string | null): string {
-  const words = name?.trim().split(/\s+/).filter(Boolean) ?? []
-  if (words.length === 0) return 'U'
-  if (words.length === 1) return words[0]?.slice(0, 2).toUpperCase() ?? 'U'
-  return `${words[0]?.[0] ?? ''}${words.at(-1)?.[0] ?? ''}`.toUpperCase()
-}
 
 function isActive(to: string): boolean {
   return route.path.startsWith(to)

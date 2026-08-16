@@ -57,15 +57,6 @@ function getMemberNamesFromList(
   return names.join(', ')
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
 function buildDraftItems(
   draftMessages: Record<string, string>,
   allUsers: UserDTO[] | undefined,
@@ -204,7 +195,6 @@ export function useChatListData() {
     getUnreadCount,
     getOtherMembers,
     getMemberNames,
-    getInitials,
     getDisplayName,
     isPrimarySessionCheck,
     handleUserClick,

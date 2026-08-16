@@ -154,7 +154,7 @@ describe('S13 useECharts.applyOption — theme base', () => {
 })
 
 describe('S14 useECharts.applyOption — draw failure', () => {
-  it('returns false and logs neither option content nor the engine error', async () => {
+  it('returns false and logs blockIndex, error, and option', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     shouldThrowOnSetOption = true
 
@@ -164,9 +164,8 @@ describe('S14 useECharts.applyOption — draw failure', () => {
     expect(errorSpy).toHaveBeenCalledTimes(1)
     const record = JSON.stringify(errorSpy.mock.calls[0])
     expect(record).toContain('blockIndex')
-    expect(record).not.toContain('series')
-    expect(record).not.toContain('42')
-    expect(record).not.toContain('boom')
+    expect(record).toContain('boom')
+    expect(record).toContain('option')
     errorSpy.mockRestore()
   })
 

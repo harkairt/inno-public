@@ -33,7 +33,7 @@
           :round="headerAgent.isVirtual"
           size="md"
           class="flex-shrink-0"
-          :style="!headerAgent.image ? { backgroundColor: headerAvatarColor } : undefined"
+          :style="!hasAvatar(headerAgent.image) ? headerAvatarStyle : undefined"
         >
           {{ headerInitials }}
         </UserAvatar>
@@ -405,7 +405,7 @@ import SessionMembers from '@/app/components/chat/SessionMembers.vue'
 import ManageSessionUsers from '@/app/components/chat/ManageSessionUsers.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
 import UserAvatar from '~/components/UserAvatar.vue'
-import { getInitials, getAvatarColor } from '@/app/utils/user'
+import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 import { useMessageFocus } from '@/app/composables/useMessageFocus'
 import FocusedMessagesSidebar from '@/app/components/chat/FocusedMessagesSidebar.vue'
 import { createLogger } from '@/lib/utils/logger'
@@ -698,7 +698,7 @@ const headerAgent = computed(() => {
 })
 
 const headerInitials = computed(() => getInitials(headerAgent.value?.name ?? ''))
-const headerAvatarColor = computed(() => getAvatarColor(headerAgent.value?.name ?? ''))
+const headerAvatarStyle = computed(() => getAvatarStyle(headerAgent.value?.email ?? ''))
 
 // Handle target agent change
 function handleTargetAgentChanged(agentId: number | undefined) {

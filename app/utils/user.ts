@@ -1,24 +1,27 @@
-/**
- * Get initials from a user's name for avatar display
- * @param name - Full name or email address
- * @returns Uppercase initials (max 2 characters)
- * @example getInitials("John Doe") => "JD"
- * @example getInitials("alice@example.com") => "AL"
- */
-export const getInitials = (name: string): string => {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+export function getInitials(name?: string | null): string {
+  const words = name?.trim().split(/\s+/).filter(Boolean) ?? []
+  if (words.length === 0) return ''
+  if (words.length === 1) return words[0]!.slice(0, 2)
+  return `${words[0]![0]}${words.at(-1)![0]}`
 }
 
-export function getAvatarColor(name: string): string {
+function emailToHue(email: string): number {
   let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  for (let i = 0; i < email.length; i++) {
+    hash = email.charCodeAt(i) + ((hash << 5) - hash)
   }
-  const hue = ((hash % 360) + 360) % 360
-  return `hsl(${hue}, 45%, 55%)`
+  return ((hash % 360) + 360) % 360
+}
+
+export function getAvatarStyle(email: string): { backgroundColor: string; color: string } {
+  const hue = emailToHue(email)
+  return {
+    backgroundColor: `hsl(${hue}, 55%, 82%)`,
+    color: `hsl(${hue}, 45%, 28%)`,
+  }
+}
+
+export function hasAvatar(image?: string | null): boolean {
+  if (!image) return false
+  return !image.includes('profilePlaceholder')
 }

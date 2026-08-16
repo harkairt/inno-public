@@ -158,6 +158,7 @@ const seekSlider = (val: number | undefined) => {
 const render = () => {
   if (!instance) {
     if (!containerRef.value || !isLoaded.value) return
+    if (!containerRef.value.offsetWidth) return
     instance = initChart(containerRef.value)
     if (!instance) {
       error.value = t('chat.barRace.renderFailed')
@@ -191,7 +192,8 @@ watch(isDark, () => {
 })
 
 useResizeObserver(containerRef, () => {
-  instance?.resize()
+  if (instance) instance.resize()
+  else render()
 })
 
 onMounted(async () => {

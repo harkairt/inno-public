@@ -12,7 +12,7 @@
         :alt="primaryMemberName"
         :round="primaryMember?.isVirtual ?? true"
         size="md"
-        :style="!primaryMember?.image ? { backgroundColor: avatarColor } : undefined"
+        :style="!hasAvatar(primaryMember?.image) ? avatarStyle : undefined"
         class="flex-shrink-0"
       >
         {{ initials }}
@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import type { AISessionHeaderDTO, UserDTO } from '@/types/api/schemas'
-import { getInitials, getAvatarColor } from '@/app/utils/user'
+import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 import { getSessionActivityDate } from '@/app/utils/session'
 import { useRelativeDate } from '~/composables/useRelativeDate'
 import UserAvatar from '~/components/UserAvatar.vue'
@@ -88,7 +88,9 @@ const primaryMember = computed(() => props.users.find((u) => u.email === props.o
 
 const primaryMemberName = computed(() => primaryMember.value?.name ?? props.otherMembers[0] ?? '')
 
-const avatarColor = computed(() => getAvatarColor(primaryMemberName.value))
+const primaryMemberEmail = computed(() => primaryMember.value?.email ?? props.otherMembers[0] ?? '')
+
+const avatarStyle = computed(() => getAvatarStyle(primaryMemberEmail.value))
 
 const initials = computed(() => getInitials(primaryMemberName.value))
 

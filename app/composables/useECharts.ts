@@ -102,8 +102,9 @@ export const useECharts = () => {
       instance.setOption(themeBase(option, isDark))
       instance.setOption(harden(option) as EChartsOption)
       return true
-    } catch {
-      logger.error('Failed to draw ECharts block', { blockIndex })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('Failed to draw ECharts block', { blockIndex, error: message, option })
       return false
     }
   }

@@ -41,7 +41,9 @@
     "colorModeDark": "Sötét",
     "colorModeSystem": "Rendszer",
     "connectionStatus": "Kapcsolat",
-    "build-info": "Verzió"
+    "build-info": "Verzió",
+    "chatFont": "Chat betűtípus",
+    "chatFontSize": "Chat betűméret"
   },
   "users": {
     "title": "Agent-tár & Emberek",

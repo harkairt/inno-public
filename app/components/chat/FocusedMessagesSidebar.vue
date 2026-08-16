@@ -73,7 +73,7 @@
           :class="isUserMessage(message) ? 'items-end' : 'items-start'"
         >
           <div
-            class="message-bubble px-3 py-2"
+            class="message-bubble px-3.5 py-1"
             :class="hasRichContent(message) ? 'w-full' : 'w-fit max-w-full'"
             :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
           >
