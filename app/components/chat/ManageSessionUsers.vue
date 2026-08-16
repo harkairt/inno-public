@@ -84,6 +84,7 @@
                 :dark-image="user.darkImage"
                 :alt="user.name || user.email"
                 :round="user.isVirtual"
+                :style="!hasAvatar(user.image) ? getAvatarStyle(user.email) : undefined"
                 size="sm"
               >
                 {{ getInitials(user.name || user.email) }}
@@ -111,7 +112,7 @@
 
 <script setup lang="ts">
 import type { UserDTO } from '@/types/api/schemas'
-import { getInitials } from '@/app/utils/user'
+import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 import { useMutuallyVisibleUsers } from '@/app/composables/useMutuallyVisibleUsers'
 
 const { t } = useI18n()

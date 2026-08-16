@@ -14,8 +14,7 @@
 }
 
 .markdown-content {
-  /* Typography foundation */
-  font-size: 0.875rem;
+  font-size: inherit;
   line-height: 1.375;
   word-wrap: break-word;
   overflow-wrap: break-word;

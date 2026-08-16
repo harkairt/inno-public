@@ -46,7 +46,7 @@
             :class="isUserMessage(message) ? 'items-end' : 'items-start'"
           >
             <div
-              class="message-bubble px-3 py-2"
+              class="message-bubble px-3.5 py-1"
               :class="[
                 hasWideContent(message) ? 'max-w-full' : 'max-w-[95%] md:max-w-[85%]',
                 {

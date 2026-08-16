@@ -32,9 +32,12 @@ const colorMode = useColorMode()
 
 const avatarSrc = computed(() => {
   const isDark = colorMode.value === 'dark'
-  if (isDark && props.darkImage) {
+  if (isDark && props.darkImage && !props.darkImage.includes('profilePlaceholder')) {
     return props.darkImage
   }
-  return props.image ?? undefined
+  if (props.image && !props.image.includes('profilePlaceholder')) {
+    return props.image
+  }
+  return undefined
 })
 </script>

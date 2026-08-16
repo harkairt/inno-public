@@ -71,7 +71,16 @@ async function renderChart(props: Record<string, unknown> = {}) {
     props: { option: barOption, blockIndex: 0, source: JSON.stringify(barOption), ...props },
   })
 
+  giveContainerWidth(utils.container)
+
   return utils
+}
+
+function giveContainerWidth(container: HTMLElement) {
+  const canvas = container.querySelector('.echart-canvas')
+  if (canvas) {
+    Object.defineProperty(canvas, 'offsetWidth', { value: 600, configurable: true })
+  }
 }
 
 async function settle() {
@@ -79,6 +88,12 @@ async function settle() {
     await Promise.resolve()
     await nextTick()
   }
+}
+
+async function settleWithLayout() {
+  await settle()
+  resizeCallback?.()
+  await nextTick()
 }
 
 describe('S15 ChatEChart — loading state', () => {
@@ -92,7 +107,7 @@ describe('S15 ChatEChart — loading state', () => {
 
   it('replaces the loading indicator with the chart once the engine loads', async () => {
     const { container } = await renderChart()
-    await settle()
+    await settleWithLayout()
 
     expect(container.querySelector('.echart-loading')).toBeNull()
     expect(container.querySelector('.echart-canvas')).not.toBeNull()
@@ -103,7 +118,7 @@ describe('S15 ChatEChart — loading state', () => {
 describe('S16, S17 ChatEChart — source changes', () => {
   it('re-applies the option on the existing instance when source changes', async () => {
     const { rerender } = await renderChart()
-    await settle()
+    await settleWithLayout()
 
     const instance = instances[0]!
     const optionCallsBefore = instance.setOption.mock.calls.length
@@ -120,7 +135,7 @@ describe('S16, S17 ChatEChart — source changes', () => {
 
   it('makes zero further engine calls when source is unchanged', async () => {
     const { rerender } = await renderChart()
-    await settle()
+    await settleWithLayout()
 
     const instance = instances[0]!
     const optionCallsBefore = instance.setOption.mock.calls.length
@@ -137,7 +152,7 @@ describe('S16, S17 ChatEChart — source changes', () => {
 describe('S18 ChatEChart — theme change', () => {
   it('re-applies the option without re-initializing when the colour mode flips', async () => {
     await renderChart()
-    await settle()
+    await settleWithLayout()
 
     const instance = instances[0]!
     const optionCallsBefore = instance.setOption.mock.calls.length
@@ -154,10 +169,10 @@ describe('S18 ChatEChart — theme change', () => {
 describe('S19 ChatEChart — container resize', () => {
   it('resizes the instance when the container resizes', async () => {
     await renderChart()
-    await settle()
+    await settleWithLayout()
 
     const instance = instances[0]!
-    expect(instance.resize).not.toHaveBeenCalled()
+    instance.resize.mockClear()
 
     resizeCallback?.()
     await nextTick()
@@ -169,13 +184,14 @@ describe('S19 ChatEChart — container resize', () => {
 describe('S20 ChatEChart — teardown', () => {
   it('disposes exactly once on unmount and makes no call afterwards', async () => {
     const { unmount } = await renderChart()
-    await settle()
+    await settleWithLayout()
 
     const instance = instances[0]!
     unmount()
     await nextTick()
 
     expect(instance.dispose).toHaveBeenCalledTimes(1)
+    instance.resize.mockClear()
 
     resizeCallback?.()
     await nextTick()
@@ -227,7 +243,7 @@ describe('S41–S45a ChatEChart — clicking an actionable data item', () => {
 
   async function renderPromptChart() {
     const utils = await renderChart({ option: promptOption, source: JSON.stringify(promptOption) })
-    await settle()
+    await settleWithLayout()
     return utils
   }
 
@@ -292,7 +308,7 @@ describe('S41–S45a ChatEChart — clicking an actionable data item', () => {
 
   it('S45 renders no hint for an option without prompts', async () => {
     const { container } = await renderChart()
-    await settle()
+    await settleWithLayout()
 
     expect(container.querySelector('.echart-hint')).toBeNull()
   })
@@ -302,7 +318,7 @@ describe('S41–S45a ChatEChart — clicking an actionable data item', () => {
     expect(container.querySelector('.echart-hint')).not.toBeNull()
 
     await rerender({ option: barOption, blockIndex: 0, source: JSON.stringify(barOption) })
-    await settle()
+    await settleWithLayout()
 
     expect(container.querySelector('.echart-hint')).toBeNull()
     expect(initSpy).toHaveBeenCalledTimes(1)

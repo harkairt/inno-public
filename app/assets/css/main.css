@@ -46,13 +46,13 @@
   /* saját üzenet: primary szín, világos szöveg */
   --config-own-message-bg: hsl(var(--primary));
   --config-own-message-fg: hsl(var(--primary-foreground));
-  --config-own-message-font-size: 15px;
+  --config-own-message-font-size: 0.9375rem;
   --config-own-message-font-style: normal;
   --config-own-message-font-weight: normal;
 
   /* partner üzenet: fehér kártya vékony vonallal */
   --config-partner-message-bg: hsl(0 0% 100%);          /* #fff surface */
-  --config-partner-message-font-size: 15px;
+  --config-partner-message-font-size: 0.9375rem;
   --config-partner-message-font-style: normal;
   --config-partner-message-font-weight: normal;
 
@@ -366,7 +366,7 @@
     color: hsl(var(--primary-foreground));
     border-radius: 18px 6px 18px 18px;
     padding: 13px 16px;
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.55;
   }
 
@@ -376,7 +376,7 @@
     border: 1px solid hsl(var(--border));
     border-radius: 6px 18px 18px 18px;
     padding: 13px 16px;
-    font-size: 15px;
+    font-size: 0.9375rem;
     line-height: 1.6;
     box-shadow: 0 1px 2px rgb(20 30 29 / 0.04);
   }

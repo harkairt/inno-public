@@ -41,7 +41,9 @@
     "colorModeDark": "Dark",
     "colorModeSystem": "System",
     "connectionStatus": "Connection",
-    "build-info": "Build"
+    "build-info": "Build",
+    "chatFont": "Chat font",
+    "chatFontSize": "Chat font size"
   },
   "users": {
     "title": "Agents & People",

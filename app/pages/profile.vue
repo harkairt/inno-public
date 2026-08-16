@@ -70,6 +70,59 @@
           />
         </div>
 
+        <!-- Chat Font Face -->
+        <div
+          class="flex items-center justify-between px-4 py-3.5"
+          data-testid="profile-font-face"
+        >
+          <div class="flex items-center gap-3">
+            <UIcon
+              name="i-heroicons-pencil-square"
+              class="size-5 text-[hsl(var(--muted-foreground))]"
+            />
+            <span class="text-sm font-medium">{{ t('profile.chatFont') }}</span>
+          </div>
+          <UTabs
+            :model-value="activeFontFaceTab"
+            :items="fontFaceTabs"
+            :content="false"
+            variant="pill"
+            size="xs"
+            @update:model-value="handleFontFaceChange"
+          />
+        </div>
+
+        <!-- Chat Font Size -->
+        <div
+          class="flex items-center justify-between px-4 py-3.5"
+          data-testid="profile-font-size"
+        >
+          <div class="flex items-center gap-3">
+            <UIcon
+              name="i-heroicons-arrows-up-down"
+              class="size-5 text-[hsl(var(--muted-foreground))]"
+            />
+            <span class="text-sm font-medium">{{ t('profile.chatFontSize') }}</span>
+          </div>
+          <div class="inline-flex items-baseline gap-0.5 rounded-lg bg-(--ui-bg-elevated) p-1">
+            <button
+              v-for="opt in FONT_SIZE_OPTIONS"
+              :key="opt.value"
+              type="button"
+              class="grid place-items-center rounded-md size-7 transition-colors font-medium"
+              :class="
+                activeFontSizeTab === opt.value
+                  ? 'bg-(--ui-primary) text-(--ui-bg) shadow-xs'
+                  : 'text-(--ui-text-muted) hover:text-(--ui-text)'
+              "
+              :style="{ fontSize: `${opt.rem}rem` }"
+              @click="handleFontSizeChange(opt.value)"
+            >
+              A
+            </button>
+          </div>
+        </div>
+
         <!-- SignalR Connection Status -->
         <div
           class="flex items-center justify-between px-4 py-3.5"
@@ -140,17 +193,29 @@
 import { ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useSignalRConnectionMonitor } from '~/composables/useSignalR'
+import {
+  useUiPreferences,
+  FONT_OPTIONS,
+  FONT_SIZE_OPTIONS,
+  DEFAULT_FONT_FACE,
+  serverConfigFontSizeToPreset,
+  type FontFace,
+  type FontSize,
+} from '~/composables/useUiPreferences'
+import { useConfigStore } from '~/stores/config'
 import UserAvatar from '~/components/UserAvatar.vue'
 
 const { t, locale, setLocale } = useI18n()
 const colorMode = useColorMode()
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
+const configStore = useConfigStore()
 const {
   statusMessage,
   statusColor: statusTextColor,
   state: signalrState,
 } = useSignalRConnectionMonitor()
+const { fontFace, fontSize, setFontFace, setFontSize } = useUiPreferences()
 
 const isLoggingOut = ref(false)
 
@@ -158,6 +223,27 @@ const localeOptions = [
   { label: 'English', value: 'en' },
   { label: 'Magyar', value: 'hu' },
 ]
+
+const fontFaceTabs = FONT_OPTIONS.map((opt) => ({
+  label: opt.label,
+  value: opt.value,
+}))
+
+const activeFontFaceTab = computed(() => fontFace.value ?? DEFAULT_FONT_FACE)
+
+const activeFontSizeTab = computed(() => {
+  if (fontSize.value) return fontSize.value
+  const serverPx = configStore.config.messageTextOwnSize
+  return serverConfigFontSizeToPreset(serverPx)
+})
+
+function handleFontFaceChange(value: string | number) {
+  setFontFace(String(value) as FontFace)
+}
+
+function handleFontSizeChange(value: string | number) {
+  setFontSize(String(value) as FontSize)
+}
 
 const formattedBuildTimestamp = computed(() => {
   const ts = runtimeConfig.public.buildTimestamp

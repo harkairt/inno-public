@@ -89,6 +89,7 @@ const applyCurrent = () => {
 const render = () => {
   if (!instance) {
     if (!containerRef.value || !isLoaded.value) return
+    if (!containerRef.value.offsetWidth) return
 
     instance = initChart(containerRef.value)
     if (!instance) {
@@ -115,7 +116,8 @@ watch(() => props.source, render)
 watch(isDark, applyCurrent)
 
 useResizeObserver(containerRef, () => {
-  instance?.resize()
+  if (instance) instance.resize()
+  else render()
 })
 
 onMounted(async () => {
