@@ -10,6 +10,8 @@ export interface UseChatMessagesReturn {
   thinkingAgents: ComputedRef<string[]>
   lastUnansweredOptionsMessageId: ComputedRef<string | undefined>
   isOptionsMode: ComputedRef<boolean>
+  pendingIds: ComputedRef<Set<string>>
+  failedIds: ComputedRef<Set<string>>
 }
 
 export function useChatMessages(
@@ -19,13 +21,21 @@ export function useChatMessages(
   const chatStore = useChatStore()
   const authStore = useAuthStore()
 
-  const messages = computed(() => {
+  const resolved = computed(() => {
     const id = toValue(sessionId)
     const queryMessages = sessionData.value?.messages ?? []
     const pending = chatStore.getUnconfirmedPendingMessages(id, queryMessages)
     const failed = chatStore.getFailedMessages(id)
-    return [...queryMessages, ...pending, ...failed]
+    return {
+      messages: [...queryMessages, ...pending, ...failed],
+      pendingIds: new Set(pending.map((m) => m.messageID)),
+      failedIds: new Set(failed.map((m) => m.messageID)),
+    }
   })
+
+  const messages = computed(() => resolved.value.messages)
+  const pendingIds = computed(() => resolved.value.pendingIds)
+  const failedIds = computed(() => resolved.value.failedIds)
 
   const typingUsers = computed(() => chatStore.getTypingUsers(toValue(sessionId)))
   const thinkingAgents = computed(() => chatStore.getThinkingAgents(toValue(sessionId)))
@@ -51,5 +61,7 @@ export function useChatMessages(
     thinkingAgents,
     lastUnansweredOptionsMessageId,
     isOptionsMode,
+    pendingIds,
+    failedIds,
   }
 }

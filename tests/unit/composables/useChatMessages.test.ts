@@ -65,7 +65,21 @@ describe('useChatMessages', () => {
   it('includes failed messages after query and pending messages', () => {
     const chatStore = useChatStore()
     const queryMsg = makeMessage({ messageID: 'q-1' })
-    chatStore.addFailedMessage('s-1', { ...makeMessage({ messageID: 'f-1' }), status: 'failed' })
+    chatStore.addFailedMessage('s-1', {
+      optimisticDisplay: makeMessage({ messageID: 'f-1' }),
+      request: {
+        userCode: 'user',
+        sessionId: 's-1',
+        agentId: 1,
+        members: [],
+        question: '',
+        group: '',
+        pquestionType: 0,
+        options: [],
+        files: [],
+      },
+      status: 'failed' as const,
+    })
 
     const sessionData = ref<AISessionDTO | undefined>(makeSession([queryMsg]))
     const { messages } = useChatMessages('s-1', sessionData)
@@ -87,8 +101,36 @@ describe('useChatMessages', () => {
   it('works with ref-based sessionId', () => {
     const chatStore = useChatStore()
     const sid = ref('s-1')
-    chatStore.addFailedMessage('s-1', { ...makeMessage({ messageID: 'f-1' }), status: 'failed' })
-    chatStore.addFailedMessage('s-2', { ...makeMessage({ messageID: 'f-2' }), status: 'failed' })
+    chatStore.addFailedMessage('s-1', {
+      optimisticDisplay: makeMessage({ messageID: 'f-1' }),
+      request: {
+        userCode: 'user',
+        sessionId: 's-1',
+        agentId: 1,
+        members: [],
+        question: '',
+        group: '',
+        pquestionType: 0,
+        options: [],
+        files: [],
+      },
+      status: 'failed' as const,
+    })
+    chatStore.addFailedMessage('s-2', {
+      optimisticDisplay: makeMessage({ messageID: 'f-2' }),
+      request: {
+        userCode: 'user',
+        sessionId: 's-2',
+        agentId: 1,
+        members: [],
+        question: '',
+        group: '',
+        pquestionType: 0,
+        options: [],
+        files: [],
+      },
+      status: 'failed' as const,
+    })
 
     const sessionData = ref<AISessionDTO | undefined>(makeSession())
     const { messages } = useChatMessages(sid, sessionData)

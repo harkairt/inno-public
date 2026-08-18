@@ -88,7 +88,11 @@
               :agent-id="agentId"
               :agent-name="selectedUser.name || selectedUser.email"
               :active-options-message-id="lastUnansweredOptionsMessageId"
+              :pending-ids="pendingIds"
+              :failed-ids="failedIds"
               @option-submitted="handleOptionSubmitted"
+              @retry-message="handleRetryMessage"
+              @discard-message="handleDiscardMessage"
             />
           </div>
         </div>
@@ -157,6 +161,7 @@
 <script setup lang="ts">
 import { useChatSession } from '@/app/composables/useChatQueries'
 import { useSendMessage } from '@/app/composables/useChatMutations'
+import { revokeBlobUrls } from '@/app/composables/sendMessageOptimistic'
 import { useChatMessages } from '@/app/composables/useChatMessages'
 import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
 import { useFileDrop } from '@/app/composables/useFileDrop'
@@ -219,8 +224,15 @@ const { data: sessionData } = useChatSession(sessionId.value, {
   enabled: sessionQueryEnabled,
 })
 
-const { messages, typingUsers, thinkingAgents, lastUnansweredOptionsMessageId, isOptionsMode } =
-  useChatMessages(sessionId, sessionData)
+const {
+  messages,
+  typingUsers,
+  thinkingAgents,
+  lastUnansweredOptionsMessageId,
+  isOptionsMode,
+  pendingIds,
+  failedIds,
+} = useChatMessages(sessionId, sessionData)
 
 watch(
   () => messages.value.length > 0,
@@ -258,11 +270,32 @@ async function handleOptionSubmitted(answer: string) {
     files: [],
   }
   try {
-    await optionMutation.mutateAsync(request)
+    await optionMutation.mutateAsync({ request })
     scrollToBottom()
   } catch (error) {
     logger.error('Failed to send option answer:', error)
   }
+}
+
+const sendMutation = useSendMessage()
+
+function handleRetryMessage(messageId: string) {
+  const entry = chatStore
+    .getFailedEntries(sessionId.value)
+    .find((e) => e.optimisticDisplay.messageID === messageId)
+  if (!entry) return
+  chatStore.removeFailedMessage(sessionId.value, messageId)
+  void sendMutation
+    .mutateAsync({ request: entry.request, attachments: entry.attachments })
+    .finally(() => scrollToBottom())
+}
+
+function handleDiscardMessage(messageId: string) {
+  const entry = chatStore
+    .getFailedEntries(sessionId.value)
+    .find((e) => e.optimisticDisplay.messageID === messageId)
+  if (entry) revokeBlobUrls(entry.optimisticDisplay)
+  chatStore.removeFailedMessage(sessionId.value, messageId)
 }
 
 // Check if single virtual agent session - hide buttons if so

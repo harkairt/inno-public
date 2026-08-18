@@ -10,9 +10,28 @@ import type {
   UserDTO,
   AIPublicChatStartDTO,
 } from '@/types/api/schemas'
+import { FileMessagePayloadSchema } from '@/types/api/schemas'
+import type { StagedAttachment } from '@/types/fileAttachment'
 import type { useChatStore } from '@/app/stores/chat'
 import type { useAuthStore } from '@/app/stores/auth'
 import { AIAnswerType, MessageStatus } from '@/types/enums'
+
+export function revokeBlobUrls(message: AISessionMessageDTO): void {
+  if (message.messageType !== AIAnswerType.File || !message.messageText) return
+  try {
+    const parsed: unknown = JSON.parse(message.messageText)
+    const payload = FileMessagePayloadSchema.safeParse(parsed)
+    if (!payload.success) return
+
+    for (const file of payload.data.files) {
+      if (file.url.startsWith('blob:')) {
+        URL.revokeObjectURL(file.url)
+      }
+    }
+  } catch {
+    return
+  }
+}
 
 export interface SendMessageMutateContext {
   previousSession: AISessionDTO | undefined
@@ -21,6 +40,7 @@ export interface SendMessageMutateContext {
   userMessageTimestamp: Date
   isNewSession: boolean
   thinkingAgentName: string | undefined
+  attachments?: StagedAttachment[]
 }
 
 interface SendMessageDeps {
@@ -33,6 +53,14 @@ interface ConfirmSendParams extends SendMessageDeps {
   serverMessage: AISessionMessageDTO
   request: AiQuestionRequestDTO
   context: SendMessageMutateContext | undefined
+}
+
+interface CreateTempMessageParams {
+  request: AiQuestionRequestDTO
+  tempMessageId: string
+  timestamp: Date
+  authStore: ReturnType<typeof useAuthStore>
+  attachments?: StagedAttachment[]
 }
 
 function generateTempId(): string {
@@ -59,16 +87,33 @@ function getAgentFromCache(queryClient: QueryClient, agentId: number): UserDTO |
   return publicChatData?.agent ?? undefined
 }
 
-function createTempMessageDTO(
-  request: AiQuestionRequestDTO,
-  tempMessageId: string,
-  timestamp: Date,
-  authStore: ReturnType<typeof useAuthStore>,
-): AISessionMessageDTO {
+function createTempMessageDTO({
+  request,
+  tempMessageId,
+  timestamp,
+  authStore,
+  attachments,
+}: CreateTempMessageParams): AISessionMessageDTO {
+  let messageText: string = request.question
+  let messageType: AIAnswerType = AIAnswerType.Text
+
+  if (attachments && attachments.length > 0) {
+    messageType = AIAnswerType.File
+    messageText = JSON.stringify({
+      text: request.question,
+      files: attachments.map((a) => ({
+        id: a.serverFileId!,
+        fileName: a.fileName,
+        mimeType: a.mimeType,
+        url: URL.createObjectURL(a.file),
+      })),
+    })
+  }
+
   return {
     messageID: tempMessageId,
-    messageText: request.question,
-    messageType: AIAnswerType.Text,
+    messageText,
+    messageType,
     senderUserCode: authStore.user?.email ?? 'unknown',
     senderName: authStore.user?.name ?? 'You',
     sendDate: timestamp.toISOString(),
@@ -122,6 +167,7 @@ function createSyntheticSessionHeader(
 export async function applyOptimisticSend(
   request: AiQuestionRequestDTO,
   deps: SendMessageDeps,
+  attachments?: StagedAttachment[],
 ): Promise<SendMessageMutateContext> {
   const { queryClient, chatStore, authStore } = deps
 
@@ -140,12 +186,13 @@ export async function applyOptimisticSend(
     chatStore.startAgentThinking(request.sessionId, thinkingAgentName)
   }
 
-  const tempMessageDTO = createTempMessageDTO(
+  const tempMessageDTO = createTempMessageDTO({
     request,
     tempMessageId,
-    userMessageTimestamp,
+    timestamp: userMessageTimestamp,
     authStore,
-  )
+    attachments,
+  })
 
   const baselineCount = (existingSession?.messages ?? []).filter(
     (m) =>
@@ -185,6 +232,7 @@ export async function applyOptimisticSend(
     userMessageTimestamp,
     isNewSession,
     thinkingAgentName,
+    attachments,
   }
 }
 
@@ -196,6 +244,13 @@ export async function confirmSend(params: ConfirmSendParams): Promise<void> {
   }
 
   if (!context?.isNewSession) {
+    queryClient.setQueryData<AISessionDTO>(chatQueryKeys.session(request.sessionId), (old) => {
+      if (!old || isEmptyResponse(serverMessage)) return old
+      const messages = old.messages ?? []
+      if (messages.some((message) => message.messageID === serverMessage.messageID)) return old
+      return { ...old, messages: [...messages, serverMessage] }
+    })
+
     await queryClient.invalidateQueries({ queryKey: chatQueryKeys.session(request.sessionId) })
 
     queryClient.setQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions(), (old) =>
@@ -206,6 +261,7 @@ export async function confirmSend(params: ConfirmSendParams): Promise<void> {
   }
 
   if (context?.tempMessageId) {
+    if (context.tempMessageDTO) revokeBlobUrls(context.tempMessageDTO)
     chatStore.removePendingMessage(request.sessionId, context.tempMessageId)
   }
 
@@ -275,8 +331,10 @@ export function rollbackSend(
     // Stryker disable next-line OptionalChaining: context is provably non-null here (tempMessageId branch already entered)
     if (context?.tempMessageDTO) {
       chatStore.addFailedMessage(request.sessionId, {
-        ...context.tempMessageDTO,
+        optimisticDisplay: context.tempMessageDTO,
+        request,
         status: MessageStatus.FAILED,
+        attachments: context.attachments,
       })
     }
   }

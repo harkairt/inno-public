@@ -1,11 +1,12 @@
 <template>
   <div
     v-if="mode === 'thumbnail'"
-    class="overflow-hidden rounded-lg cursor-pointer"
+    class="overflow-hidden rounded-lg"
+    :class="{ 'cursor-pointer': interactive }"
   >
     <img
       :src="imgSrc"
-      :data-source="fullResUrl"
+      :data-source="interactive ? fullResUrl : undefined"
       :alt="sanitizedFileName"
       class="w-full h-auto object-cover"
       loading="lazy"
@@ -17,13 +18,21 @@
     </div>
   </div>
 
-  <a
+  <component
+    :is="interactive ? 'a' : 'div'"
     v-else-if="mode === 'card'"
-    :href="fullResUrl"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-black/8 hover:bg-black/12 dark:bg-white/10 dark:hover:bg-white/15 transition-colors group/file text-[inherit]"
-    :title="t('chat.messages.openFile')"
+    v-bind="
+      interactive
+        ? {
+            href: fullResUrl,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            title: t('chat.messages.openFile'),
+          }
+        : {}
+    "
+    class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-black/8 dark:bg-white/10 transition-colors group/file text-[inherit]"
+    :class="{ 'hover:bg-black/12 dark:hover:bg-white/15': interactive }"
   >
     <div
       class="flex items-center justify-center w-8 h-8 rounded shrink-0 bg-black/10 dark:bg-white/15"
@@ -41,23 +50,32 @@
       {{ fileExtension }}
     </span>
     <UIcon
+      v-if="interactive"
       name="i-heroicons-arrow-top-right-on-square-20-solid"
       class="w-4 h-4 shrink-0 opacity-0 group-hover/file:opacity-100 transition-opacity"
     />
-  </a>
+  </component>
 
-  <a
+  <component
+    :is="interactive ? 'a' : 'div'"
     v-else-if="mode === 'chip'"
-    :href="fullResUrl"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="flex items-center gap-2 px-2.5 h-10 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] hover:bg-[hsl(var(--muted)/0.5)] transition-colors text-sm max-w-[240px] text-[inherit]"
-    :title="t('chat.messages.openFile')"
+    v-bind="
+      interactive
+        ? {
+            href: fullResUrl,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            title: t('chat.messages.openFile'),
+          }
+        : {}
+    "
+    class="flex items-center gap-2 px-2.5 h-10 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] transition-colors text-sm max-w-[240px] text-[inherit]"
+    :class="{ 'hover:bg-[hsl(var(--muted)/0.5)]': interactive }"
   >
     <img
       v-if="isImage && imgSrc"
       :src="imgSrc"
-      :data-source="fullResUrl"
+      :data-source="interactive ? fullResUrl : undefined"
       :alt="sanitizedFileName"
       class="w-7 h-7 object-cover rounded shrink-0"
       loading="lazy"
@@ -69,7 +87,7 @@
       class="w-7 h-7 shrink-0"
     />
     <span class="truncate flex-1 min-w-0">{{ sanitizedFileName }}</span>
-  </a>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -83,10 +101,14 @@ const {
   public: { apiBaseUrl },
 } = useRuntimeConfig()
 
-const props = defineProps<{
-  file: ReceivedFile
-  mode: 'thumbnail' | 'card' | 'chip'
-}>()
+const props = withDefaults(
+  defineProps<{
+    file: ReceivedFile
+    mode: 'thumbnail' | 'card' | 'chip'
+    interactive?: boolean
+  }>(),
+  { interactive: true },
+)
 
 const thumbnailFailed = ref(false)
 

@@ -226,7 +226,7 @@ describe('ReceiveMessage → UI refresh (real stack, MSW at the boundary)', () =
       pquestionType: 0,
       options: [],
     } as unknown as AiQuestionRequestDTO
-    const sendPromise = mutation.mutateAsync(request)
+    const sendPromise = mutation.mutateAsync({ request })
     await vi.waitFor(() =>
       expect(queryClient.getQueryData(chatQueryKeys.session(NEW_SESSION))).toBeTruthy(),
     )

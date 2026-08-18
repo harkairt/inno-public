@@ -14,6 +14,10 @@
           :agent-id="agentId"
           :agent-name="agentName"
           :hide-sender-names="true"
+          :pending-ids="pendingIds"
+          :failed-ids="failedIds"
+          @retry-message="handleRetryMessage"
+          @discard-message="handleDiscardMessage"
         >
           <template #empty />
         </ChatMessages>
@@ -123,7 +127,10 @@ const { data: sessionData } = useChatSession(sessionId.value, {
   enabled: sessionQueryEnabled,
 })
 
-const { messages, typingUsers, thinkingAgents } = useChatMessages(sessionId, sessionData)
+const { messages, typingUsers, thinkingAgents, pendingIds, failedIds } = useChatMessages(
+  sessionId,
+  sessionData,
+)
 
 watch(
   () => messages.value.length > 0,
@@ -137,6 +144,19 @@ const mutation = useSendMessage()
 
 // Disable send button while waiting for AI response
 const canSend = computed(() => !mutation.isPending.value)
+
+function handleRetryMessage(messageId: string) {
+  const entry = chatStore
+    .getFailedEntries(sessionId.value)
+    .find((e) => e.optimisticDisplay.messageID === messageId)
+  if (!entry) return
+  chatStore.removeFailedMessage(sessionId.value, messageId)
+  mutation.mutateAsync({ request: entry.request }).finally(() => scrollToBottom())
+}
+
+function handleDiscardMessage(messageId: string) {
+  chatStore.removeFailedMessage(sessionId.value, messageId)
+}
 
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)

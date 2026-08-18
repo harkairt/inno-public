@@ -17,7 +17,11 @@
             :hide-sender-names="true"
             :active-options-message-id="lastUnansweredOptionsMessageId"
             :skip-entrance-animation="skipEntranceAnimation"
+            :pending-ids="pendingIds"
+            :failed-ids="failedIds"
             @option-submitted="handleOptionSubmitted"
+            @retry-message="handleRetryMessage"
+            @discard-message="handleDiscardMessage"
           >
             <template #empty />
           </ChatMessages>
@@ -138,14 +142,23 @@ const welcomeMessageDate = computed(() => {
   return date.toISOString()
 })
 
-// Combine session messages with any failed messages from store
 const messages = computed(() => {
   const queryMessages = session.value?.messages || []
-  const failedMessages = chatStore.getFailedMessages(sessionId)
-  return [...queryMessages, ...failedMessages]
+  const pending = chatStore.getUnconfirmedPendingMessages(sessionId, queryMessages)
+  const failed = chatStore.getFailedMessages(sessionId)
+  return [...queryMessages, ...pending, ...failed]
 })
 
-// Send mutation for disabling button while pending
+const failedIds = computed(
+  () => new Set(chatStore.getFailedMessages(sessionId).map((m) => m.messageID)),
+)
+const pendingIds = computed(() => {
+  const queryMessages = session.value?.messages || []
+  return new Set(
+    chatStore.getUnconfirmedPendingMessages(sessionId, queryMessages).map((m) => m.messageID),
+  )
+})
+
 const mutation = useSendMessage()
 
 // Disable send button while waiting for AI response
@@ -181,14 +194,26 @@ async function handleOptionSubmitted(answer: string) {
     files: [],
   }
   try {
-    await mutation.mutateAsync(request)
+    await mutation.mutateAsync({ request })
     scrollToBottom()
   } catch (error) {
     console.error('Failed to send option answer:', error)
   }
 }
 
-// Typing indicator users
+function handleRetryMessage(messageId: string) {
+  const entry = chatStore
+    .getFailedEntries(sessionId)
+    .find((e) => e.optimisticDisplay.messageID === messageId)
+  if (!entry) return
+  chatStore.removeFailedMessage(sessionId, messageId)
+  mutation.mutateAsync({ request: entry.request }).finally(() => scrollToBottom())
+}
+
+function handleDiscardMessage(messageId: string) {
+  chatStore.removeFailedMessage(sessionId, messageId)
+}
+
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
 const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId))
 

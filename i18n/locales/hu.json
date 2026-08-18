@@ -116,7 +116,9 @@
       "copyMessage": "Üzenet másolása",
       "openFile": "Fájl megnyitása",
       "viewImage": "Kép megtekintése",
-      "downloadFile": "Fájl letöltése"
+      "downloadFile": "Fájl letöltése",
+      "retry": "Újraküldés",
+      "discard": "Elvetés"
     },
     "focus": {
       "toggleSidebar": "Kiemelt üzenetek megjelenítése",

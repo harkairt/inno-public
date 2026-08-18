@@ -35,24 +35,6 @@
           "
         />
 
-        <UAlert
-          v-if="mutation.isError.value && mutation.error.value"
-          color="error"
-          variant="soft"
-          :title="errorMessage"
-          class="mb-2"
-        >
-          <template #actions>
-            <UButton
-              size="xs"
-              variant="outline"
-              @click="retryFailedMessage"
-            >
-              {{ t('chat.messageInput.retry') }}
-            </UButton>
-          </template>
-        </UAlert>
-
         <div class="flex items-end gap-2">
           <input
             v-if="!props.disableFileUpload"
@@ -217,7 +199,6 @@ const { sendTypingIndicator, sendStoppedTypingIndicator } = useSignalRChat()
 
 // Message state
 const messageText = ref('')
-const lastFailedMessage = ref<string>('')
 
 // Restore draft from store on mount
 onMounted(() => {
@@ -411,13 +392,6 @@ const canSend = computed(() => {
   return true
 })
 
-// Computed: Error message
-const errorMessage = computed(() => {
-  if (!mutation.error.value) return t('chat.messageInput.failedToSend')
-  const error = mutation.error.value
-  return error instanceof Error ? error.message : t('chat.messageInput.anErrorOccurred')
-})
-
 async function handleSubmit() {
   if (props.disabled || !canSend.value) return
 
@@ -430,11 +404,15 @@ async function handleSubmit() {
   }
 
   const trimmedMessage = messageText.value.trim()
-  lastFailedMessage.value = trimmedMessage
+  const attachmentSnapshot = [...fileUpload.stagedAttachments.value]
+
   messageText.value = ''
+  fileUpload.clearAttachments()
 
   const targetAgentId = props.selectedAgentId ?? props.agentId
-  const files = fileUpload.readyFileIds.value
+  const files = attachmentSnapshot
+    .filter((a) => a.status === 'ready' && a.serverFileId)
+    .map((a) => a.serverFileId!)
   const request: AiQuestionRequestDTO = {
     userCode: authStore.user?.email ?? '',
     sessionId: props.sessionId,
@@ -450,22 +428,12 @@ async function handleSubmit() {
   emit('scrollToBottom')
 
   try {
-    await mutation.mutateAsync(request)
+    await mutation.mutateAsync({ request, attachments: attachmentSnapshot })
 
     chatStore.clearDraft(effectiveDraftKey.value)
-    fileUpload.clearAttachments()
-    lastFailedMessage.value = ''
     emit('messageSent')
   } catch {
-    // Error handled by mutation error state; attachments preserved for retry
-  }
-}
-
-// Retry failed message
-function retryFailedMessage() {
-  if (lastFailedMessage.value) {
-    messageText.value = lastFailedMessage.value
-    void handleSubmit()
+    // Failed message is stored in chat store by rollbackSend; retry via thread bubble
   }
 }
 

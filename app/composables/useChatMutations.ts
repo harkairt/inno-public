@@ -19,6 +19,7 @@ import type {
   StartPublicChatrequestDTO,
   AIPublicChatStartDTO,
 } from '@/types/api/schemas'
+import type { StagedAttachment } from '@/types/fileAttachment'
 import type { MutationSuccess } from '@/types/api/base'
 import type { AppError } from '@/lib/errors/types'
 
@@ -35,6 +36,11 @@ function notifyMembersViaSignalR(
   }
 }
 
+export type SendMessageVariables = {
+  request: AiQuestionRequestDTO
+  attachments?: StagedAttachment[]
+}
+
 export function useSendMessage() {
   const queryClient = useQueryClient()
   const chatStore = useChatStore()
@@ -42,20 +48,20 @@ export function useSendMessage() {
   const deps = { queryClient, chatStore, authStore }
 
   return useMutation({
-    mutationFn: async (request: AiQuestionRequestDTO): Promise<AISessionMessageDTO> => {
-      const result = await chatService.sendQuestion(request)
+    mutationFn: async (vars: SendMessageVariables): Promise<AISessionMessageDTO> => {
+      const result = await chatService.sendQuestion(vars.request)
       if (result.isErr()) throw result.error
       return result.value
     },
 
-    onMutate: (request) => applyOptimisticSend(request, deps),
+    onMutate: (vars) => applyOptimisticSend(vars.request, deps, vars.attachments),
 
-    onSuccess: async (serverMessage, request, context) => {
-      await confirmSend({ ...deps, serverMessage, request, context })
-      notifyMembersViaSignalR(request, authStore)
+    onSuccess: async (serverMessage, vars, context) => {
+      await confirmSend({ ...deps, serverMessage, request: vars.request, context })
+      notifyMembersViaSignalR(vars.request, authStore)
     },
 
-    onError: (_error, request, context) => rollbackSend(request, context, deps),
+    onError: (_error, vars, context) => rollbackSend(vars.request, context, deps),
   })
 }
 

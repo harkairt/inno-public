@@ -8,7 +8,13 @@ export function sanitizeFileUrl(url: string, apiBaseUrl = ''): string {
 
   try {
     const parsed = new URL(url)
-    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return url
+    if (
+      parsed.protocol === 'blob:' ||
+      parsed.protocol === 'http:' ||
+      parsed.protocol === 'https:'
+    ) {
+      return url
+    }
   } catch {
     /* invalid URL */
   }
