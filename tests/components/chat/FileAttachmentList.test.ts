@@ -58,35 +58,6 @@ describe('FileAttachmentList', () => {
     expect(spinner).toBeTruthy()
   })
 
-  it('shows check icon for ready state', () => {
-    const attachment = makeAttachment({
-      status: 'ready',
-      progress: 100,
-      serverFileId: 'abc',
-    })
-
-    const { container } = renderWithProviders(FileAttachmentList, {
-      props: { attachments: [attachment] },
-    })
-
-    const checkIcon = container.querySelector('.text-emerald-500')
-    expect(checkIcon).toBeTruthy()
-  })
-
-  it('shows error icon and retry button for failed state', () => {
-    const attachment = makeAttachment({ status: 'failed' })
-
-    const { container } = renderWithProviders(FileAttachmentList, {
-      props: { attachments: [attachment] },
-    })
-
-    const errorIcon = container.querySelector('.text-rose-500')
-    expect(errorIcon).toBeTruthy()
-
-    const retryBtn = container.querySelector('[data-testid="retry-upload-button"]')
-    expect(retryBtn).toBeTruthy()
-  })
-
   it('emits remove when remove button is clicked', async () => {
     const attachment = makeAttachment({ id: 'att-123' })
 
@@ -100,20 +71,6 @@ describe('FileAttachmentList', () => {
 
     expect(emitted().remove).toBeTruthy()
     expect(emitted().remove[0]).toEqual(['att-123'])
-  })
-
-  it('emits retry when retry button is clicked', async () => {
-    const attachment = makeAttachment({ id: 'att-fail', status: 'failed' })
-
-    const { container, emitted } = renderWithProviders(FileAttachmentList, {
-      props: { attachments: [attachment] },
-    })
-
-    const retryBtn = container.querySelector('[data-testid="retry-upload-button"]')
-    await retryBtn!.dispatchEvent(new Event('click', { bubbles: true }))
-
-    expect(emitted().retry).toBeTruthy()
-    expect(emitted().retry[0]).toEqual(['att-fail'])
   })
 
   it('shows image thumbnail preview for image attachments', () => {

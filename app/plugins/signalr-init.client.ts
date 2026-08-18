@@ -1,4 +1,5 @@
 import type { QueryClient } from '@tanstack/vue-query'
+import type { GetUnreadMessagesDTO } from '@/types/api/schemas'
 import { chatQueryKeys } from '@/app/composables/useChatQueries'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -31,6 +32,9 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
       if (import.meta.dev) logger.debug('New message notification:', { sessionId, agentId })
 
+      const chatStore = useChatStore()
+      const isViewingSession = chatStore.activeSessionId === sessionId
+
       void queryClient.invalidateQueries({
         queryKey: chatQueryKeys.session(sessionId),
       })
@@ -43,6 +47,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         queryKey: chatQueryKeys.sessions(),
         exact: true,
       })
+
+      if (isViewingSession) {
+        queryClient.setQueryData<GetUnreadMessagesDTO[]>(chatQueryKeys.unread(), (old) =>
+          old?.map((entry) =>
+            entry.sessionId === sessionId ? { ...entry, unreadMessageCount: 0 } : entry,
+          ),
+        )
+      }
     })
 
     listenersRegistered = true

@@ -59,7 +59,7 @@
   --config-message-border-width: 1px;
   --config-message-border-color: hsl(47 16% 89%);       /* #E7E5DE line */
   --config-message-border-style: solid;
-  --config-message-border-radius: 1.125rem;             /* 18px — Elemtár buborék */
+  --config-message-border-radius: 0.75rem;             
 
   --config-main-color: hsl(180 74% 21%);                /* #0E5C5C brand */
   --config-background-color: hsl(48 22% 95%);           /* #F6F5F1 bg */

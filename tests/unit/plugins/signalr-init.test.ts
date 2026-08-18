@@ -12,14 +12,14 @@ import { createTestQueryClient } from '@/tests/utils/render'
 import { useFakeTimersSafe, advance, useRealTimers } from '@/tests/utils/timers'
 import { chatQueryKeys } from '@/app/composables/useChatQueries'
 import { useAuthStore } from '@/app/stores/auth'
+import { useChatStore } from '@/app/stores/chat'
 import { useSignalR } from '@/app/composables/useSignalR'
 import signalrInitPlugin from '@/app/plugins/signalr-init.client'
 
-// The plugin relies on Nuxt auto-imports (useAuthStore, useSignalR). Expose them
-// as globals so the un-imported references in the plugin resolve at runtime.
 beforeEach(() => {
   vi.stubGlobal('useAuthStore', useAuthStore)
   vi.stubGlobal('useSignalR', useSignalR)
+  vi.stubGlobal('useChatStore', useChatStore)
 })
 
 afterEach(() => {
@@ -208,5 +208,57 @@ describe('signalr-init plugin', () => {
       (call) => JSON.stringify((call[0] as { queryKey: unknown }).queryKey) === sessionKey,
     )
     expect(sessionInvalidations).toHaveLength(1)
+  })
+
+  it('zeroes unread cache when the user is viewing the session that received a message', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token' })
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+
+    queryClient.setQueryData(chatQueryKeys.unread(), [
+      { sessionId: 'sess-1', unreadMessageCount: 3 },
+      { sessionId: 'sess-2', unreadMessageCount: 1 },
+    ])
+
+    const chatStore = useChatStore()
+    chatStore.setActiveSession('sess-1')
+
+    await runPlugin(queryClient)
+    await advance(500)
+
+    fake.emitFromServer('ReceiveMessage', 'sess-1', 5)
+
+    const unread = queryClient.getQueryData<{ sessionId: string; unreadMessageCount: number }[]>(
+      chatQueryKeys.unread(),
+    )
+    expect(unread).toEqual([
+      { sessionId: 'sess-1', unreadMessageCount: 0 },
+      { sessionId: 'sess-2', unreadMessageCount: 1 },
+    ])
+  })
+
+  it('does not zero unread cache when the user is viewing a different session', async () => {
+    seedAuthStorage({ accessToken: 'seeded-access-token' })
+    const fake = installFakeSignalR()
+    useFakeTimersSafe()
+    const queryClient = createTestQueryClient()
+
+    queryClient.setQueryData(chatQueryKeys.unread(), [
+      { sessionId: 'sess-1', unreadMessageCount: 3 },
+    ])
+
+    const chatStore = useChatStore()
+    chatStore.setActiveSession('sess-other')
+
+    await runPlugin(queryClient)
+    await advance(500)
+
+    fake.emitFromServer('ReceiveMessage', 'sess-1', 5)
+
+    const unread = queryClient.getQueryData<{ sessionId: string; unreadMessageCount: number }[]>(
+      chatQueryKeys.unread(),
+    )
+    expect(unread).toEqual([{ sessionId: 'sess-1', unreadMessageCount: 3 }])
   })
 })

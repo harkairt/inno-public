@@ -32,7 +32,8 @@
     "conversations": "Beszélgetések",
     "users": "Felhasználók",
     "profile": "Profil",
-    "mainNavigation": "Fő navigáció"
+    "mainNavigation": "Fő navigáció",
+    "newConversation": "Új beszélgetés"
   },
   "profile": {
     "language": "Nyelv",
@@ -56,6 +57,7 @@
     "unavailable": "Nem elérhető",
     "addFavorite": "Hozzáadás a kedvencekhez",
     "removeFavorite": "Eltávolítás a kedvencekből",
+    "favorite": "Kedvenc",
     "openConversation": "Beszélgetés megnyitása",
     "noUsers": "Nem található megjeleníthető partner.",
     "noSearchResults": "Nincs a keresésnek megfelelő partner.",

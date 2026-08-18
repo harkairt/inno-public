@@ -101,7 +101,6 @@
         <!-- Focus sidebar toggle (desktop only) -->
         <UButton
           v-if="!isMobile && session"
-          :icon="focusSidebarOpen ? 'i-heroicons-bookmark-solid' : 'i-heroicons-bookmark'"
           variant="ghost"
           color="neutral"
           square
@@ -109,7 +108,26 @@
           :aria-label="t('chat.focus.toggleSidebar')"
           data-testid="focus-sidebar-toggle"
           @click="focusSidebarOpen = !focusSidebarOpen"
-        />
+        >
+          <div class="relative flex items-center justify-center">
+            <UIcon
+              :name="focusSidebarOpen ? 'i-heroicons-bookmark-solid' : 'i-heroicons-bookmark'"
+              class="size-6"
+            />
+            <span
+              v-if="focusedIds.length > 0"
+              class="absolute text-[9px] font-bold leading-none"
+              :class="
+                focusSidebarOpen
+                  ? 'text-[hsl(var(--background))]'
+                  : 'text-[hsl(var(--muted-foreground))]'
+              "
+              style="padding-bottom: 2px"
+            >
+              {{ focusedIds.length }}
+            </span>
+          </div>
+        </UButton>
 
         <!-- Session Members Avatar Stack (hidden for primary sessions) -->
         <SessionMembers
@@ -312,7 +330,7 @@
           :messages="messages"
           :focused-ids="focusedIds"
           @toggle-focus="toggleFocus"
-          @clear-all="clearAll"
+          @clear-all="(clearAll(), (focusSidebarOpen = false))"
         />
       </div>
 
@@ -420,8 +438,16 @@ const sessionId = route.params.sessionId as string
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 
-const { focusedIds, toggleFocus, clearAll } = useMessageFocus(sessionId)
+const { focusedIds, toggleFocus: rawToggleFocus, clearAll } = useMessageFocus(sessionId)
 const focusSidebarOpen = ref(false)
+
+function toggleFocus(messageId: string): void {
+  const wasEmpty = focusedIds.value.length === 0
+  rawToggleFocus(messageId)
+  if (wasEmpty && focusedIds.value.length > 0 && !focusSidebarOpen.value) {
+    focusSidebarOpen.value = true
+  }
+}
 
 // Consume one-shot flag: skip entrance animation when arriving from /chats/new/*
 chatStore.setActiveSession(sessionId)
@@ -478,25 +504,21 @@ const {
 // Fetch all sessions for primary session detection
 const { data: allSessions } = useChatSessions()
 
-// Mark messages as read mutation
 const { mutate: markMessagesRead } = useMarkMessagesRead()
 
-// Track whether we've already marked messages as read for this session
-// This prevents the cascade loop when session cache updates trigger the watcher
-const hasMarkedAsRead = ref(false)
+const lastSeenMessageCount = ref(0)
 
-// Watch for session data and trigger mark as read ONCE per navigation
 watch(
-  () => session.value,
-  (newSession) => {
-    if (newSession && !hasMarkedAsRead.value && authStore.user?.email) {
-      hasMarkedAsRead.value = true
+  () => session.value?.messages?.length ?? 0,
+  (count) => {
+    if (count > lastSeenMessageCount.value && session.value && authStore.user?.email) {
       markMessagesRead({
         sessionId,
-        agentId: newSession.agentId,
+        agentId: session.value.agentId,
         userCode: authStore.user.email,
       })
     }
+    lastSeenMessageCount.value = count
   },
   { immediate: true },
 )

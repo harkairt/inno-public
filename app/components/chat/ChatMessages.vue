@@ -44,70 +44,46 @@
           <div
             class="flex flex-col w-full"
             :class="isUserMessage(message) ? 'items-end' : 'items-start'"
+            @click="handleBubbleTap(message.messageID)"
           >
-            <div
-              class="message-bubble px-3.5 py-1"
-              :class="[
-                hasWideContent(message) ? 'max-w-full' : 'max-w-[95%] md:max-w-[85%]',
-                {
-                  'rounded-br-md': isUserMessage(message),
-                  'rounded-bl-md': !isUserMessage(message),
-                },
-              ]"
-              :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
-              @click="handleBubbleTap(message.messageID)"
+            <MessageBubble
+              :message="message"
+              :options-active="message.messageID === props.activeOptionsMessageId"
+              :selected-answer="getSelectedAnswer(group.messages, messageIndex)"
+              max-width-class="max-w-[95%] md:max-w-[85%]"
+              @option-submitted="(answer) => emit('optionSubmitted', answer)"
             >
-              <div
-                v-if="showSenderName(message)"
-                class="flex items-start justify-between gap-2"
-              >
+              <template #header>
                 <div
-                  class="text-xs font-medium mb-1.5"
-                  :class="{
-                    'opacity-80': isUserMessage(message),
-                    'text-[hsl(var(--muted-foreground))]': !isUserMessage(message),
-                  }"
+                  v-if="showSenderName(message)"
+                  class="flex items-start justify-between gap-2"
                 >
-                  {{ message.senderName }}
-                </div>
+                  <div
+                    class="text-xs font-medium mb-1.5"
+                    :class="{
+                      'opacity-80': isUserMessage(message),
+                      'text-[hsl(var(--muted-foreground))]': !isUserMessage(message),
+                    }"
+                  >
+                    {{ message.senderName }}
+                  </div>
 
-                <div
-                  v-if="false && !isUserMessage(message) && message.messageID !== 'welcome'"
-                  class="transition-opacity duration-200 -mt-1 -mr-1"
-                  :class="message.isRated ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
-                >
-                  <MessageRating
-                    :message-id="message.messageID"
-                    :session-id="message.sessionId"
-                    :agent-id="props.agentId ?? 0"
-                    :is-rated="message.isRated"
-                    :rating="message.rating ?? null"
-                  />
+                  <div
+                    v-if="false && !isUserMessage(message) && message.messageID !== 'welcome'"
+                    class="transition-opacity duration-200 -mt-1 -mr-1"
+                    :class="message.isRated ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
+                  >
+                    <MessageRating
+                      :message-id="message.messageID"
+                      :session-id="message.sessionId"
+                      :agent-id="props.agentId ?? 0"
+                      :is-rated="message.isRated"
+                      :rating="message.rating ?? null"
+                    />
+                  </div>
                 </div>
-              </div>
-
-              <template v-if="message.messageType === AIAnswerType.Options">
-                <MarkdownContent
-                  v-if="!parseOptionsPayload(message.messageText)"
-                  :content="message.messageText"
-                />
-                <OptionsMessage
-                  v-else
-                  :payload="parseOptionsPayload(message.messageText)!"
-                  :is-active="message.messageID === props.activeOptionsMessageId"
-                  :selected-answer="getSelectedAnswer(group.messages, messageIndex)"
-                  @submit="(answer) => emit('optionSubmitted', answer)"
-                />
               </template>
-              <FileMessage
-                v-else-if="message.messageType === AIAnswerType.File"
-                :message-text="message.messageText"
-              />
-              <MarkdownContent
-                v-else
-                :content="message.messageText"
-              />
-            </div>
+            </MessageBubble>
 
             <div class="h-5 flex items-center pl-2">
               <div
@@ -191,25 +167,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
-import { parseOptionsPayload } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
-import { AIAnswerType } from '@/types/enums'
 import { useMessagePresentation } from '@/app/composables/useMessagePresentation'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
-import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
-import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
-import FileMessage from '@/app/components/chat/FileMessage.vue'
+import MessageBubble from '@/app/components/chat/MessageBubble.vue'
 
 const { t, locale } = useI18n()
 const { isMobile } = useNavigationVisibility()
-const {
-  ownMessageStyle,
-  partnerMessageStyle,
-  isUserMessage,
-  formatActionBarDate,
-  handleCopy,
-  copiedMessageId,
-} = useMessagePresentation()
+const { isUserMessage, formatActionBarDate, handleCopy, copiedMessageId } = useMessagePresentation()
 
 interface Props {
   messages?: AISessionMessageDTO[]
@@ -244,23 +209,6 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore()
 const tappedMessageId = ref<string | null>(null)
-
-const WIDE_CONTENT_MARKERS = [
-  '```echarts',
-  '```chart.js',
-  '```bar-race',
-  '```rows',
-  '```h-rows',
-  '```pivot',
-]
-
-const MD_TABLE_RE = /^\|.+\|/m
-
-const hasWideContent = (message: AISessionMessageDTO): boolean => {
-  const text = message.messageText
-  if (!text) return false
-  return WIDE_CONTENT_MARKERS.some((marker) => text.includes(marker)) || MD_TABLE_RE.test(text)
-}
 
 function handleBubbleTap(messageId: string) {
   if (!isMobile.value) return

@@ -6,17 +6,45 @@
       :class="{ 'sidebar-item-active': isActive }"
       :data-testid="`session-item-${session.sessionId}`"
     >
-      <UserAvatar
-        :image="primaryMember?.image"
-        :dark-image="primaryMember?.darkImage"
-        :alt="primaryMemberName"
-        :round="primaryMember?.isVirtual ?? true"
-        size="md"
-        :style="!hasAvatar(primaryMember?.image) ? avatarStyle : undefined"
-        class="flex-shrink-0"
-      >
-        {{ initials }}
-      </UserAvatar>
+      <div class="relative flex-shrink-0">
+        <UserAvatar
+          :image="primaryMember?.image"
+          :dark-image="primaryMember?.darkImage"
+          :alt="primaryMemberName"
+          :round="isVirtual"
+          size="md"
+          :style="!hasAvatar(primaryMember?.image) ? avatarStyle : undefined"
+        >
+          {{ initials }}
+        </UserAvatar>
+        <span
+          v-if="primaryMember && isFavoriteMember"
+          class="absolute -right-0.5 -top-0.5 grid size-3.5 place-items-center rounded-full border-2 border-[hsl(var(--background))] bg-[hsl(var(--amber))]"
+          role="img"
+          :aria-label="t('users.favorite')"
+        >
+          <UIcon
+            name="i-heroicons-star-solid"
+            class="size-[7px] text-white"
+            aria-hidden="true"
+          />
+        </span>
+        <span
+          v-if="primaryMember && isVirtual"
+          class="absolute -right-0.5 -bottom-0.5 grid size-3.5 place-items-center rounded-full border-2 border-[hsl(var(--background))] bg-[hsl(var(--success))]"
+          role="img"
+          :aria-label="t('users.aiAgent')"
+        >
+          <SparkleIcon class="size-[7px] text-white" />
+        </span>
+        <span
+          v-else-if="primaryMember"
+          class="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 border-[hsl(var(--background))]"
+          :class="primaryMember.isAvailable ? 'bg-[hsl(var(--success))]' : 'bg-[hsl(var(--ink-3))]'"
+          role="img"
+          :aria-label="primaryMember.isAvailable ? t('users.available') : t('users.unavailable')"
+        />
+      </div>
 
       <div class="flex-1 min-w-0">
         <div class="relative">
@@ -69,6 +97,8 @@ import { getSessionActivityDate } from '@/app/utils/session'
 import { useRelativeDate } from '~/composables/useRelativeDate'
 import UserAvatar from '~/components/UserAvatar.vue'
 import SessionItemMenu from '~/components/chat/SessionItemMenu.vue'
+import SparkleIcon from '~/components/icons/SparkleIcon.vue'
+import { useUserFavorites } from '~/composables/useUserFavorites'
 
 const props = defineProps<{
   session: AISessionHeaderDTO
@@ -82,9 +112,26 @@ const props = defineProps<{
   isMobile: boolean
 }>()
 
+const { t } = useI18n()
 const { formatSessionDate } = useRelativeDate()
+const { isFavorite } = useUserFavorites()
 
-const primaryMember = computed(() => props.users.find((u) => u.email === props.otherMembers[0]))
+const primaryMemberEmail0 = computed(() => props.otherMembers[0])
+
+const primaryMember = computed(() => props.users.find((u) => u.email === primaryMemberEmail0.value))
+
+const primaryMemberDetail = computed(() =>
+  props.session.memberDetails?.find((m) => m.email === primaryMemberEmail0.value),
+)
+
+const isVirtual = computed(
+  () => primaryMemberDetail.value?.isVirtual ?? primaryMember.value?.isVirtual ?? false,
+)
+
+const isFavoriteMember = computed(() => {
+  const id = primaryMember.value?.id
+  return id !== undefined && isFavorite(id)
+})
 
 const primaryMemberName = computed(() => primaryMember.value?.name ?? props.otherMembers[0] ?? '')
 

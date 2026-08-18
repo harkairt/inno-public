@@ -37,4 +37,28 @@ describe('sanitizeFileUrl', () => {
   it('returns empty string for garbage input', () => {
     expect(sanitizeFileUrl('not a url at all')).toBe('')
   })
+
+  describe('with apiBaseUrl', () => {
+    it('prepends apiBaseUrl to root-relative paths', () => {
+      expect(sanitizeFileUrl('/api/storage/file.png', 'http://172.22.4.22:8082')).toBe(
+        'http://172.22.4.22:8082/api/storage/file.png',
+      )
+    })
+
+    it('strips trailing slash from apiBaseUrl', () => {
+      expect(sanitizeFileUrl('/api/storage/file.png', 'http://example.com/')).toBe(
+        'http://example.com/api/storage/file.png',
+      )
+    })
+
+    it('does not modify absolute URLs even when apiBaseUrl is provided', () => {
+      expect(sanitizeFileUrl('https://cdn.example.com/file.png', 'http://api.example.com')).toBe(
+        'https://cdn.example.com/file.png',
+      )
+    })
+
+    it('leaves root-relative path unchanged when apiBaseUrl is empty', () => {
+      expect(sanitizeFileUrl('/api/storage/file.png', '')).toBe('/api/storage/file.png')
+    })
+  })
 })

@@ -7,19 +7,19 @@
     <div
       v-for="attachment in attachments"
       :key="attachment.id"
-      class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] text-sm max-w-[240px]"
+      class="group/attach relative flex items-center gap-2 px-2.5 h-10 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] text-sm max-w-[240px]"
       :data-testid="`attachment-${attachment.id}`"
     >
       <img
         v-if="isImage(attachment) && previewUrls.get(attachment.id)"
         :src="previewUrls.get(attachment.id)"
         :alt="attachment.fileName"
-        class="w-8 h-8 object-cover rounded shrink-0"
+        class="w-7 h-7 object-cover rounded shrink-0"
       />
       <UIcon
         v-else
-        name="i-heroicons-paper-clip-20-solid"
-        class="w-4 h-4 text-[hsl(var(--muted-foreground))] shrink-0"
+        :name="fileTypeIcon(attachment)"
+        class="w-7 h-7 shrink-0"
       />
 
       <span class="truncate flex-1 min-w-0">{{ attachment.fileName }}</span>
@@ -34,34 +34,9 @@
         />
       </div>
 
-      <UIcon
-        v-else-if="attachment.status === 'ready'"
-        name="i-heroicons-check-circle-20-solid"
-        class="w-4 h-4 text-emerald-500 shrink-0"
-      />
-
-      <template v-else-if="attachment.status === 'failed'">
-        <UIcon
-          name="i-heroicons-exclamation-circle-20-solid"
-          class="w-4 h-4 text-rose-500 shrink-0"
-        />
-        <button
-          type="button"
-          class="shrink-0 text-rose-500 hover:text-rose-600"
-          :aria-label="t('chat.messageInput.retryUpload')"
-          data-testid="retry-upload-button"
-          @click="emit('retry', attachment.id)"
-        >
-          <UIcon
-            name="i-heroicons-arrow-path-20-solid"
-            class="w-3.5 h-3.5"
-          />
-        </button>
-      </template>
-
       <button
         type="button"
-        class="shrink-0 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+        class="absolute -top-2 -right-2 flex items-center justify-center w-5 h-5 opacity-0 group-hover/attach:opacity-100 transition-opacity rounded-full bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
         :aria-label="t('chat.messageInput.removeAttachment')"
         data-testid="remove-attachment-button"
         @click="emit('remove', attachment.id)"
@@ -78,6 +53,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, watch } from 'vue'
 import type { StagedAttachment } from '@/types/fileAttachment'
+import { fileTypeIcon } from '@/app/utils/fileIcon'
 
 const { t } = useI18n()
 
