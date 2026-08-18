@@ -115,7 +115,7 @@ describe('useSendMessage — empty-response filtering (isEmptyResponse)', () => 
     const queryClient = testQueryClient()
     const mutation = mountWith(queryClient, useSendMessage)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
     const messages = session?.messages ?? []
@@ -137,7 +137,7 @@ describe('useSendMessage — empty-response filtering (isEmptyResponse)', () => 
     const queryClient = testQueryClient()
     const mutation = mountWith(queryClient, useSendMessage)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
     expect(session?.messages ?? []).toHaveLength(1)
@@ -166,7 +166,7 @@ describe('useSendMessage — virtual-agent typing indicator', () => {
     const mutation = mountWith(queryClient, useSendMessage)
     const chatStore = useChatStore()
 
-    const inFlight = mutation.mutateAsync(sendRequest())
+    const inFlight = mutation.mutateAsync({ request: sendRequest() })
     await vi.waitFor(() => expect(chatStore.getThinkingAgents('session-1')).toContain('Bot'))
 
     gate.resolve()
@@ -187,7 +187,7 @@ describe('useSendMessage — virtual-agent typing indicator', () => {
     const mutation = mountWith(queryClient, useSendMessage)
     const chatStore = useChatStore()
 
-    await expect(mutation.mutateAsync(sendRequest())).rejects.toBeDefined()
+    await expect(mutation.mutateAsync({ request: sendRequest() })).rejects.toBeDefined()
 
     expect(chatStore.getThinkingAgents('session-1')).toEqual([])
   })
@@ -212,7 +212,7 @@ describe('useSendMessage — virtual-agent typing indicator', () => {
     const mutation = mountWith(queryClient, useSendMessage)
     const chatStore = useChatStore()
 
-    const inFlight = mutation.mutateAsync(sendRequest())
+    const inFlight = mutation.mutateAsync({ request: sendRequest() })
     await vi.waitFor(() => expect(chatStore.getThinkingAgents('session-1')).toContain('PubBot'))
 
     gate.resolve()
@@ -232,7 +232,7 @@ describe('useSendMessage — failed-message identity on rollback', () => {
     const mutation = mountWith(queryClient, useSendMessage)
     const chatStore = useChatStore()
 
-    await expect(mutation.mutateAsync(sendRequest())).rejects.toBeDefined()
+    await expect(mutation.mutateAsync({ request: sendRequest() })).rejects.toBeDefined()
 
     const failed = chatStore.getFailedMessages('session-1')
     expect(failed).toHaveLength(1)
@@ -252,7 +252,7 @@ describe('useSendMessage — failed-message identity on rollback', () => {
     const mutation = mountWith(queryClient, useSendMessage)
     const chatStore = useChatStore()
 
-    await expect(mutation.mutateAsync(sendRequest())).rejects.toBeDefined()
+    await expect(mutation.mutateAsync({ request: sendRequest() })).rejects.toBeDefined()
 
     const failed = chatStore.getFailedMessages('session-1')
     expect(failed).toHaveLength(1)
@@ -279,7 +279,7 @@ describe('useSendMessage — synthetic session fields on a new session', () => {
     const queryClient = testQueryClient()
     const mutation = mountWith(queryClient, useSendMessage)
 
-    const inFlight = mutation.mutateAsync(sendRequest())
+    const inFlight = mutation.mutateAsync({ request: sendRequest() })
     await vi.waitFor(() =>
       expect(queryClient.getQueryData(chatQueryKeys.session('session-1'))).toBeDefined(),
     )
@@ -311,7 +311,7 @@ describe('useSendMessage — new-session dedupe on merge', () => {
     const queryClient = testQueryClient()
     const mutation = mountWith(queryClient, useSendMessage)
 
-    const inFlight = mutation.mutateAsync(sendRequest())
+    const inFlight = mutation.mutateAsync({ request: sendRequest() })
     await vi.waitFor(() =>
       expect(queryClient.getQueryData(chatQueryKeys.session('session-1'))).toBeDefined(),
     )
@@ -353,7 +353,7 @@ describe('useSendMessage — pending baseline count', () => {
     const mutation = mountWith(queryClient, useSendMessage)
     const chatStore = useChatStore()
 
-    const inFlight = mutation.mutateAsync(sendRequest())
+    const inFlight = mutation.mutateAsync({ request: sendRequest() })
     // Wait until onMutate has parked the pending message.
     await vi.waitFor(() => expect(chatStore.getPendingMessages('session-1')).toHaveLength(1))
 
@@ -386,7 +386,7 @@ describe('useSendMessage — sidebar header insert', () => {
     queryClient.setQueryData(chatQueryKeys.sessions(), [other])
     const mutation = mountWith(queryClient, useSendMessage)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
     const headers = queryClient.getQueryData<AISessionHeaderDTO[]>(chatQueryKeys.sessions()) ?? []
     const ids = headers.map((h) => h.sessionId)
@@ -467,7 +467,18 @@ describe('useDeleteSession', () => {
     const mutation = mountWith(queryClient, useDeleteSession)
     const chatStore = useChatStore()
     chatStore.addFailedMessage('session-1', {
-      ...makeMessage({ messageID: 'f1' }),
+      optimisticDisplay: makeMessage({ messageID: 'f1' }),
+      request: {
+        userCode: 'user',
+        sessionId: 'session-1',
+        agentId: 1,
+        members: [],
+        question: '',
+        group: '',
+        pquestionType: 0,
+        options: [],
+        files: [],
+      },
       status: 3 as never,
     })
 

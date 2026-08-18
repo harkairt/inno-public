@@ -83,7 +83,9 @@ class ChatService {
     }
   }
 
-  sendQuestion(request: AiQuestionRequestDTO): Promise<Result<AISessionMessageDTO, AppError>> {
+  async sendQuestion(
+    request: AiQuestionRequestDTO,
+  ): Promise<Result<AISessionMessageDTO, AppError>> {
     return safePost({
       url: '/api/AIWebAPI/question/text',
       body: request,

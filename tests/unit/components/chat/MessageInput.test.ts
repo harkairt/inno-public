@@ -169,8 +169,10 @@ describe('MessageInput — submit behavior', () => {
 
     expect(mockMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
-        question: 'Test message',
-        sessionId: 'session-1',
+        request: expect.objectContaining({
+          question: 'Test message',
+          sessionId: 'session-1',
+        }),
       }),
     )
   })

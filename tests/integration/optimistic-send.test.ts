@@ -74,7 +74,7 @@ function testQueryClient() {
 }
 
 describe('useSendMessage — optimistic send integration', () => {
-  it('invalidates the session query and clears the optimistic message on success', async () => {
+  it('adds the text response to an existing session before invalidating it', async () => {
     seedAuthStorage({ user: makeUser({ email: ME }) })
     const fake = installFakeSignalR()
     fake.setState('connected')
@@ -88,11 +88,12 @@ describe('useSendMessage — optimistic send integration', () => {
     queryClient.setQueryData(chatQueryKeys.session('session-1'), existingSession())
     const mutation = mountSend(queryClient)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
-    // Existing-session success reconciles by invalidating the session query — the
-    // ensuing GetSessionById refetch is authoritative — rather than clobbering the
-    // cache with the lone server message.
+    const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
+    expect(session?.messages).toContainEqual(
+      expect.objectContaining({ messageID: 'server-msg', messageText: 'AI reply' }),
+    )
     expect(queryClient.getQueryState(chatQueryKeys.session('session-1'))?.isInvalidated).toBe(true)
 
     // The optimistic message lives in the pending-message store and is cleared once
@@ -116,7 +117,7 @@ describe('useSendMessage — optimistic send integration', () => {
     queryClient.setQueryData(chatQueryKeys.session('session-1'), existingSession())
     const mutation = mountSend(queryClient)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
     // The old code skipped cache work on an empty reply; the new code still
     // invalidates and clears the pending bubble so it can't linger forever.
@@ -139,7 +140,7 @@ describe('useSendMessage — optimistic send integration', () => {
     const queryClient = testQueryClient()
     const mutation = mountSend(queryClient)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
     const chatStore = useChatStore()
     // Pending optimistic message removed on success...
@@ -162,7 +163,7 @@ describe('useSendMessage — optimistic send integration', () => {
     queryClient.setQueryData(chatQueryKeys.session('session-1'), existingSession())
     const mutation = mountSend(queryClient)
 
-    await mutation.mutateAsync(sendRequest())
+    await mutation.mutateAsync({ request: sendRequest() })
 
     expect(fake.invocations).toContainEqual({
       method: 'SendMessageToUser',
@@ -179,7 +180,7 @@ describe('useSendMessage — optimistic send integration', () => {
     queryClient.setQueryData(chatQueryKeys.session('session-1'), existingSession())
     const mutation = mountSend(queryClient)
 
-    await expect(mutation.mutateAsync(sendRequest())).rejects.toBeDefined()
+    await expect(mutation.mutateAsync({ request: sendRequest() })).rejects.toBeDefined()
 
     // Optimistic temp message removed from the cache (rollback).
     const session = queryClient.getQueryData<AISessionDTO>(chatQueryKeys.session('session-1'))
@@ -190,7 +191,11 @@ describe('useSendMessage — optimistic send integration', () => {
     const failed = chatStore.getFailedMessages('session-1')
     expect(failed).toHaveLength(1)
     expect(failed[0]?.messageText).toBe('hello there')
-    expect(failed[0]?.status).toBe(MessageStatus.FAILED)
     expect(failed[0]?.messageID).toMatch(/^temp-/)
+
+    const entries = chatStore.getFailedEntries('session-1')
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.status).toBe(MessageStatus.FAILED)
+    expect(entries[0]?.request.question).toBe('hello there')
   })
 })

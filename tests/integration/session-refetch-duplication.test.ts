@@ -115,7 +115,7 @@ describe('session-detail refetch duplication (real stack, MSW at the boundary)',
     const baseHeaders = headersCounter.count
 
     // No pre-seeded session(id) cache (the 404 left it empty) → isNewSession path.
-    await sendMutation.mutateAsync(sendRequest())
+    await sendMutation.mutateAsync({ request: sendRequest() })
 
     // Invalidations are awaited inside onSuccess, so the counts are exact the
     // moment mutateAsync resolves — real timers, no waitFor race.
@@ -167,7 +167,7 @@ describe('session-detail refetch duplication (real stack, MSW at the boundary)',
     expect(byIdCounter.count).toBe(0) // fresh seeded cache → no mount fetch
 
     // Fetch #1: existing-session onSuccess invalidates session(id) (useChatMutations.ts:158).
-    await sendMutation.mutateAsync(sendRequest())
+    await sendMutation.mutateAsync({ request: sendRequest() })
 
     // Fetch #2: the backend echoes the sender's own message back via
     // ReceiveMessage; the plugin invalidates session(id) a second time. This is

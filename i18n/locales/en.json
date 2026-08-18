@@ -116,7 +116,9 @@
       "copyMessage": "Copy message",
       "openFile": "Open file",
       "viewImage": "View image",
-      "downloadFile": "Download file"
+      "downloadFile": "Download file",
+      "retry": "Retry",
+      "discard": "Discard"
     },
     "focus": {
       "toggleSidebar": "Toggle focused messages",

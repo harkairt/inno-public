@@ -141,6 +141,16 @@ describe('ChatMessages — message rendering', () => {
     expect(screen.getByText('Second')).toBeTruthy()
     expect(screen.getByText('Third')).toBeTruthy()
   })
+
+  it('keeps the action-bar space but hides its controls for a pending message', async () => {
+    const message = makeMessage({ messageID: 'pending-message' })
+    await renderMessages({ messages: [message], pendingIds: new Set([message.messageID]) })
+
+    const actionBar = screen.getByTestId('message-actions-pending-message')
+    expect(actionBar.classList.contains('h-5')).toBe(true)
+    expect(screen.queryByRole('button', { name: 'chat.messages.copyMessage' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'chat.focus.focusMessage' })).toBeNull()
+  })
 })
 
 describe('ChatMessages — user vs partner alignment', () => {

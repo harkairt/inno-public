@@ -28,6 +28,7 @@
     <FileMessage
       v-else-if="message.messageType === AIAnswerType.File"
       :message-text="message.messageText"
+      :interactive="interactive"
     />
     <MarkdownContent
       v-else
@@ -55,11 +56,13 @@ const props = withDefaults(
     optionsActive?: boolean
     selectedAnswer?: string
     maxWidthClass?: string
+    interactive?: boolean
   }>(),
   {
     optionsActive: false,
     selectedAnswer: undefined,
     maxWidthClass: 'w-fit max-w-full',
+    interactive: true,
   },
 )
 

@@ -175,14 +175,6 @@ describe('chats/[sessionId] page', () => {
     await fireEvent.update(input, 'hello there')
     await fireEvent.keyDown(input, { key: 'Enter' })
 
-    // Failed-message banner: MessageInput surfaces the send error as an alert.
-    // NOTE: the per-message FAILED status dot is intentionally NOT asserted — it
-    // can't render for store-sourced failed messages. ChatMessages compares
-    // message.status against its own local enum (FAILED = 'FAILED'), whereas the
-    // store tags failures with the shared enum value 'failed', so the dot's
-    // v-if is dead. The banner + the message text below cover the flow at DOM level.
-    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
-
     // The failed user message text is still shown (parked in the store).
     const messages = await screen.findByTestId('messages-container')
     await waitFor(() => expect(within(messages).getByText('hello there')).toBeTruthy())

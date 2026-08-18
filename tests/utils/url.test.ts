@@ -14,6 +14,11 @@ describe('sanitizeFileUrl', () => {
     expect(sanitizeFileUrl('https://example.com/file.png')).toBe('https://example.com/file.png')
   })
 
+  it('accepts blob URLs for local file previews', () => {
+    const blobUrl = 'blob:https://app.example.com/12345678-1234-1234-1234-123456789abc'
+    expect(sanitizeFileUrl(blobUrl)).toBe(blobUrl)
+  })
+
   it('rejects protocol-relative URLs', () => {
     expect(sanitizeFileUrl('//evil.com/file.png')).toBe('')
   })

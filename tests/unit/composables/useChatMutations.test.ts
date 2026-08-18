@@ -147,17 +147,19 @@ function makeMessage(overrides: Partial<AISessionMessageDTO> = {}): AISessionMes
   }
 }
 
-function makeQuestionRequest(overrides: Partial<AiQuestionRequestDTO> = {}): AiQuestionRequestDTO {
+function makeQuestionRequest(overrides: Partial<AiQuestionRequestDTO> = {}) {
   return {
-    userCode: 'user@test.com',
-    sessionId: 'session-1',
-    agentId: 1,
-    members: ['user@test.com'],
-    question: 'Hello',
-    group: '',
-    pquestionType: AIQuestionType.Text,
-    options: [],
-    ...overrides,
+    request: {
+      userCode: 'user@test.com',
+      sessionId: 'session-1',
+      agentId: 1,
+      members: ['user@test.com'],
+      question: 'Hello',
+      group: '',
+      pquestionType: AIQuestionType.Text,
+      options: [],
+      ...overrides,
+    } as AiQuestionRequestDTO,
   }
 }
 

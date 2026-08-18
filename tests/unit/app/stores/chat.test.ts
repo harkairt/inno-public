@@ -6,18 +6,29 @@ import { AIAnswerType, MessageStatus } from '@/types/enums'
 
 function makeFailedMessage(id: string, sessionId = 'session-1') {
   return {
-    messageID: id,
-    messageText: `Message ${id}`,
-    messageType: AIAnswerType.Text,
-    isRated: false,
-    rating: null,
-    readByUsers: null,
-    sendDate: '2024-01-01T00:00:00Z',
-    senderName: 'User',
-    senderUserCode: 'user',
-    sessionId,
-    dataTable: null,
-    options: null,
+    optimisticDisplay: {
+      messageID: id,
+      messageText: `Message ${id}`,
+      messageType: AIAnswerType.Text,
+      isRated: false,
+      rating: null,
+      readByUsers: null,
+      sendDate: '2024-01-01T00:00:00Z',
+      senderName: 'User',
+      senderUserCode: 'user',
+      sessionId,
+    },
+    request: {
+      userCode: 'user',
+      sessionId,
+      agentId: 1,
+      members: [],
+      question: `Message ${id}`,
+      group: '',
+      pquestionType: 0,
+      options: [],
+      files: [],
+    },
     status: MessageStatus.FAILED,
   }
 }
@@ -430,7 +441,7 @@ describe('S37–S40 Chat Store — composer requests', () => {
     useChatStore()
 
     expect(persist?.key).toBe('innochat-chat')
-    expect(persist?.pick).toEqual(['failedMessages', 'activeSessionId', 'draftMessages'])
+    expect(persist?.pick).toEqual(['activeSessionId', 'draftMessages'])
     expect(persist?.pick).not.toContain('composerRequest')
   })
 })

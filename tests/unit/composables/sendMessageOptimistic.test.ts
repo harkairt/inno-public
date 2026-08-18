@@ -439,7 +439,8 @@ describe('sendMessageOptimistic', () => {
       expect(deps.chatStore.addFailedMessage).toHaveBeenCalledWith(
         'session-1',
         expect.objectContaining({
-          messageID: 'temp-1',
+          optimisticDisplay: expect.objectContaining({ messageID: 'temp-1' }),
+          request: expect.objectContaining({ sessionId: 'session-1' }),
           status: MessageStatus.FAILED,
         }),
       )

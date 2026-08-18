@@ -7,7 +7,7 @@
 
     <div
       v-if="imageFiles.length > 0"
-      v-viewer.rebuild="{ url: 'data-source' }"
+      v-viewer.rebuild="interactive ? { url: 'data-source' } : false"
       class="grid gap-1.5"
       :class="imageFiles.length === 1 ? 'grid-cols-1 max-w-[240px]' : 'grid-cols-2 max-w-[480px]'"
     >
@@ -16,6 +16,7 @@
         :key="file.id"
         :file="file"
         mode="thumbnail"
+        :interactive="interactive"
       />
     </div>
 
@@ -28,6 +29,7 @@
         :key="file.id"
         :file="file"
         mode="chip"
+        :interactive="interactive"
       />
     </div>
 
@@ -44,9 +46,13 @@ import { FileMessagePayloadSchema } from '@/types/api/schemas'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import FileEntry from '@/app/components/chat/FileEntry.vue'
 
-const props = defineProps<{
-  messageText: string | null | undefined
-}>()
+const props = withDefaults(
+  defineProps<{
+    messageText: string | null | undefined
+    interactive?: boolean
+  }>(),
+  { interactive: true },
+)
 
 const payload = computed(() => {
   if (!props.messageText) return null

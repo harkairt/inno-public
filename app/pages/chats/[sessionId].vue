@@ -289,8 +289,12 @@
                     :active-options-message-id="lastUnansweredOptionsMessageId"
                     :skip-entrance-animation="skipEntranceAnimation"
                     :focused-ids="focusedIds"
+                    :pending-ids="pendingIds"
+                    :failed-ids="failedIds"
                     @option-submitted="handleOptionSubmitted"
                     @toggle-focus="toggleFocus"
+                    @retry-message="handleRetryMessage"
+                    @discard-message="handleDiscardMessage"
                   />
                 </Transition>
               </div>
@@ -405,6 +409,7 @@
 <script setup lang="ts">
 import { useChatSession, useChatSessions } from '@/app/composables/useChatQueries'
 import { useMarkMessagesRead, useSendMessage } from '@/app/composables/useChatMutations'
+import { revokeBlobUrls } from '@/app/composables/sendMessageOptimistic'
 import { useChatMessages } from '@/app/composables/useChatMessages'
 import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
 import { useFileDrop } from '@/app/composables/useFileDrop'
@@ -548,8 +553,15 @@ const { isPrimarySession, otherMemberName, otherMemberId } = usePrimarySession(
   currentUserEmail,
 )
 
-const { messages, typingUsers, thinkingAgents, lastUnansweredOptionsMessageId, isOptionsMode } =
-  useChatMessages(sessionId, session)
+const {
+  messages,
+  typingUsers,
+  thinkingAgents,
+  lastUnansweredOptionsMessageId,
+  isOptionsMode,
+  pendingIds,
+  failedIds,
+} = useChatMessages(sessionId, session)
 
 // Header title: server-assigned name, or the user's first message for a freshly
 // created session the server hasn't named yet (mirrors the optimistic sidebar entry).
@@ -611,11 +623,32 @@ async function handleOptionSubmitted(answer: string) {
     files: [],
   }
   try {
-    await optionMutation.mutateAsync(request)
+    await optionMutation.mutateAsync({ request })
     scrollToBottom()
   } catch {
     // Error handled by mutation error state
   }
+}
+
+const sendMutation = useSendMessage()
+
+function handleRetryMessage(messageId: string) {
+  const entry = chatStore
+    .getFailedEntries(sessionId)
+    .find((e) => e.optimisticDisplay.messageID === messageId)
+  if (!entry) return
+  chatStore.removeFailedMessage(sessionId, messageId)
+  void sendMutation
+    .mutateAsync({ request: entry.request, attachments: entry.attachments })
+    .finally(() => scrollToBottom())
+}
+
+function handleDiscardMessage(messageId: string) {
+  const entry = chatStore
+    .getFailedEntries(sessionId)
+    .find((e) => e.optimisticDisplay.messageID === messageId)
+  if (entry) revokeBlobUrls(entry.optimisticDisplay)
+  chatStore.removeFailedMessage(sessionId, messageId)
 }
 
 // Detect virtual agent for welcome message display (member-based → stable across GetSessionById)

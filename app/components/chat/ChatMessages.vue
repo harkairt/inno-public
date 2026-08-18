@@ -51,6 +51,10 @@
               :options-active="message.messageID === props.activeOptionsMessageId"
               :selected-answer="getSelectedAnswer(group.messages, messageIndex)"
               max-width-class="max-w-[95%] md:max-w-[85%]"
+              :interactive="
+                !props.pendingIds.has(message.messageID) && !props.failedIds.has(message.messageID)
+              "
+              :class="{ 'opacity-70': props.failedIds.has(message.messageID) }"
               @option-submitted="(answer) => emit('optionSubmitted', answer)"
             >
               <template #header>
@@ -85,8 +89,31 @@
               </template>
             </MessageBubble>
 
-            <div class="h-5 flex items-center pl-2">
+            <div
+              v-if="props.failedIds.has(message.messageID)"
+              class="h-5 flex items-center pl-2 gap-2"
+            >
+              <button
+                class="text-[10px] text-red-500 hover:text-red-600 transition-colors select-none"
+                @click.stop="emit('retryMessage', message.messageID)"
+              >
+                {{ t('chat.messages.retry') }}
+              </button>
+              <button
+                class="text-[10px] text-[hsl(var(--muted-foreground)/0.6)] hover:text-[hsl(var(--muted-foreground))] transition-colors select-none"
+                @click.stop="emit('discardMessage', message.messageID)"
+              >
+                {{ t('chat.messages.discard') }}
+              </button>
+            </div>
+
+            <div
+              v-else
+              :data-testid="`message-actions-${message.messageID}`"
+              class="h-5 flex items-center pl-2"
+            >
               <div
+                v-if="!props.pendingIds.has(message.messageID)"
                 :class="[
                   'flex items-center gap-1.5 px-1 transition-opacity duration-150',
                   isMobile
@@ -187,6 +214,8 @@ interface Props {
   activeOptionsMessageId?: string
   skipEntranceAnimation?: boolean
   focusedIds?: readonly string[]
+  pendingIds?: Set<string>
+  failedIds?: Set<string>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -200,11 +229,15 @@ const props = withDefaults(defineProps<Props>(), {
   activeOptionsMessageId: undefined,
   skipEntranceAnimation: false,
   focusedIds: () => [],
+  pendingIds: () => new Set<string>(),
+  failedIds: () => new Set<string>(),
 })
 
 const emit = defineEmits<{
   optionSubmitted: [answer: string]
   toggleFocus: [messageId: string]
+  retryMessage: [messageId: string]
+  discardMessage: [messageId: string]
 }>()
 
 const authStore = useAuthStore()
