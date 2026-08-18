@@ -18,6 +18,7 @@
         </p>
 
         <SearchInput
+          ref="searchInputRef"
           v-model="userSearchQuery"
           :placeholder="t('users.searchPlaceholder')"
           :aria-label="t('users.searchLabel')"
@@ -144,8 +145,18 @@ function loadSavedFilter(userId: number | undefined): DirectoryFilter {
 }
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const directoryHeadingId = 'users-directory-heading'
+const searchInputRef = ref<{ $el: HTMLElement } | null>(null)
+
+onMounted(() => {
+  if (route.query.focus === 'search') {
+    void nextTick(() => {
+      searchInputRef.value?.$el?.querySelector('input')?.focus()
+    })
+  }
+})
 
 const authStore = useAuthStore()
 const activeFilter = ref<DirectoryFilter>(loadSavedFilter(authStore.user?.id))

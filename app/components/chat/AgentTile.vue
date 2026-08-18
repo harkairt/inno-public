@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserDTO } from '@/types/api/schemas'
+import { sanitizeFileUrl } from '@/app/utils/url'
 
 const props = defineProps<{
   agent: UserDTO
@@ -7,10 +8,14 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const colorMode = useColorMode()
+const {
+  public: { apiBaseUrl },
+} = useRuntimeConfig()
 
-const avatarUrl = computed(() =>
-  colorMode.value === 'dark' ? props.agent.darkImage : props.agent.image,
-)
+const avatarUrl = computed(() => {
+  const raw = colorMode.value === 'dark' ? props.agent.darkImage : props.agent.image
+  return raw ? sanitizeFileUrl(raw, apiBaseUrl as string) : null
+})
 </script>
 
 <template>

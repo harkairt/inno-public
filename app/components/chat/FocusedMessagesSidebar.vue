@@ -64,40 +64,20 @@
 
       <div
         v-else
+        ref="scrollContainer"
         class="flex-1 overflow-y-auto py-3 px-3 space-y-3"
       >
         <div
           v-for="message in focusedMessages"
           :key="message.messageID"
+          :data-focus-id="message.messageID"
           class="flex flex-col"
           :class="isUserMessage(message) ? 'items-end' : 'items-start'"
         >
-          <div
-            class="message-bubble px-3.5 py-1"
-            :class="hasRichContent(message) ? 'w-full' : 'w-fit max-w-full'"
-            :style="isUserMessage(message) ? ownMessageStyle : partnerMessageStyle"
-          >
-            <template
-              v-if="
-                message.messageType === AIAnswerType.Options &&
-                parseOptionsPayload(message.messageText)
-              "
-            >
-              <OptionsMessage
-                :payload="parseOptionsPayload(message.messageText)!"
-                :is-active="false"
-                :selected-answer="getSelectedAnswer(message)"
-              />
-            </template>
-            <FileMessage
-              v-else-if="message.messageType === AIAnswerType.File"
-              :message-text="message.messageText"
-            />
-            <MarkdownContent
-              v-else
-              :content="message.messageText"
-            />
-          </div>
+          <MessageBubble
+            :message="message"
+            :selected-answer="getSelectedAnswer(message)"
+          />
 
           <div class="h-5 flex items-center pl-2">
             <div class="flex items-center gap-1.5 px-1">
@@ -137,46 +117,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
-import { parseOptionsPayload } from '@/types/api/schemas'
-import { AIAnswerType } from '@/types/enums'
 import { useMessagePresentation } from '@/app/composables/useMessagePresentation'
 import { usePanelResize } from '~/composables/usePanelResize'
 import { useAuthStore } from '~/stores/auth'
-import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
-import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
-import FileMessage from '@/app/components/chat/FileMessage.vue'
+import MessageBubble from '@/app/components/chat/MessageBubble.vue'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
-const {
-  ownMessageStyle,
-  partnerMessageStyle,
-  isUserMessage,
-  formatActionBarDate,
-  handleCopy,
-  copiedMessageId,
-} = useMessagePresentation()
-
-const WIDE_CONTENT_MARKERS = [
-  '```echarts',
-  '```chart.js',
-  '```bar-race',
-  '```rows',
-  '```h-rows',
-  '```pivot',
-]
-const MD_TABLE_RE = /^\|.+\|/m
-
-function hasRichContent(message: AISessionMessageDTO): boolean {
-  if (message.messageType === AIAnswerType.Options) return true
-  if (message.messageType === AIAnswerType.DataTable) return true
-  if (message.messageType === AIAnswerType.File) return true
-  const text = message.messageText
-  if (!text) return false
-  return WIDE_CONTENT_MARKERS.some((marker) => text.includes(marker)) || MD_TABLE_RE.test(text)
-}
+const { isUserMessage, formatActionBarDate, handleCopy, copiedMessageId } = useMessagePresentation()
 
 function getSelectedAnswer(message: AISessionMessageDTO): string | undefined {
   const userEmail = authStore.user?.email
@@ -215,16 +165,25 @@ const {
   direction: 'right',
 })
 
+const scrollContainer = ref<HTMLElement>()
+
 const focusedMessages = computed(() =>
   props.messages
     .filter((m) => props.focusedIds.includes(m.messageID))
     .sort((a, b) => new Date(a.sendDate).getTime() - new Date(b.sendDate).getTime()),
 )
-</script>
 
-<style scoped>
-.message-bubble {
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-</style>
+watch(
+  () => props.focusedIds,
+  (newIds, oldIds) => {
+    if (!props.sidebarOpen) return
+    const added = newIds.find((id) => !oldIds.includes(id))
+    if (!added) return
+    void nextTick(() => {
+      scrollContainer.value
+        ?.querySelector(`[data-focus-id="${CSS.escape(added)}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+  },
+)
+</script>

@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-2">
     <MarkdownContent
-      v-if="payload && payload.text"
+      v-if="payload?.text"
       :content="payload.text"
     />
 
@@ -21,13 +21,13 @@
 
     <div
       v-if="nonImageFiles.length > 0"
-      class="flex flex-col gap-1.5"
+      class="flex flex-wrap gap-2"
     >
       <FileEntry
         v-for="file in nonImageFiles"
         :key="file.id"
         :file="file"
-        mode="card"
+        mode="chip"
       />
     </div>
 

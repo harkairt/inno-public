@@ -76,7 +76,7 @@ describe('FileMessage', () => {
     expect(img?.src).toContain('photo.png')
   })
 
-  it('renders card (no img) for non-image files', () => {
+  it('renders chip (no img) for non-image files', () => {
     const payload = filePayload({
       files: [
         {
@@ -93,11 +93,10 @@ describe('FileMessage', () => {
     })
 
     expect(queryByText('report.pdf')).toBeTruthy()
-    const img = container.querySelector('img')
-    expect(img).toBeNull()
+    expect(container.querySelector('img')).toBeNull()
   })
 
-  it('renders file cards as links', () => {
+  it('renders file chips as links', () => {
     const payload = filePayload({
       files: [
         {
@@ -190,7 +189,7 @@ describe('FileMessage', () => {
     expect(container.textContent).toContain('oops')
   })
 
-  it('renders mixed payload with both image grid and file cards', () => {
+  it('renders mixed payload with image thumbnails and file chips', () => {
     const { container, getByText } = renderWithProviders(FileMessage, {
       props: { messageText: mixedPayload() },
     })
@@ -199,14 +198,14 @@ describe('FileMessage', () => {
     expect(imgs).toHaveLength(2)
 
     const links = container.querySelectorAll('a')
-    expect(links.length).toBeGreaterThanOrEqual(2)
+    expect(links).toHaveLength(2)
 
     expect(getByText('screenshot.jpg')).toBeTruthy()
     expect(getByText('report.pdf')).toBeTruthy()
     expect(getByText('data.xlsx')).toBeTruthy()
   })
 
-  it('renders image-only payload without file card section', () => {
+  it('renders image-only payload as thumbnails without links', () => {
     const payload = filePayload({
       files: [
         { id: '1', fileName: 'a.png', mimeType: 'image/png', url: '/api/storage/a.png' },
@@ -225,7 +224,7 @@ describe('FileMessage', () => {
     expect(links).toHaveLength(0)
   })
 
-  it('renders file-only payload without image grid', () => {
+  it('renders file-only payload', () => {
     const payload = filePayload({
       files: [
         { id: '1', fileName: 'a.pdf', mimeType: 'application/pdf', url: '/api/storage/a.pdf' },
@@ -252,18 +251,8 @@ describe('FileMessage', () => {
   it('renders multiple files', () => {
     const payload = filePayload({
       files: [
-        {
-          id: '1',
-          fileName: 'a.png',
-          mimeType: 'image/png',
-          url: '/api/storage/a.png',
-        },
-        {
-          id: '2',
-          fileName: 'b.pdf',
-          mimeType: 'application/pdf',
-          url: '/api/storage/b.pdf',
-        },
+        { id: '1', fileName: 'a.png', mimeType: 'image/png', url: '/api/storage/a.png' },
+        { id: '2', fileName: 'b.pdf', mimeType: 'application/pdf', url: '/api/storage/b.pdf' },
       ],
     })
 

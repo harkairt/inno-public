@@ -32,7 +32,8 @@
     "conversations": "Conversations",
     "users": "Users",
     "profile": "Profile",
-    "mainNavigation": "Main navigation"
+    "mainNavigation": "Main navigation",
+    "newConversation": "New conversation"
   },
   "profile": {
     "language": "Language",
@@ -56,6 +57,7 @@
     "unavailable": "Unavailable",
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites",
+    "favorite": "Favorite",
     "openConversation": "Open conversation",
     "noUsers": "No partners are available to display.",
     "noSearchResults": "No partners match your search.",

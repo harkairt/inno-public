@@ -18,7 +18,7 @@
   </div>
 
   <a
-    v-else
+    v-else-if="mode === 'card'"
     :href="fullResUrl"
     target="_blank"
     rel="noopener noreferrer"
@@ -29,7 +29,7 @@
       class="flex items-center justify-center w-8 h-8 rounded shrink-0 bg-black/10 dark:bg-white/15"
     >
       <UIcon
-        :name="fileIcon"
+        :name="fileTypeIcon(file)"
         class="w-4.5 h-4.5"
       />
     </div>
@@ -45,32 +45,63 @@
       class="w-4 h-4 shrink-0 opacity-0 group-hover/file:opacity-100 transition-opacity"
     />
   </a>
+
+  <a
+    v-else-if="mode === 'chip'"
+    :href="fullResUrl"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="flex items-center gap-2 px-2.5 h-10 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] hover:bg-[hsl(var(--muted)/0.5)] transition-colors text-sm max-w-[240px] text-[inherit]"
+    :title="t('chat.messages.openFile')"
+  >
+    <img
+      v-if="isImage && imgSrc"
+      :src="imgSrc"
+      :data-source="fullResUrl"
+      :alt="sanitizedFileName"
+      class="w-7 h-7 object-cover rounded shrink-0"
+      loading="lazy"
+      @error="onImgError"
+    />
+    <UIcon
+      v-else
+      :name="fileTypeIcon(file)"
+      class="w-7 h-7 shrink-0"
+    />
+    <span class="truncate flex-1 min-w-0">{{ sanitizedFileName }}</span>
+  </a>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { ReceivedFile } from '@/types/api/schemas'
 import { sanitizeFileUrl } from '@/app/utils/url'
+import { fileTypeIcon } from '@/app/utils/fileIcon'
 
 const { t } = useI18n()
+const {
+  public: { apiBaseUrl },
+} = useRuntimeConfig()
 
 const props = defineProps<{
   file: ReceivedFile
-  mode: 'thumbnail' | 'card'
+  mode: 'thumbnail' | 'card' | 'chip'
 }>()
 
 const thumbnailFailed = ref(false)
 
-const fullResUrl = computed(() => sanitizeFileUrl(props.file.url))
+const fullResUrl = computed(() => sanitizeFileUrl(props.file.url, apiBaseUrl as string))
 
 const thumbnailUrl = computed(() => {
   if (props.file.thumbnailUrl && !thumbnailFailed.value) {
-    return sanitizeFileUrl(props.file.thumbnailUrl)
+    return sanitizeFileUrl(props.file.thumbnailUrl, apiBaseUrl as string)
   }
   return ''
 })
 
 const imgSrc = computed(() => thumbnailUrl.value || fullResUrl.value)
+
+const isImage = computed(() => props.file.mimeType.startsWith('image/'))
 
 const sanitizedFileName = computed(() => {
   return props.file.fileName.replace(/[<>&"']/g, '')
@@ -80,19 +111,6 @@ const fileExtension = computed(() => {
   const dot = props.file.fileName.lastIndexOf('.')
   if (dot === -1) return ''
   return props.file.fileName.slice(dot + 1)
-})
-
-const fileIcon = computed(() => {
-  const mime = props.file.mimeType
-  if (mime === 'application/pdf') return 'i-heroicons-document-text-20-solid'
-  if (mime.startsWith('text/')) return 'i-heroicons-document-20-solid'
-  if (mime.includes('spreadsheet') || mime.includes('excel'))
-    return 'i-heroicons-table-cells-20-solid'
-  if (mime.includes('presentation') || mime.includes('powerpoint'))
-    return 'i-heroicons-presentation-chart-bar-20-solid'
-  if (mime.includes('word') || mime.includes('document'))
-    return 'i-heroicons-document-text-20-solid'
-  return 'i-heroicons-paper-clip-20-solid'
 })
 
 function onImgError() {

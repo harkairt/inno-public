@@ -4,9 +4,22 @@
     data-testid="chat-list-panel"
   >
     <div class="px-5 py-3">
-      <h1 class="font-display text-lg font-semibold tracking-tight mb-2">
-        {{ t('navigation.conversations') }}
-      </h1>
+      <div class="flex items-center justify-between mt-1 mb-4">
+        <h1 class="font-display text-lg font-semibold tracking-tight">
+          {{ t('navigation.conversations') }}
+        </h1>
+        <NuxtLink
+          to="/users?focus=search"
+          class="flex items-center justify-center size-[34px] rounded-[10px] text-[var(--ui-text-muted)] border border-[var(--ui-border)] hover:bg-[var(--ui-bg-elevated)] hover:border-[var(--ui-border-accented)] hover:text-[var(--ui-text)] transition-colors"
+          :aria-label="t('navigation.newConversation')"
+          data-testid="new-conversation-button"
+        >
+          <UIcon
+            name="i-heroicons-plus"
+            class="size-5"
+          />
+        </NuxtLink>
+      </div>
       <SearchInput
         v-model="sessionSearchQuery"
         :placeholder="t('sidebar.searchSessions')"
