@@ -6,6 +6,9 @@
 .cache
 dist
 
+# Staged deploy packages (scripts/build-deploy.ps1)
+deploy
+
 # Netlify build output (only root-level, not pages/chats/public/)
 /public
 
