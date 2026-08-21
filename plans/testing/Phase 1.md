@@ -70,7 +70,7 @@ tests/msw/
 ```
 
 ### F2.1 `tests/msw/http.ts` — backend envelope helpers
-Every backend response is wrapped in `ApiResponse<T>`: `{ data, success: null, warning: null, error: null }`. Tests fail silently without it (documented in vonno-testing skill). Centralize:
+Every backend response is wrapped in `ApiResponse<T>`: `{ data, success: null, warning: null, error: null }`. Tests fail silently without it (documented in innochat-testing skill). Centralize:
 
 ```ts
 import { HttpResponse } from 'msw'
@@ -474,7 +474,7 @@ Then run `npm run test:coverage`, read actuals, set `thresholds.global` to `floo
 - Components/pages: `renderWithProviders` from `tests/utils/render.ts`.
 - Remove/replace the false "80% threshold enforced" claim with "ratcheted thresholds in vitest.config.ts, raised per backfill wave".
 
-### `.claude/skills/vonno-testing/SKILL.md` rewrite outline:
+### `.claude/skills/innochat-testing/SKILL.md` rewrite outline:
 1. Stack table — MSW marked as wired.
 2. **Mocking decision ladder** (resolves the CLAUDE.md "never mock Pinia" vs practice contradiction):
    - Component/page/integration tests → **MSW only**; never mock Pinia stores, services, or apiClient.

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Prefer LSP over Grep/Read for code navigation — it's faster, precise, and avoids reading entire files. goToDefinition, findReferences, hover, documentSymbol, workspaceSymbol, goToImplementation, prepareCallHierarchy, incomingCalls, outgoingCalls
 - Fallback to Grep when LSP isn't available or for text/pattern searches (comments, strings, config).
-- Refer to `.claude/skills/` for architecture, implementation patterns, and testing guidance (`vonno-overview`, `vonno-implementation`, `vonno-testing`).
+- Refer to `.claude/skills/` for architecture, implementation patterns, and testing guidance (`innochat-overview`, `innochat-implementation`, `innochat-testing`).
 
 ---
 

@@ -1,6 +1,6 @@
 # Quality Audit Report
 
-**Project**: vonno (InnoChat) — TypeScript + Nuxt 4 + Vue 3 + TanStack Query + Pinia
+**Project**: InnoChat — TypeScript + Nuxt 4 + Vue 3 + TanStack Query + Pinia
 **Date**: 2026-05-17
 **quality-toolkit**: v0.1.1
 

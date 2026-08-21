@@ -1,6 +1,6 @@
 # E2E Testing with Playwright
 
-This directory contains end-to-end tests for the Vonno application using Playwright.
+This directory contains end-to-end tests for the InnoChat application using Playwright.
 
 ## Setup
 
@@ -26,9 +26,9 @@ Edit `.env.test` with your actual test backend URL and credentials:
 
 ```env
 TEST_BASE_URL=http://localhost:3000
-TEST_USER_EMAIL=testuser@vonno.com
+TEST_USER_EMAIL=testuser@innochat.com
 TEST_USER_PASSWORD=Test123!
-TEST_ADMIN_EMAIL=admin@vonno.com
+TEST_ADMIN_EMAIL=admin@innochat.com
 TEST_ADMIN_PASSWORD=Admin123!
 ```
 

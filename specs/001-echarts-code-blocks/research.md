@@ -551,7 +551,7 @@ removes handlers with the instance.
 **Rationale**: ECharts event handlers live on the instance and survive
 `setOption`, so registering alongside each `setOption` stacks them: after the
 Nth definition update, one click appends N times. This is precisely the failure
-mode of the SignalR listener-registration area that `vonno-concerns` flags as
+mode of the SignalR listener-registration area that `innochat-concerns` flags as
 fragile, appearing in a new place. R7's decision to update in place rather than
 re-initialize is what makes the mistake possible here at all — the instance
 outlives the option.

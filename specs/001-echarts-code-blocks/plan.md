@@ -160,7 +160,7 @@ recorded below.*
 explicit, audited addition to `ALLOWED_ATTR` in `app/utils/sanitize.ts`
 (`ALLOW_DATA_ATTR` is `false`, so unlisted `data-*` is stripped). No client-side
 password hashing is involved. None of the four fragile areas listed in
-`vonno-concerns` (token-refresh interceptor, `useSendMessage` optimistic cache,
+`innochat-concerns` (token-refresh interceptor, `useSendMessage` optimistic cache,
 SignalR listener registration, primary-session detection) is touched.
 
 The click interaction adds one path by which assistant-authored text reaches a
@@ -176,7 +176,7 @@ user-input surface, so it is called out explicitly rather than left implicit:
 - The channel is not persisted and is consumed once (FR-030), so nothing can
   replay into a composer the user did not just interact with.
 - ECharts click-handler registration is the **same failure class** as the
-  `vonno-concerns` SignalR listener-registration entry — handlers accumulate on a
+  `innochat-concerns` SignalR listener-registration entry — handlers accumulate on a
   long-lived object. R17 binds once per instance, and quickstart scenario 44
   asserts the count rather than mere firing, because the accumulating version
   passes every other click test.
