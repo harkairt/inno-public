@@ -128,4 +128,82 @@ export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
     title: 'Malformed ```echarts block → stays a code block',
     props: { content: fence('echarts', '{ "series": [ ') },
   },
+  {
+    id: 'md-leaflet-markers',
+    title: 'Embedded ```leaflet block → ChatMap with markers',
+    props: {
+      content: fence(
+        'leaflet',
+        JSON.stringify(
+          {
+            center: [48.2082, 16.3738],
+            zoom: 13,
+            markers: [
+              { lat: 48.2082, lng: 16.3738, title: 'Vienna', description: 'Capital of Austria' },
+            ],
+          },
+          null,
+          2,
+        ),
+      ),
+    },
+  },
+  {
+    id: 'md-leaflet-mixed',
+    title: 'Embedded ```leaflet block → ChatMap with markers, polyline, polygon',
+    props: {
+      content: fence(
+        'leaflet',
+        JSON.stringify(
+          {
+            markers: [
+              { lat: 48.2082, lng: 16.3738, title: 'Vienna' },
+              { lat: 47.8095, lng: 13.055, title: 'Salzburg' },
+            ],
+            polylines: [
+              {
+                coordinates: [
+                  [48.2082, 16.3738],
+                  [47.8095, 13.055],
+                ],
+                color: '#3b82f6',
+                weight: 3,
+              },
+            ],
+            polygons: [
+              {
+                coordinates: [
+                  [48.22, 16.35],
+                  [48.22, 16.4],
+                  [48.19, 16.4],
+                  [48.19, 16.35],
+                ],
+                color: '#10b981',
+                fillColor: '#10b98133',
+                weight: 2,
+              },
+            ],
+          },
+          null,
+          2,
+        ),
+      ),
+    },
+  },
+  {
+    id: 'md-leaflet-rejected',
+    title: 'Rejected ```leaflet block (HTML in popup) → stays a code block',
+    props: {
+      content: fence(
+        'leaflet',
+        JSON.stringify(
+          {
+            markers: [{ lat: 48.2082, lng: 16.3738, title: '<script>alert(1)</script>' }],
+          },
+          null,
+          2,
+        ),
+      ),
+    },
+  },
 ]

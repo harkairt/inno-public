@@ -210,6 +210,10 @@
       "renderFailed": "This chart could not be displayed.",
       "play": "Play",
       "pause": "Pause"
+    },
+    "map": {
+      "loading": "Loading map…",
+      "renderFailed": "This map could not be displayed."
     }
   },
   "errors": {

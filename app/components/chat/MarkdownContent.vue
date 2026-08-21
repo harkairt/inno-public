@@ -58,6 +58,18 @@
       />
     </Teleport>
     <Teleport
+      v-for="mapEntry in mapEntries"
+      :key="mapEntry.id"
+      :to="`[data-map-id='${mapEntry.id}']`"
+      :defer="true"
+    >
+      <ChatMap
+        :data="mapEntry.data"
+        :block-index="mapEntry.blockIndex"
+        :source="mapEntry.source"
+      />
+    </Teleport>
+    <Teleport
       v-for="mdTable in mdTableEntries"
       :key="mdTable.id"
       :to="`[data-md-table-id='${mdTable.id}']`"
@@ -75,11 +87,13 @@ import { useMarkdown } from '@/app/composables/useMarkdown'
 import { useShiki } from '@/app/composables/useShiki'
 import { useChartJs } from '~/composables/useChartJs'
 import { useECharts } from '~/composables/useECharts'
+import { useLeaflet } from '~/composables/useLeaflet'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 import { createLogger } from '@/lib/utils/logger'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
 import { parseEChartsOption, type EChartsOption } from '@/lib/validation/echarts'
 import { parseBarRaceData, type BarRaceData } from '@/lib/validation/barRace'
+import { parseLeafletData, type LeafletMapData } from '@/lib/validation/leaflet'
 import {
   parseRowsBlock,
   parseHRowsBlock,
@@ -92,6 +106,7 @@ import ChatTable from '~/components/chat/ChatTable.vue'
 import ChatPivotTable from '~/components/chat/ChatPivotTable.vue'
 import ChatEChart from '~/components/chat/ChatEChart.vue'
 import ChatBarRace from '~/components/chat/ChatBarRace.vue'
+import ChatMap from '~/components/chat/ChatMap.vue'
 import MarkdownTableWrapper from '~/components/chat/MarkdownTableWrapper.vue'
 
 interface Props {
@@ -105,6 +120,7 @@ const props = withDefaults(defineProps<Props>(), {
 const { isLoaded: shikiLoaded, loadHighlighter, highlightCode } = useShiki()
 const { isLoaded: chartJsLoaded, loadChartJs } = useChartJs()
 const { isLoaded: echartsLoaded, loadECharts } = useECharts()
+const { isLoaded: leafletLoaded, loadLeaflet } = useLeaflet()
 
 const logger = createLogger('MarkdownContent')
 const reportedRejections = new Set<string>()
@@ -141,6 +157,13 @@ interface BarRaceEntry {
   blockIndex: number
 }
 
+interface MapEntry {
+  id: string
+  data: LeafletMapData
+  source: string
+  blockIndex: number
+}
+
 interface MdTableEntry {
   id: string
   html: string
@@ -152,6 +175,7 @@ const tableEntries = ref<TableEntry[]>([])
 const pivotEntries = ref<PivotEntry[]>([])
 const echartEntries = ref<EChartEntry[]>([])
 const barRaceEntries = ref<BarRaceEntry[]>([])
+const mapEntries = ref<MapEntry[]>([])
 const mdTableEntries = ref<MdTableEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
@@ -189,6 +213,13 @@ const hasTableBlocks = (content: string | null | undefined): boolean => {
 const hasPivotBlocks = (content: string | null | undefined): boolean => {
   if (!content) return false
   return content.includes('```pivot')
+}
+
+const hasLeafletBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```leaflet')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 10) !== -1
 }
 
 const MAX_CONTENT_SIZE = 100000
@@ -319,6 +350,44 @@ const applyBarRaceBlocks = (html: string): string => {
   return result.html
 }
 
+const extractLeafletBlocks = (html: string): { html: string; entries: MapEntry[] } => {
+  const entries: MapEntry[] = []
+  let index = 0
+  const leafletBlockRegex = /<pre><code\s+class="language-leaflet">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(leafletBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseLeafletData(source)
+    const blockIndex = index++
+
+    if (parsed.isErr()) {
+      const key = `leaflet-${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected leaflet block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+
+    const id = `${instancePrefix}-map-${blockIndex}`
+    entries.push({ id, data: parsed.value, source, blockIndex })
+    return `<div class="map-placeholder" data-map-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const applyLeafletBlocks = (html: string): string => {
+  if (!hasLeafletBlocks(props.content)) {
+    mapEntries.value = []
+    return html
+  }
+
+  const result = extractLeafletBlocks(html)
+  mapEntries.value = result.entries
+  return result.html
+}
+
 const extractMarkdownTables = (html: string): { html: string; entries: MdTableEntry[] } => {
   const entries: MdTableEntry[] = []
   let index = 0
@@ -371,6 +440,7 @@ const renderContent = () => {
     pivotEntries.value = []
     echartEntries.value = []
     barRaceEntries.value = []
+    mapEntries.value = []
     mdTableEntries.value = []
     return
   }
@@ -416,6 +486,7 @@ const renderContent = () => {
 
     html = applyEChartsBlocks(html)
     html = applyBarRaceBlocks(html)
+    html = applyLeafletBlocks(html)
 
     const mdTableResult = extractMarkdownTables(html)
     html = mdTableResult.html
@@ -433,6 +504,7 @@ const renderContent = () => {
     pivotEntries.value = []
     echartEntries.value = []
     barRaceEntries.value = []
+    mapEntries.value = []
     mdTableEntries.value = []
   }
 }
@@ -463,6 +535,12 @@ watch(echartsLoaded, (loaded) => {
   }
 })
 
+watch(leafletLoaded, (loaded) => {
+  if (loaded && mapEntries.value.length > 0) {
+    renderContent()
+  }
+})
+
 onMounted(() => {
   if (hasCodeBlocks(props.content)) {
     void loadHighlighter()
@@ -472,6 +550,9 @@ onMounted(() => {
   }
   if (hasEChartsBlocks(props.content) || hasBarRaceBlocks(props.content)) {
     void loadECharts()
+  }
+  if (hasLeafletBlocks(props.content)) {
+    void loadLeaflet()
   }
 })
 </script>

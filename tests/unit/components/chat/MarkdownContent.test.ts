@@ -77,6 +77,38 @@ vi.mock('~/components/chat/ChatChart.vue', () => ({
   }),
 }))
 
+vi.mock('leaflet', () => ({
+  default: {
+    map: () => ({
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn().mockReturnThis(),
+      remove: vi.fn(),
+      invalidateSize: vi.fn(),
+    }),
+    tileLayer: () => ({ addTo: vi.fn().mockReturnThis() }),
+    marker: () => ({ addTo: vi.fn().mockReturnThis(), bindPopup: vi.fn().mockReturnThis() }),
+    polyline: () => ({ addTo: vi.fn().mockReturnThis() }),
+    polygon: () => ({ addTo: vi.fn().mockReturnThis() }),
+    latLngBounds: vi.fn().mockReturnValue({ isValid: () => true }),
+    Icon: { Default: { prototype: {}, mergeOptions: vi.fn() } },
+  },
+}))
+
+vi.mock('leaflet/dist/leaflet.css', () => ({}))
+
+vi.mock('~/components/chat/ChatMap.vue', () => ({
+  default: defineComponent({
+    name: 'ChatMap',
+    props: {
+      data: { type: Object, required: true },
+      blockIndex: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+    setup: (props) => () =>
+      h('div', { class: 'map-stub', 'data-block-index': String(props.blockIndex) }),
+  }),
+}))
+
 async function renderMarkdown(content: string | null) {
   const { default: MarkdownContent } = (await import('~/components/chat/MarkdownContent.vue')) as {
     default: Component
@@ -397,5 +429,57 @@ describe('S29 MarkdownContent — chart.js regression guard', () => {
     expect(container.querySelector('code.language-chart\\.js')).toBeNull()
     expect(container.textContent).toContain('Quarterly revenue')
     expect(container.textContent).toContain('Let me know if you want it by month.')
+  })
+})
+
+const LEAFLET_MARKERS =
+  '{"markers":[{"lat":48.2082,"lng":16.3738,"title":"Vienna","description":"Capital of Austria"}]}'
+
+const leafletFence = (body: string) => ['```leaflet', body, '```'].join('\n')
+
+describe('MarkdownContent — leaflet block extraction', () => {
+  it('replaces a single leaflet block with a placeholder holding the map', async () => {
+    const { container } = await renderSettled(`## Map\n\n${leafletFence(LEAFLET_MARKERS)}\n\nEnd.`)
+
+    const placeholder = container.querySelector('[data-map-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.map-stub')).not.toBeNull()
+
+    expect(container.querySelector('code.language-leaflet')).toBeNull()
+    expect(container.textContent).not.toContain('"markers"')
+    expect(container.textContent).toContain('End.')
+  })
+
+  it('gives two leaflet blocks distinct ids and block indexes', async () => {
+    const second = '{"markers":[{"lat":0,"lng":0}]}'
+    const { container } = await renderSettled(
+      [leafletFence(LEAFLET_MARKERS), leafletFence(second)].join('\n\n'),
+    )
+
+    const placeholders = [...container.querySelectorAll('[data-map-id]')]
+    expect(placeholders).toHaveLength(2)
+
+    const ids = placeholders.map((el) => el.getAttribute('data-map-id'))
+    expect(new Set(ids).size).toBe(2)
+
+    const indexes = [...container.querySelectorAll('.map-stub')].map((el) =>
+      el.getAttribute('data-block-index'),
+    )
+    expect(indexes).toEqual(['0', '1'])
+  })
+
+  it('keeps a rejected leaflet block (HTML in title) as code', async () => {
+    const rejected = '{"markers":[{"lat":0,"lng":0,"title":"<b>bad</b>"}]}'
+    const { container } = await renderSettled(leafletFence(rejected))
+
+    expect(container.querySelector('[data-map-id]')).toBeNull()
+    expect(container.querySelector('.map-stub')).toBeNull()
+  })
+
+  it('leaves an unterminated leaflet fence untouched', async () => {
+    const { container } = await renderSettled(`\`\`\`leaflet\n${LEAFLET_MARKERS}`)
+
+    expect(container.querySelector('[data-map-id]')).toBeNull()
+    expect(container.querySelector('.map-stub')).toBeNull()
   })
 })
