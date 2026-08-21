@@ -105,6 +105,13 @@ const svgRenderingPipeline = `<svg width="760" height="320" viewBox="0 0 760 320
   </g>
 </svg>`
 
+const mermaidFlowchart = `flowchart TB
+  Invoice[Számla beérkezik] --> Amount{Összeg > 500e Ft}
+  Amount -->|Igen| Approval[Vezetői jóváhagyás]
+  Amount -->|Nem| Booking[Automatikus könyvelés]
+  Approval --> Booking
+  Booking --> ERP[(ERP könyvelés)]`
+
 export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
   { id: 'md-prose', title: 'Prose — headings, lists, blockquote, rule', props: { content: prose } },
   { id: 'md-links', title: 'Links, linkified URL, image', props: { content: linksAndImages } },
@@ -286,5 +293,36 @@ export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
     props: {
       content: `The SVG root declares \`width="760"\` and \`height="320"\`, so the rendered image has an explicit intrinsic size.\n\n${fence('svg', svgRenderingPipeline)}`,
     },
+  },
+  {
+    id: 'md-mermaid',
+    title: 'Embedded ```mermaid block → isolated Mermaid diagram',
+    props: { content: fence('mermaid', mermaidFlowchart) },
+  },
+  {
+    id: 'md-mermaid-rejected',
+    title: 'Rejected ```mermaid block (interactive click) → stays a code block',
+    props: {
+      content: fence('mermaid', 'flowchart LR\n  A --> B\n  click A "https://example.com"'),
+    },
+  },
+  {
+    id: 'md-video',
+    title: 'Embedded ```video block → native HTML5 video player',
+    props: {
+      content: fence(
+        'video',
+        JSON.stringify(
+          { src: '/videos/demo.webm', title: 'Product walkthrough', muted: true },
+          null,
+          2,
+        ),
+      ),
+    },
+  },
+  {
+    id: 'md-video-rejected',
+    title: 'Rejected ```video block (external URL) → stays a code block',
+    props: { content: fence('video', JSON.stringify({ src: 'https://example.com/video.mp4' })) },
   },
 ]

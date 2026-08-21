@@ -31,6 +31,7 @@ vi.mock('shiki', () => ({
 
 let echartsImportCount = 0
 let cytoscapeImportCount = 0
+let mermaidImportCount = 0
 
 vi.mock('echarts', () => {
   echartsImportCount++
@@ -49,6 +50,16 @@ vi.mock('cytoscape', () => {
       json: vi.fn(),
       layout: vi.fn(() => ({ run: vi.fn() })),
     }),
+  }
+})
+
+vi.mock('mermaid', () => {
+  mermaidImportCount++
+  return {
+    default: {
+      initialize: vi.fn(),
+      render: vi.fn(async () => ({ svg: '<svg></svg>' })),
+    },
   }
 })
 
@@ -147,6 +158,32 @@ vi.mock('~/components/chat/ChatSvg.vue', () => ({
     },
     setup: (props) => () =>
       h('div', { class: 'svg-stub', 'data-block-index': String(props.blockIndex) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatMermaid.vue', () => ({
+  default: defineComponent({
+    name: 'ChatMermaid',
+    props: {
+      data: { type: Object, required: true },
+      blockIndex: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+    setup: (props) => () =>
+      h('div', { class: 'mermaid-stub', 'data-block-index': String(props.blockIndex) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatVideo.vue', () => ({
+  default: defineComponent({
+    name: 'ChatVideo',
+    props: {
+      data: { type: Object, required: true },
+      blockIndex: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+    setup: (props) => () =>
+      h('div', { class: 'video-stub', 'data-block-index': String(props.blockIndex) }),
   }),
 }))
 
@@ -681,5 +718,89 @@ describe('MarkdownContent — SVG block extraction', () => {
 
     expect(container.querySelector('[data-svg-id]')).toBeNull()
     expect(container.querySelector('.svg-stub')).toBeNull()
+  })
+})
+
+const VIDEO_DATA = '{"src":"/videos/demo.webm","title":"Product tour","muted":true}'
+const videoFence = (body: string) => ['```video', body, '```'].join('\n')
+
+describe('MarkdownContent — HTML5 video block extraction', () => {
+  it('replaces a valid video block with a placeholder holding the native player', async () => {
+    const { container } = await renderSettled(`## Demo\n\n${videoFence(VIDEO_DATA)}\n\nEnd.`)
+
+    const placeholder = container.querySelector('[data-video-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.video-stub')).not.toBeNull()
+    expect(container.querySelector('code.language-video')).toBeNull()
+    expect(container.textContent).toContain('End.')
+  })
+
+  it('keeps an external video URL as a code block', async () => {
+    const { container } = await renderSettled(videoFence('{"src":"https://example.com/demo.mp4"}'))
+
+    expect(container.querySelector('[data-video-id]')).toBeNull()
+    expect(container.querySelector('.video-stub')).toBeNull()
+    expect(container.textContent).toContain('https://example.com/demo.mp4')
+  })
+})
+
+const mermaidFence = (body: string) => ['```mermaid', body, '```'].join('\n')
+const MERMAID_FLOWCHART = 'flowchart LR\n  A[Start] --> B[End]'
+
+describe('MarkdownContent — Mermaid block extraction', () => {
+  it('does not import Mermaid for content without a complete Mermaid fence', async () => {
+    expect(mermaidImportCount).toBe(0)
+
+    await renderSettled('# Title\n\n```ts\nconst diagram = false\n```')
+
+    expect(mermaidImportCount).toBe(0)
+  })
+
+  it('replaces a valid Mermaid fence with an isolated renderer placeholder', async () => {
+    const { container } = await renderSettled(
+      `## Flow\n\n${mermaidFence(MERMAID_FLOWCHART)}\n\nEnd.`,
+    )
+
+    const placeholder = container.querySelector('[data-mermaid-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.mermaid-stub')).not.toBeNull()
+    expect(container.querySelector('code.language-mermaid')).toBeNull()
+    expect(container.textContent).toContain('End.')
+  })
+
+  it('gives multiple Mermaid blocks distinct ids and indexes', async () => {
+    const { container } = await renderSettled(
+      [mermaidFence(MERMAID_FLOWCHART), mermaidFence('sequenceDiagram\n  A->>B: Hello')].join(
+        '\n\n',
+      ),
+    )
+
+    const placeholders = [...container.querySelectorAll('[data-mermaid-id]')]
+    expect(placeholders).toHaveLength(2)
+    expect(
+      new Set(placeholders.map((element) => element.getAttribute('data-mermaid-id'))).size,
+    ).toBe(2)
+    expect(
+      [...container.querySelectorAll('.mermaid-stub')].map((element) =>
+        element.getAttribute('data-block-index'),
+      ),
+    ).toEqual(['0', '1'])
+  })
+
+  it('leaves unsafe Mermaid fences as normal code blocks', async () => {
+    const unsafe = mermaidFence('flowchart LR\n A --> B\n click A callback')
+    const { container } = await renderSettled(unsafe)
+
+    expect(container.querySelector('[data-mermaid-id]')).toBeNull()
+    expect(container.querySelector('.mermaid-stub')).toBeNull()
+    expect(container.textContent).toContain('click A callback')
+  })
+
+  it('leaves an unterminated Mermaid fence as normal code', async () => {
+    const { container } = await renderSettled('```mermaid\nflowchart LR\n C --> D')
+
+    expect(container.querySelector('[data-mermaid-id]')).toBeNull()
+    expect(container.querySelector('.mermaid-stub')).toBeNull()
+    expect(container.textContent).toContain('C --> D')
   })
 })

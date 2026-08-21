@@ -71,6 +71,8 @@ const config: Config = {
     'data-cytoscape-id',
     'data-map-id',
     'data-svg-id',
+    'data-mermaid-id',
+    'data-video-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',
     'width',
