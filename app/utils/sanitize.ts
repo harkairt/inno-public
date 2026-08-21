@@ -68,6 +68,7 @@ const config: Config = {
     'data-pivot-id',
     'data-md-table-id',
     'data-bar-race-id',
+    'data-cytoscape-id',
     'data-map-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',

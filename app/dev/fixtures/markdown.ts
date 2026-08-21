@@ -3,6 +3,7 @@ import type { Scenario } from '@/app/dev/fixtures/scenario'
 import { SAMPLE_IMAGE_DATA_URI } from '@/app/dev/fixtures/options'
 import { salesRows, barChart } from '@/app/dev/fixtures/tabular'
 import { echartsBar } from '@/app/dev/fixtures/echarts'
+import { simpleGraph } from '@/app/dev/fixtures/cytoscape'
 
 type MarkdownContentProps = InstanceType<typeof MarkdownContent>['$props']
 
@@ -127,6 +128,30 @@ export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
     id: 'md-echarts-unparseable',
     title: 'Malformed ```echarts block → stays a code block',
     props: { content: fence('echarts', '{ "series": [ ') },
+  },
+  {
+    id: 'md-cytoscape',
+    title: 'Embedded ```cytoscape block → ChatCytoscape',
+    props: { content: fence('cytoscape', JSON.stringify(simpleGraph, null, 2)) },
+  },
+  {
+    id: 'md-cytoscape-rejected',
+    title: 'Rejected ```cytoscape block (external reference) → stays a code block',
+    props: {
+      content: fence(
+        'cytoscape',
+        JSON.stringify(
+          {
+            elements: {
+              nodes: [{ data: { id: 'a', icon: 'https://evil.com/x.png' } }],
+              edges: [],
+            },
+          },
+          null,
+          2,
+        ),
+      ),
+    },
   },
   {
     id: 'md-leaflet-markers',
