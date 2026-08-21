@@ -182,4 +182,21 @@ describe('OptionsMessage — multi-select submit', () => {
 
     expect(emitted().submit[0]).toEqual(['Option A, Option C'])
   })
+
+  it('restores answered selections whose labels contain commas', () => {
+    const { container } = renderOptions({
+      isActive: false,
+      selectedAnswer: 'Budapest, Hungary, Vienna',
+      payload: makePayload({
+        MultiSelectEnabled: true,
+        Items: [
+          { Key: 'k1', Value: 'Budapest, Hungary' },
+          { Key: 'k2', Value: 'Vienna' },
+          { Key: 'k3', Value: 'Bratislava' },
+        ],
+      }),
+    })
+
+    expect(container.querySelectorAll('i')).toHaveLength(2)
+  })
 })

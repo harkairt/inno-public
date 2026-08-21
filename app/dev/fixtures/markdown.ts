@@ -56,6 +56,55 @@ Lorem_ipsum_dolor_sit_amet_consectetur_adipiscing_elit_sed_do_eiusmod_tempor_inc
 
 https://example.com/a/very/long/path/that/keeps/going/and/going/and/going?query=alsoveryverylong&more=true`
 
+const svgRenderingPipeline = `<svg width="760" height="320" viewBox="0 0 760 320" role="img" aria-labelledby="svg-gallery-title">
+  <title id="svg-gallery-title">Validated SVG rendering pipeline</title>
+  <defs>
+    <linearGradient id="background" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+  </defs>
+  <rect width="760" height="320" rx="28" fill="url(#background)"/>
+  <text x="380" y="48" fill="#f8fafc" font-family="Inter, sans-serif" font-size="24" font-weight="700" text-anchor="middle">Safe SVG rendering</text>
+  <text x="380" y="76" fill="#94a3b8" font-family="Inter, sans-serif" font-size="14" text-anchor="middle">Raw fence to validated, isolated image</text>
+
+  <g transform="translate(54 112)">
+    <rect width="172" height="132" rx="18" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <circle cx="24" cy="24" r="5" fill="#fb7185"/>
+    <circle cx="42" cy="24" r="5" fill="#fbbf24"/>
+    <circle cx="60" cy="24" r="5" fill="#34d399"/>
+    <path d="M28 64L16 76L28 88" fill="none" stroke="#5eead4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M62 64L74 76L62 88" fill="none" stroke="#5eead4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 98L52 54" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+    <text x="110" y="78" fill="#e2e8f0" font-family="Inter, sans-serif" font-size="17" font-weight="700" text-anchor="middle">SVG fence</text>
+    <text x="110" y="101" fill="#94a3b8" font-family="Inter, sans-serif" font-size="12" text-anchor="middle">untrusted input</text>
+  </g>
+
+  <path d="M242 178H296" fill="none" stroke="#64748b" stroke-width="3" stroke-dasharray="7 7"/>
+  <path d="M296 178L284 170V186Z" fill="#64748b"/>
+
+  <g>
+    <path d="M380 112L426 130V169C426 204 406 229 380 242C354 229 334 204 334 169V130Z" fill="url(#shield)"/>
+    <path d="M356 174L372 190L405 153" fill="none" stroke="#ecfeff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="380" y="271" fill="#ccfbf1" font-family="Inter, sans-serif" font-size="14" font-weight="700" text-anchor="middle">ALLOWLISTED</text>
+  </g>
+
+  <path d="M464 178H518" fill="none" stroke="#64748b" stroke-width="3" stroke-dasharray="7 7"/>
+  <path d="M518 178L506 170V186Z" fill="#64748b"/>
+
+  <g transform="translate(534 112)">
+    <rect width="172" height="132" rx="18" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+    <rect x="17" y="17" width="138" height="82" rx="10" fill="#dbeafe"/>
+    <circle cx="126" cy="40" r="11" fill="#fbbf24"/>
+    <path d="M28 88L65 54L88 75L107 61L145 88Z" fill="#0f766e"/>
+    <text x="86" y="117" fill="#334155" font-family="Inter, sans-serif" font-size="13" font-weight="700" text-anchor="middle">isolated image</text>
+  </g>
+</svg>`
+
 export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
   { id: 'md-prose', title: 'Prose — headings, lists, blockquote, rule', props: { content: prose } },
   { id: 'md-links', title: 'Links, linkified URL, image', props: { content: linksAndImages } },
@@ -229,6 +278,13 @@ export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
           2,
         ),
       ),
+    },
+  },
+  {
+    id: 'md-svg',
+    title: 'Embedded ```svg block → isolated SVG image',
+    props: {
+      content: `The SVG root declares \`width="760"\` and \`height="320"\`, so the rendered image has an explicit intrinsic size.\n\n${fence('svg', svgRenderingPipeline)}`,
     },
   },
 ]

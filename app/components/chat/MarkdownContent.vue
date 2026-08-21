@@ -82,6 +82,18 @@
       />
     </Teleport>
     <Teleport
+      v-for="svgEntry in svgEntries"
+      :key="svgEntry.id"
+      :to="`[data-svg-id='${svgEntry.id}']`"
+      :defer="true"
+    >
+      <ChatSvg
+        :data="svgEntry.data"
+        :block-index="svgEntry.blockIndex"
+        :source="svgEntry.source"
+      />
+    </Teleport>
+    <Teleport
       v-for="mdTable in mdTableEntries"
       :key="mdTable.id"
       :to="`[data-md-table-id='${mdTable.id}']`"
@@ -108,6 +120,7 @@ import { parseEChartsOption, type EChartsOption } from '@/lib/validation/echarts
 import { parseBarRaceData, type BarRaceData } from '@/lib/validation/barRace'
 import { parseCytoscapeConfig, type CytoscapeConfig } from '@/lib/validation/cytoscape'
 import { parseLeafletData, type LeafletMapData } from '@/lib/validation/leaflet'
+import { parseSvgData, type SvgData } from '@/lib/validation/svg'
 import {
   parseRowsBlock,
   parseHRowsBlock,
@@ -122,6 +135,7 @@ import ChatEChart from '~/components/chat/ChatEChart.vue'
 import ChatBarRace from '~/components/chat/ChatBarRace.vue'
 import ChatCytoscape from '~/components/chat/ChatCytoscape.vue'
 import ChatMap from '~/components/chat/ChatMap.vue'
+import ChatSvg from '~/components/chat/ChatSvg.vue'
 import MarkdownTableWrapper from '~/components/chat/MarkdownTableWrapper.vue'
 
 interface Props {
@@ -187,6 +201,13 @@ interface MapEntry {
   blockIndex: number
 }
 
+interface SvgEntry {
+  id: string
+  data: SvgData
+  source: string
+  blockIndex: number
+}
+
 interface MdTableEntry {
   id: string
   html: string
@@ -200,6 +221,7 @@ const echartEntries = ref<EChartEntry[]>([])
 const barRaceEntries = ref<BarRaceEntry[]>([])
 const cytoscapeEntries = ref<CytoscapeEntry[]>([])
 const mapEntries = ref<MapEntry[]>([])
+const svgEntries = ref<SvgEntry[]>([])
 const mdTableEntries = ref<MdTableEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
@@ -251,6 +273,13 @@ const hasLeafletBlocks = (content: string | null | undefined): boolean => {
   const openIdx = content.indexOf('```leaflet')
   if (openIdx === -1) return false
   return content.indexOf('```', openIdx + 10) !== -1
+}
+
+const hasSvgBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```svg')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 6) !== -1
 }
 
 const MAX_CONTENT_SIZE = 100000
@@ -457,6 +486,44 @@ const applyLeafletBlocks = (html: string): string => {
   return result.html
 }
 
+const extractSvgBlocks = (html: string): { html: string; entries: SvgEntry[] } => {
+  const entries: SvgEntry[] = []
+  let index = 0
+  const svgBlockRegex = /<pre><code\s+class="language-svg">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(svgBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseSvgData(source)
+    const blockIndex = index++
+
+    if (parsed.isErr()) {
+      const key = `svg-${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected SVG block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+
+    const id = `${instancePrefix}-svg-${blockIndex}`
+    entries.push({ id, data: parsed.value, source, blockIndex })
+    return `<div class="svg-placeholder" data-svg-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const applySvgBlocks = (html: string): string => {
+  if (!hasSvgBlocks(props.content)) {
+    svgEntries.value = []
+    return html
+  }
+
+  const result = extractSvgBlocks(html)
+  svgEntries.value = result.entries
+  return result.html
+}
+
 const extractMarkdownTables = (html: string): { html: string; entries: MdTableEntry[] } => {
   const entries: MdTableEntry[] = []
   let index = 0
@@ -511,6 +578,7 @@ const renderContent = () => {
     barRaceEntries.value = []
     cytoscapeEntries.value = []
     mapEntries.value = []
+    svgEntries.value = []
     mdTableEntries.value = []
     return
   }
@@ -558,6 +626,7 @@ const renderContent = () => {
     html = applyBarRaceBlocks(html)
     html = applyCytoscapeBlocks(html)
     html = applyLeafletBlocks(html)
+    html = applySvgBlocks(html)
 
     const mdTableResult = extractMarkdownTables(html)
     html = mdTableResult.html
@@ -577,6 +646,7 @@ const renderContent = () => {
     barRaceEntries.value = []
     cytoscapeEntries.value = []
     mapEntries.value = []
+    svgEntries.value = []
     mdTableEntries.value = []
   }
 }

@@ -219,6 +219,11 @@
     "map": {
       "loading": "Térkép betöltése…",
       "renderFailed": "Ezt a térképet nem sikerült megjeleníteni."
+    },
+    "svg": {
+      "loading": "Illusztráció betöltése…",
+      "renderFailed": "Ezt az illusztrációt nem sikerült megjeleníteni.",
+      "altText": "SVG-illusztráció"
     }
   },
   "errors": {

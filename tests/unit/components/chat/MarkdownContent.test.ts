@@ -20,9 +20,10 @@ import { renderWithProviders } from '@/tests/utils/render'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 
 // Fake Shiki highlighter — avoids the real WASM load in happy-dom.
-const codeToHtml = vi.fn(
-  (code: string, opts: { lang: string }) => `<pre lang="${opts.lang}"><code>${code}</code></pre>`,
-)
+const codeToHtml = vi.fn((code: string, opts: { lang: string }) => {
+  const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return `<pre lang="${opts.lang}"><code>${escaped}</code></pre>`
+})
 const getLoadedLanguages = vi.fn(() => ['javascript', 'typescript', 'text'])
 vi.mock('shiki', () => ({
   createHighlighter: vi.fn(async () => ({ codeToHtml, getLoadedLanguages })),
@@ -133,6 +134,19 @@ vi.mock('~/components/chat/ChatMap.vue', () => ({
     },
     setup: (props) => () =>
       h('div', { class: 'map-stub', 'data-block-index': String(props.blockIndex) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatSvg.vue', () => ({
+  default: defineComponent({
+    name: 'ChatSvg',
+    props: {
+      data: { type: Object, required: true },
+      blockIndex: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+    setup: (props) => () =>
+      h('div', { class: 'svg-stub', 'data-block-index': String(props.blockIndex) }),
   }),
 }))
 
@@ -599,5 +613,73 @@ describe('MarkdownContent — leaflet block extraction', () => {
 
     expect(container.querySelector('[data-map-id]')).toBeNull()
     expect(container.querySelector('.map-stub')).toBeNull()
+  })
+})
+
+const SVG_ILLUSTRATION =
+  '<svg viewBox="0 0 120 80"><title>Status</title><circle cx="40" cy="40" r="24" fill="#22c55e"/><path d="M70 40L110 40" stroke="#334155"/></svg>'
+
+const svgFence = (body: string) => ['```svg', body, '```'].join('\n')
+
+describe('MarkdownContent — SVG block extraction', () => {
+  it('replaces a valid SVG block with a placeholder holding the isolated renderer', async () => {
+    const { container } = await renderSettled(
+      `## Illustration\n\n${svgFence(SVG_ILLUSTRATION)}\n\nEnd.`,
+    )
+
+    const placeholder = container.querySelector('[data-svg-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.svg-stub')).not.toBeNull()
+    expect(container.querySelector('code.language-svg')).toBeNull()
+    expect(container.textContent).not.toContain('<circle')
+    expect(container.textContent).toContain('End.')
+  })
+
+  it('assigns distinct ids and block indexes to multiple SVG fences', async () => {
+    const { container } = await renderSettled(
+      [svgFence(SVG_ILLUSTRATION), svgFence(SVG_ILLUSTRATION)].join('\n\n'),
+    )
+
+    const placeholders = [...container.querySelectorAll('[data-svg-id]')]
+    expect(placeholders).toHaveLength(2)
+    expect(new Set(placeholders.map((element) => element.getAttribute('data-svg-id'))).size).toBe(2)
+    expect(
+      [...container.querySelectorAll('.svg-stub')].map((element) =>
+        element.getAttribute('data-block-index'),
+      ),
+    ).toEqual(['0', '1'])
+  })
+
+  it('leaves a rejected active SVG block as code', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const source = '<svg><script>alert(1)</script></svg>'
+    const { container } = await renderSettled(svgFence(source))
+
+    expect(container.querySelector('[data-svg-id]')).toBeNull()
+    expect(container.querySelector('.svg-stub')).toBeNull()
+    expect(container.textContent).toContain('alert(1)')
+
+    const records = warnSpy.mock.calls.filter((call) => call[0] === '[MarkdownContent]')
+    expect(records).toHaveLength(1)
+    expect(records[0]?.[2]).toEqual({
+      reason: 'unsupported-element',
+      blockIndex: 0,
+    })
+    warnSpy.mockRestore()
+  })
+
+  it('leaves an unterminated SVG fence untouched', async () => {
+    const { container } = await renderSettled(`\`\`\`svg\n${SVG_ILLUSTRATION}`)
+
+    expect(container.querySelector('[data-svg-id]')).toBeNull()
+    expect(container.querySelector('.svg-stub')).toBeNull()
+    expect(container.textContent).toContain('<svg')
+  })
+
+  it('does not create an SVG renderer for ordinary markdown', async () => {
+    const { container } = await renderSettled('A message without an SVG fence.')
+
+    expect(container.querySelector('[data-svg-id]')).toBeNull()
+    expect(container.querySelector('.svg-stub')).toBeNull()
   })
 })
