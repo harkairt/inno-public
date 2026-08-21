@@ -210,6 +210,10 @@
       "renderFailed": "Ezt a diagramot nem sikerült megjeleníteni.",
       "play": "Lejátszás",
       "pause": "Szünet"
+    },
+    "map": {
+      "loading": "Térkép betöltése…",
+      "renderFailed": "Ezt a térképet nem sikerült megjeleníteni."
     }
   },
   "errors": {
