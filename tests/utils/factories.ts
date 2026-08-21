@@ -1,5 +1,5 @@
 /**
- * Shared test factories for vonno/InnoChat unit tests.
+ * Shared test factories for InnoChat unit tests.
  *
  * Usage:
  *   import { makeApiResponse, makeAxiosError, makeUser, makeSession, makeMessage } from '@/../tests/utils/factories'

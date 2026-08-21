@@ -21,7 +21,7 @@ http:
         value: "148"
       - name: sessionId
         type: text
-        value: b6f737e9-9f67-4731-ae49-71cd7ed032ed
+        value: "{{sessionId}}"
   auth: inherit
 
 settings:

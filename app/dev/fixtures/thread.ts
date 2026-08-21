@@ -7,7 +7,7 @@ export const galleryUser: UserDTO = {
   createdAt: '2026-01-02T08:00:00.000Z',
   updatedAt: null,
   name: 'Gallery User',
-  email: 'gallery@vonno.dev',
+  email: 'gallery@innochat.dev',
   status: 'active',
   invitationAccepted: true,
   roles: ['user'],
@@ -20,8 +20,8 @@ export const galleryUser: UserDTO = {
   isAvailable: true,
 }
 
-const AGENT_CODE = 'vonno-agent'
-const AGENT_NAME = 'Vonno Agent'
+const AGENT_CODE = 'innochat-agent'
+const AGENT_NAME = 'InnoChat Agent'
 const SESSION_ID = 'dev-gallery-session'
 const DAY_MS = 86_400_000
 

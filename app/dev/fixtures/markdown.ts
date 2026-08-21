@@ -30,7 +30,7 @@ Trailing paragraph after a horizontal rule.`
 const linksAndImages = `An inline [link to example.com](https://example.com/docs) and a bare URL that
 linkify turns into an anchor: https://example.com/raw?a=1&b=2
 
-![Vonno palette](${SAMPLE_IMAGE_DATA_URI})`
+![InnoChat palette](${SAMPLE_IMAGE_DATA_URI})`
 
 const code = `Inline \`useMarkdown()\` reference, then a highlighted block:
 

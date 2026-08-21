@@ -4,7 +4,7 @@ This guide explains how to deploy the Netlify Edge Function to act as a CORS pro
 
 ## Prerequisites
 
-- GitHub account with the `vonno` repository
+- GitHub account with the `innochat` repository
 - No credit card required for Netlify free tier
 
 ## Setup Steps
@@ -21,8 +21,8 @@ This guide explains how to deploy the Netlify Edge Function to act as a CORS pro
 
 1. In Netlify dashboard, click "Add new site" → "Import an existing project"
 2. Choose "Deploy with GitHub"
-3. Authorize Netlify to access `vonno` repository
-4. Select the `vonno` repository
+3. Authorize Netlify to access `innochat` repository
+4. Select the `innochat` repository
 
 ### 3. Configure Build Settings
 
@@ -70,7 +70,7 @@ If you have a custom domain:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ User Browser                                                    │
-│   ↓ visits https://harkairt.github.io/vonno/                   │
+│   ↓ visits https://harkairt.github.io/innochat/                │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -136,7 +136,7 @@ You should see:
 - No CORS errors
 
 ### Using browser DevTools:
-1. Visit https://harkairt.github.io/vonno/
+1. Visit https://harkairt.github.io/innochat/
 2. Open DevTools → Network tab
 3. Try to log in
 4. Check requests to Netlify edge function:

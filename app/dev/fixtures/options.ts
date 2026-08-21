@@ -59,15 +59,15 @@ const fixtures: OptionsFixture[] = [
       ...RADIO_DEFAULTS,
       Text: 'Pick the palette you prefer:',
       Items: [
-        { Key: 'k1', Value: `![Vonno palette](${SAMPLE_IMAGE_DATA_URI})` },
+        { Key: 'k1', Value: `![InnoChat palette](${SAMPLE_IMAGE_DATA_URI})` },
         {
           Key: 'k2',
-          Value: `Same palette, with a caption\n\n![Vonno palette](${SAMPLE_IMAGE_DATA_URI})`,
+          Value: `Same palette, with a caption\n\n![InnoChat palette](${SAMPLE_IMAGE_DATA_URI})`,
         },
         { Key: 'k3', Value: 'Neither' },
       ],
     },
-    answer: `![Vonno palette](${SAMPLE_IMAGE_DATA_URI})`,
+    answer: `![InnoChat palette](${SAMPLE_IMAGE_DATA_URI})`,
     answeredHint: 'the image row itself is the selected answer',
   },
   {
@@ -132,7 +132,7 @@ const fixtures: OptionsFixture[] = [
       Items: [
         { Key: 'k1', Value: '**PDF** — print ready' },
         { Key: 'k2', Value: 'Excel (`.xlsx`) with one sheet per region' },
-        { Key: 'k3', Value: `![Vonno palette](${SAMPLE_IMAGE_DATA_URI}) Palette swatch` },
+        { Key: 'k3', Value: `![InnoChat palette](${SAMPLE_IMAGE_DATA_URI}) Palette swatch` },
       ],
     },
     answer: 'Excel (`.xlsx`) with one sheet per region',

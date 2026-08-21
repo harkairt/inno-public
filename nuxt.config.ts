@@ -192,8 +192,8 @@ export default defineNuxtConfig({
     },
 
     manifest: {
-      name: 'Vonno - AI Chat Platform',
-      short_name: 'Vonno',
+      name: 'InnoChat - AI Chat Platform',
+      short_name: 'InnoChat',
       description: 'Intelligent AI-powered chat platform for seamless communication',
       theme_color: '#283618',
       background_color: '#ffffff',

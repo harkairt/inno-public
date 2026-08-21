@@ -1,0 +1,23 @@
+{
+  "description": "Run project checks when a Codex turn finishes.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/bin/bash \"$(git rev-parse --show-toplevel)/.claude/hooks/npx_nuxt_typecheck.sh\"",
+            "timeout": 600,
+            "statusMessage": "Running Nuxt typecheck"
+          },
+          {
+            "type": "command",
+            "command": "/bin/bash \"$(git rev-parse --show-toplevel)/.claude/hooks/npx_eslint_changed_files.sh\"",
+            "timeout": 600,
+            "statusMessage": "Linting changed files"
+          }
+        ]
+      }
+    ]
+  }
+}
