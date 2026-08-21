@@ -58,6 +58,18 @@
       />
     </Teleport>
     <Teleport
+      v-for="cytoscape in cytoscapeEntries"
+      :key="cytoscape.id"
+      :to="`[data-cytoscape-id='${cytoscape.id}']`"
+      :defer="true"
+    >
+      <ChatCytoscape
+        :config="cytoscape.config"
+        :block-index="cytoscape.blockIndex"
+        :source="cytoscape.source"
+      />
+    </Teleport>
+    <Teleport
       v-for="mapEntry in mapEntries"
       :key="mapEntry.id"
       :to="`[data-map-id='${mapEntry.id}']`"
@@ -87,12 +99,14 @@ import { useMarkdown } from '@/app/composables/useMarkdown'
 import { useShiki } from '@/app/composables/useShiki'
 import { useChartJs } from '~/composables/useChartJs'
 import { useECharts } from '~/composables/useECharts'
+import { useCytoscape } from '~/composables/useCytoscape'
 import { useLeaflet } from '~/composables/useLeaflet'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 import { createLogger } from '@/lib/utils/logger'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
 import { parseEChartsOption, type EChartsOption } from '@/lib/validation/echarts'
 import { parseBarRaceData, type BarRaceData } from '@/lib/validation/barRace'
+import { parseCytoscapeConfig, type CytoscapeConfig } from '@/lib/validation/cytoscape'
 import { parseLeafletData, type LeafletMapData } from '@/lib/validation/leaflet'
 import {
   parseRowsBlock,
@@ -106,6 +120,7 @@ import ChatTable from '~/components/chat/ChatTable.vue'
 import ChatPivotTable from '~/components/chat/ChatPivotTable.vue'
 import ChatEChart from '~/components/chat/ChatEChart.vue'
 import ChatBarRace from '~/components/chat/ChatBarRace.vue'
+import ChatCytoscape from '~/components/chat/ChatCytoscape.vue'
 import ChatMap from '~/components/chat/ChatMap.vue'
 import MarkdownTableWrapper from '~/components/chat/MarkdownTableWrapper.vue'
 
@@ -120,6 +135,7 @@ const props = withDefaults(defineProps<Props>(), {
 const { isLoaded: shikiLoaded, loadHighlighter, highlightCode } = useShiki()
 const { isLoaded: chartJsLoaded, loadChartJs } = useChartJs()
 const { isLoaded: echartsLoaded, loadECharts } = useECharts()
+const { isLoaded: cytoscapeLoaded, loadCytoscape } = useCytoscape()
 const { isLoaded: leafletLoaded, loadLeaflet } = useLeaflet()
 
 const logger = createLogger('MarkdownContent')
@@ -157,6 +173,13 @@ interface BarRaceEntry {
   blockIndex: number
 }
 
+interface CytoscapeEntry {
+  id: string
+  config: CytoscapeConfig
+  source: string
+  blockIndex: number
+}
+
 interface MapEntry {
   id: string
   data: LeafletMapData
@@ -175,6 +198,7 @@ const tableEntries = ref<TableEntry[]>([])
 const pivotEntries = ref<PivotEntry[]>([])
 const echartEntries = ref<EChartEntry[]>([])
 const barRaceEntries = ref<BarRaceEntry[]>([])
+const cytoscapeEntries = ref<CytoscapeEntry[]>([])
 const mapEntries = ref<MapEntry[]>([])
 const mdTableEntries = ref<MdTableEntry[]>([])
 
@@ -203,6 +227,13 @@ const hasBarRaceBlocks = (content: string | null | undefined): boolean => {
   const openIdx = content.indexOf('```bar-race')
   if (openIdx === -1) return false
   return content.indexOf('```', openIdx + 11) !== -1
+}
+
+const hasCytoscapeBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```cytoscape')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 12) !== -1
 }
 
 const hasTableBlocks = (content: string | null | undefined): boolean => {
@@ -350,6 +381,44 @@ const applyBarRaceBlocks = (html: string): string => {
   return result.html
 }
 
+const extractCytoscapeBlocks = (html: string): { html: string; entries: CytoscapeEntry[] } => {
+  const entries: CytoscapeEntry[] = []
+  let index = 0
+  const cytoscapeBlockRegex = /<pre><code\s+class="language-cytoscape">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(cytoscapeBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseCytoscapeConfig(source)
+    const blockIndex = index++
+
+    if (parsed.isErr()) {
+      const key = `cytoscape-${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected cytoscape block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+
+    const id = `${instancePrefix}-cytoscape-${blockIndex}`
+    entries.push({ id, config: parsed.value, source, blockIndex })
+    return `<div class="cytoscape-placeholder" data-cytoscape-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const applyCytoscapeBlocks = (html: string): string => {
+  if (!hasCytoscapeBlocks(props.content)) {
+    cytoscapeEntries.value = []
+    return html
+  }
+
+  const result = extractCytoscapeBlocks(html)
+  cytoscapeEntries.value = result.entries
+  return result.html
+}
+
 const extractLeafletBlocks = (html: string): { html: string; entries: MapEntry[] } => {
   const entries: MapEntry[] = []
   let index = 0
@@ -440,6 +509,7 @@ const renderContent = () => {
     pivotEntries.value = []
     echartEntries.value = []
     barRaceEntries.value = []
+    cytoscapeEntries.value = []
     mapEntries.value = []
     mdTableEntries.value = []
     return
@@ -486,6 +556,7 @@ const renderContent = () => {
 
     html = applyEChartsBlocks(html)
     html = applyBarRaceBlocks(html)
+    html = applyCytoscapeBlocks(html)
     html = applyLeafletBlocks(html)
 
     const mdTableResult = extractMarkdownTables(html)
@@ -504,6 +575,7 @@ const renderContent = () => {
     pivotEntries.value = []
     echartEntries.value = []
     barRaceEntries.value = []
+    cytoscapeEntries.value = []
     mapEntries.value = []
     mdTableEntries.value = []
   }
@@ -535,6 +607,12 @@ watch(echartsLoaded, (loaded) => {
   }
 })
 
+watch(cytoscapeLoaded, (loaded) => {
+  if (loaded && cytoscapeEntries.value.length > 0) {
+    renderContent()
+  }
+})
+
 watch(leafletLoaded, (loaded) => {
   if (loaded && mapEntries.value.length > 0) {
     renderContent()
@@ -550,6 +628,9 @@ onMounted(() => {
   }
   if (hasEChartsBlocks(props.content) || hasBarRaceBlocks(props.content)) {
     void loadECharts()
+  }
+  if (hasCytoscapeBlocks(props.content)) {
+    void loadCytoscape()
   }
   if (hasLeafletBlocks(props.content)) {
     void loadLeaflet()

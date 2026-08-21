@@ -211,6 +211,11 @@
       "play": "Play",
       "pause": "Pause"
     },
+    "cytoscape": {
+      "loading": "Loading graph…",
+      "renderFailed": "This graph could not be displayed.",
+      "resetView": "Reset view"
+    },
     "map": {
       "loading": "Loading map…",
       "renderFailed": "This map could not be displayed."

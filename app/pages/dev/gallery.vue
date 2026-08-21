@@ -187,6 +187,24 @@
       </section>
 
       <section class="space-y-4">
+        <h2 class="text-lg font-semibold">ChatCytoscape</h2>
+        <div
+          v-for="scenario in cytoscapeScenarios"
+          :key="scenario.id"
+          class="rounded-xl border border-[hsl(var(--border))] p-4"
+        >
+          <div class="mb-3 text-xs font-medium text-[hsl(var(--muted-foreground))]">
+            {{ scenario.title }}
+          </div>
+          <ChatCytoscape
+            :config="scenario.props.config"
+            :block-index="scenario.props.blockIndex"
+            :source="scenario.props.source"
+          />
+        </div>
+      </section>
+
+      <section class="space-y-4">
         <h2 class="text-lg font-semibold">ChatMap</h2>
         <div
           v-for="scenario in leafletScenarios"
@@ -252,6 +270,7 @@ import ChatTable from '@/app/components/chat/ChatTable.vue'
 import ChatChart from '@/app/components/chat/ChatChart.vue'
 import ChatEChart from '@/app/components/chat/ChatEChart.vue'
 import ChatBarRace from '@/app/components/chat/ChatBarRace.vue'
+import ChatCytoscape from '@/app/components/chat/ChatCytoscape.vue'
 import ChatMap from '@/app/components/chat/ChatMap.vue'
 import ChatPivotTable from '@/app/components/chat/ChatPivotTable.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
@@ -261,6 +280,7 @@ import { markdownScenarios } from '@/app/dev/fixtures/markdown'
 import { tableScenarios, chartScenarios, pivotScenarios } from '@/app/dev/fixtures/tabular'
 import { echartsScenarios } from '@/app/dev/fixtures/echarts'
 import { barRaceScenarios } from '@/app/dev/fixtures/barRace'
+import { cytoscapeScenarios } from '@/app/dev/fixtures/cytoscape'
 import { leafletScenarios } from '@/app/dev/fixtures/leaflet'
 import { threadMessages, ACTIVE_OPTIONS_MESSAGE_ID } from '@/app/dev/fixtures/thread'
 

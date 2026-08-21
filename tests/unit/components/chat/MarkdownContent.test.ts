@@ -29,11 +29,25 @@ vi.mock('shiki', () => ({
 }))
 
 let echartsImportCount = 0
+let cytoscapeImportCount = 0
 
 vi.mock('echarts', () => {
   echartsImportCount++
   return {
     init: () => ({ setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn(), on: vi.fn() }),
+  }
+})
+
+vi.mock('cytoscape', () => {
+  cytoscapeImportCount++
+  return {
+    default: () => ({
+      destroy: vi.fn(),
+      resize: vi.fn(),
+      style: vi.fn(),
+      json: vi.fn(),
+      layout: vi.fn(() => ({ run: vi.fn() })),
+    }),
   }
 })
 
@@ -65,6 +79,19 @@ vi.mock('~/components/chat/ChatPivotTable.vue', () => ({
     props: { data: { type: Array, required: true } },
     setup: (props) => () =>
       h('div', { class: 'pivot-stub', 'data-rows': String(props.data.length) }),
+  }),
+}))
+
+vi.mock('~/components/chat/ChatCytoscape.vue', () => ({
+  default: defineComponent({
+    name: 'ChatCytoscape',
+    props: {
+      config: { type: Object, required: true },
+      blockIndex: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+    setup: (props) => () =>
+      h('div', { class: 'cytoscape-stub', 'data-block-index': String(props.blockIndex) }),
   }),
 }))
 
@@ -429,6 +456,97 @@ describe('S29 MarkdownContent — chart.js regression guard', () => {
     expect(container.querySelector('code.language-chart\\.js')).toBeNull()
     expect(container.textContent).toContain('Quarterly revenue')
     expect(container.textContent).toContain('Let me know if you want it by month.')
+  })
+})
+
+const CYTOSCAPE_GRAPH =
+  '{"elements":{"nodes":[{"data":{"id":"a"}},{"data":{"id":"b"}}],"edges":[{"data":{"source":"a","target":"b"}}]}}'
+
+const cytoscapeFence = (body: string) => ['```cytoscape', body, '```'].join('\n')
+
+describe('MarkdownContent — Cytoscape engine is not loaded speculatively', () => {
+  it('never imports the Cytoscape engine for content without a cytoscape block', async () => {
+    expect(cytoscapeImportCount).toBe(0)
+
+    await renderSettled('# Title\n\n```js\nconst a = 1\n```\n\nSome prose.')
+
+    expect(cytoscapeImportCount).toBe(0)
+    expect(document.querySelector('[data-cytoscape-id]')).toBeNull()
+  })
+
+  it('leaves an unterminated cytoscape fence untouched and loads no engine', async () => {
+    expect(cytoscapeImportCount).toBe(0)
+
+    const { container } = await renderSettled(
+      `Here it comes:\n\n\`\`\`cytoscape\n${CYTOSCAPE_GRAPH}`,
+    )
+
+    expect(cytoscapeImportCount).toBe(0)
+    expect(container.querySelector('[data-cytoscape-id]')).toBeNull()
+    expect(container.querySelector('.cytoscape-stub')).toBeNull()
+    expect(container.textContent).toContain('"elements"')
+  })
+})
+
+describe('MarkdownContent — Cytoscape block extraction', () => {
+  it('replaces a single cytoscape block with a placeholder holding the graph', async () => {
+    const { container } = await renderSettled(
+      `## Network\n\n${cytoscapeFence(CYTOSCAPE_GRAPH)}\n\nThat is the topology.`,
+    )
+
+    const placeholder = container.querySelector('[data-cytoscape-id]')
+    expect(placeholder).not.toBeNull()
+    expect(placeholder?.querySelector('.cytoscape-stub')).not.toBeNull()
+
+    expect(container.querySelector('code.language-cytoscape')).toBeNull()
+    expect(container.textContent).not.toContain('"elements"')
+    expect(container.textContent).toContain('That is the topology.')
+  })
+
+  it('gives two blocks two placeholders with distinct ids', async () => {
+    const { container } = await renderSettled(
+      [cytoscapeFence(CYTOSCAPE_GRAPH), cytoscapeFence(CYTOSCAPE_GRAPH)].join('\n\n'),
+    )
+
+    const placeholders = [...container.querySelectorAll('[data-cytoscape-id]')]
+    expect(placeholders).toHaveLength(2)
+
+    const ids = placeholders.map((el) => el.getAttribute('data-cytoscape-id'))
+    expect(new Set(ids).size).toBe(2)
+
+    const indexes = [...container.querySelectorAll('.cytoscape-stub')].map((el) =>
+      el.getAttribute('data-block-index'),
+    )
+    expect(indexes).toEqual(['0', '1'])
+  })
+})
+
+describe('MarkdownContent — rejected Cytoscape block', () => {
+  it('keeps the rejected block as code and logs the reason', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const { container } = await renderSettled(
+      [
+        cytoscapeFence(CYTOSCAPE_GRAPH),
+        cytoscapeFence('{ not json at all }'),
+        cytoscapeFence(CYTOSCAPE_GRAPH),
+      ].join('\n\n'),
+    )
+
+    const indexes = [...container.querySelectorAll('.cytoscape-stub')].map((el) =>
+      el.getAttribute('data-block-index'),
+    )
+    expect(indexes).toEqual(['0', '2'])
+
+    const survivor = [...container.querySelectorAll('pre')].find((el) =>
+      el.textContent?.includes('not json at all'),
+    )
+    expect(survivor).toBeDefined()
+
+    const records = warnSpy.mock.calls.filter((call) => call[0] === '[MarkdownContent]')
+    expect(records.length).toBeGreaterThanOrEqual(1)
+
+    warnSpy.mockRestore()
   })
 })
 

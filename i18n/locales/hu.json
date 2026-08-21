@@ -211,6 +211,11 @@
       "play": "Lejátszás",
       "pause": "Szünet"
     },
+    "cytoscape": {
+      "loading": "Gráf betöltése…",
+      "renderFailed": "Ezt a gráfot nem sikerült megjeleníteni.",
+      "resetView": "Nézet visszaállítása"
+    },
     "map": {
       "loading": "Térkép betöltése…",
       "renderFailed": "Ezt a térképet nem sikerült megjeleníteni."
