@@ -204,6 +204,7 @@ import type { OptionsMessagePayload } from '@/types/api/schemas'
 import { OptionsUIControlType } from '@/types/enums'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import { useMarkdown } from '@/app/composables/useMarkdown'
+import { restoreMultiSelectAnswer } from '@/app/utils/optionAnswer'
 
 const CUSTOM_SENTINEL = '__custom__'
 
@@ -291,9 +292,10 @@ const comboboxItems = computed(() => {
 })
 
 function restoreMultiSelect(answer: string) {
-  const parts = answer.split(', ')
-  const matched = parts.filter((v) => props.payload.Items.some((item) => item.Value === v))
-  const unmatched = parts.filter((v) => !props.payload.Items.some((item) => item.Value === v))
+  const { matched, unmatched } = restoreMultiSelectAnswer(
+    answer,
+    props.payload.Items.map((item) => item.Value),
+  )
 
   selectedMultiple.value = matched
   if (unmatched.length > 0 && props.payload.IsPlainTextEnabled) {

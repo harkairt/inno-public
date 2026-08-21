@@ -7,7 +7,7 @@ description: Use when adding a new fenced code block renderer to chat messages �
 
 A "fence type" is a fenced code block language tag (e.g. ` ```cytoscape `) that the chat markdown pipeline intercepts and renders as a rich visualization instead of syntax-highlighted code.
 
-Existing fence types: `chart.js`, `echarts`, `bar-race`, `rows`/`h-rows`, `pivot`, `cytoscape`, `leaflet`.
+Existing fence types: `chart.js`, `echarts`, `bar-race`, `rows`/`h-rows`, `pivot`, `cytoscape`, `leaflet`, `svg`.
 
 ---
 
@@ -365,6 +365,21 @@ Cover:
 - Valid ` ```{tag} ` block extracted → placeholder div rendered → component teleported
 - Invalid block left as `<pre><code>` (rejected by validator)
 - Library not imported when no `{tag}` blocks present
+
+### 10. Dev gallery — `app/dev/fixtures/markdown.ts`
+
+Every new fence type must include at least one representative, valid fenced example in
+`markdownScenarios`. Build it with the existing `fence()` helper so `/dev/gallery` exercises the
+real `MarkdownContent` detection, extraction, sanitization, and Teleport path.
+
+- Use a payload that demonstrates the renderer's main visual behavior.
+- Keep the fixture deterministic and independent of the backend or external resources.
+- Add a rejected or malformed example when the fence has security-sensitive failure behavior that
+  benefits from manual inspection.
+- If the renderer needs isolated controls or interaction testing, also add a typed fixture and a
+  dedicated component section to `app/pages/dev/gallery.vue`; the embedded MarkdownContent example
+  is still required.
+- Verify the example at `/dev/gallery` in light and dark mode and at mobile and desktop widths.
 
 ---
 

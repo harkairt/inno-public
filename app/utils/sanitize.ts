@@ -70,6 +70,7 @@ const config: Config = {
     'data-bar-race-id',
     'data-cytoscape-id',
     'data-map-id',
+    'data-svg-id',
     // KaTeX attributes (SVG + inline styles for positioning):
     'viewBox',
     'width',

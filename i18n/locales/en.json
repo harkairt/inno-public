@@ -219,6 +219,11 @@
     "map": {
       "loading": "Loading map…",
       "renderFailed": "This map could not be displayed."
+    },
+    "svg": {
+      "loading": "Loading illustration…",
+      "renderFailed": "This illustration could not be displayed.",
+      "altText": "SVG illustration"
     }
   },
   "errors": {

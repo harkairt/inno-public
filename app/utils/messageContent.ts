@@ -2,12 +2,15 @@ import type { AISessionMessageDTO } from '@/types/api/schemas'
 import { AIAnswerType } from '@/types/enums'
 
 const WIDE_CONTENT_MARKERS = [
-  '```echarts',
-  '```chart.js',
-  '```bar-race',
   '```rows',
   '```h-rows',
   '```pivot',
+  '```chart.js',
+  '```echarts',
+  '```bar-race',
+  '```cytoscape',
+  '```leaflet',
+  '```svg',
 ]
 const MD_TABLE_RE = /^\|.+\|/m
 
