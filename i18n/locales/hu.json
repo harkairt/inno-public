@@ -224,6 +224,16 @@
       "loading": "Illusztráció betöltése…",
       "renderFailed": "Ezt az illusztrációt nem sikerült megjeleníteni.",
       "altText": "SVG-illusztráció"
+    },
+    "mermaid": {
+      "loading": "Diagram betöltése…",
+      "renderFailed": "Ezt a diagramot nem sikerült megjeleníteni.",
+      "altText": "Mermaid diagram"
+    },
+    "video": {
+      "renderFailed": "Ezt a videót nem sikerült megjeleníteni.",
+      "defaultLabel": "Videólejátszó",
+      "unsupported": "A böngészője nem támogatja a HTML5-videót."
     }
   },
   "errors": {

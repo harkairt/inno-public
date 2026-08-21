@@ -366,7 +366,7 @@ Cover:
 - Invalid block left as `<pre><code>` (rejected by validator)
 - Library not imported when no `{tag}` blocks present
 
-### 10. Dev gallery — `app/dev/fixtures/markdown.ts`
+### 10. Dev gallery and thread — `app/dev/fixtures/markdown.ts` + `app/dev/fixtures/thread.ts`
 
 Every new fence type must include at least one representative, valid fenced example in
 `markdownScenarios`. Build it with the existing `fence()` helper so `/dev/gallery` exercises the
@@ -380,6 +380,8 @@ real `MarkdownContent` detection, extraction, sanitization, and Teleport path.
   dedicated component section to `app/pages/dev/gallery.vue`; the embedded MarkdownContent example
   is still required.
 - Verify the example at `/dev/gallery` in light and dark mode and at mobile and desktop widths.
+- Add the same representative fixture to `fixtureGroups` in `app/dev/fixtures/thread.ts`. This makes
+  the complete chat view exercise the real message list, bubble sizing, and MarkdownContent path.
 
 ---
 

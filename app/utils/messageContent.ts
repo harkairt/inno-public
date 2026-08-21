@@ -11,6 +11,8 @@ const WIDE_CONTENT_MARKERS = [
   '```cytoscape',
   '```leaflet',
   '```svg',
+  '```mermaid',
+  '```video',
 ]
 const MD_TABLE_RE = /^\|.+\|/m
 

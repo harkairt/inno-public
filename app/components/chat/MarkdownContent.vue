@@ -94,6 +94,30 @@
       />
     </Teleport>
     <Teleport
+      v-for="mermaid in mermaidEntries"
+      :key="mermaid.id"
+      :to="`[data-mermaid-id='${mermaid.id}']`"
+      :defer="true"
+    >
+      <ChatMermaid
+        :data="mermaid.data"
+        :block-index="mermaid.blockIndex"
+        :source="mermaid.source"
+      />
+    </Teleport>
+    <Teleport
+      v-for="video in videoEntries"
+      :key="video.id"
+      :to="`[data-video-id='${video.id}']`"
+      :defer="true"
+    >
+      <ChatVideo
+        :data="video.data"
+        :block-index="video.blockIndex"
+        :source="video.source"
+      />
+    </Teleport>
+    <Teleport
       v-for="mdTable in mdTableEntries"
       :key="mdTable.id"
       :to="`[data-md-table-id='${mdTable.id}']`"
@@ -113,6 +137,7 @@ import { useChartJs } from '~/composables/useChartJs'
 import { useECharts } from '~/composables/useECharts'
 import { useCytoscape } from '~/composables/useCytoscape'
 import { useLeaflet } from '~/composables/useLeaflet'
+import { useMermaid } from '~/composables/useMermaid'
 import { sanitizeHTML } from '@/app/utils/sanitize'
 import { createLogger } from '@/lib/utils/logger'
 import { parseChartConfig, type ChartConfig } from '@/lib/validation/chart'
@@ -121,6 +146,8 @@ import { parseBarRaceData, type BarRaceData } from '@/lib/validation/barRace'
 import { parseCytoscapeConfig, type CytoscapeConfig } from '@/lib/validation/cytoscape'
 import { parseLeafletData, type LeafletMapData } from '@/lib/validation/leaflet'
 import { parseSvgData, type SvgData } from '@/lib/validation/svg'
+import { parseMermaidData, type MermaidData } from '@/lib/validation/mermaid'
+import { parseVideoData, type VideoData } from '@/lib/validation/video'
 import {
   parseRowsBlock,
   parseHRowsBlock,
@@ -136,6 +163,8 @@ import ChatBarRace from '~/components/chat/ChatBarRace.vue'
 import ChatCytoscape from '~/components/chat/ChatCytoscape.vue'
 import ChatMap from '~/components/chat/ChatMap.vue'
 import ChatSvg from '~/components/chat/ChatSvg.vue'
+import ChatMermaid from '~/components/chat/ChatMermaid.vue'
+import ChatVideo from '~/components/chat/ChatVideo.vue'
 import MarkdownTableWrapper from '~/components/chat/MarkdownTableWrapper.vue'
 
 interface Props {
@@ -151,6 +180,7 @@ const { isLoaded: chartJsLoaded, loadChartJs } = useChartJs()
 const { isLoaded: echartsLoaded, loadECharts } = useECharts()
 const { isLoaded: cytoscapeLoaded, loadCytoscape } = useCytoscape()
 const { isLoaded: leafletLoaded, loadLeaflet } = useLeaflet()
+const { isLoaded: mermaidLoaded, loadMermaid } = useMermaid()
 
 const logger = createLogger('MarkdownContent')
 const reportedRejections = new Set<string>()
@@ -208,6 +238,20 @@ interface SvgEntry {
   blockIndex: number
 }
 
+interface MermaidEntry {
+  id: string
+  data: MermaidData
+  source: string
+  blockIndex: number
+}
+
+interface VideoEntry {
+  id: string
+  data: VideoData
+  source: string
+  blockIndex: number
+}
+
 interface MdTableEntry {
   id: string
   html: string
@@ -222,6 +266,8 @@ const barRaceEntries = ref<BarRaceEntry[]>([])
 const cytoscapeEntries = ref<CytoscapeEntry[]>([])
 const mapEntries = ref<MapEntry[]>([])
 const svgEntries = ref<SvgEntry[]>([])
+const mermaidEntries = ref<MermaidEntry[]>([])
+const videoEntries = ref<VideoEntry[]>([])
 const mdTableEntries = ref<MdTableEntry[]>([])
 
 const hasImages = computed(() => renderedHTML.value.includes('<img '))
@@ -280,6 +326,20 @@ const hasSvgBlocks = (content: string | null | undefined): boolean => {
   const openIdx = content.indexOf('```svg')
   if (openIdx === -1) return false
   return content.indexOf('```', openIdx + 6) !== -1
+}
+
+const hasMermaidBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```mermaid')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 10) !== -1
+}
+
+const hasVideoBlocks = (content: string | null | undefined): boolean => {
+  if (!content) return false
+  const openIdx = content.indexOf('```video')
+  if (openIdx === -1) return false
+  return content.indexOf('```', openIdx + 8) !== -1
 }
 
 const MAX_CONTENT_SIZE = 100000
@@ -524,6 +584,78 @@ const applySvgBlocks = (html: string): string => {
   return result.html
 }
 
+const extractMermaidBlocks = (html: string): { html: string; entries: MermaidEntry[] } => {
+  const entries: MermaidEntry[] = []
+  let index = 0
+  const mermaidBlockRegex = /<pre><code\s+class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(mermaidBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseMermaidData(source)
+    const blockIndex = index++
+
+    if (parsed.isErr()) {
+      const key = `mermaid-${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected Mermaid block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+
+    const id = `${instancePrefix}-mermaid-${blockIndex}`
+    entries.push({ id, data: parsed.value, source, blockIndex })
+    return `<div class="mermaid-placeholder" data-mermaid-id="${id}"></div>`
+  })
+
+  return { html: replaced, entries }
+}
+
+const applyMermaidBlocks = (html: string): string => {
+  if (!hasMermaidBlocks(props.content)) {
+    mermaidEntries.value = []
+    return html
+  }
+
+  const result = extractMermaidBlocks(html)
+  mermaidEntries.value = result.entries
+  return result.html
+}
+
+const extractVideoBlocks = (html: string): { html: string; entries: VideoEntry[] } => {
+  const entries: VideoEntry[] = []
+  let index = 0
+  const videoBlockRegex = /<pre><code\s+class="language-video">([\s\S]*?)<\/code><\/pre>/g
+
+  const replaced = html.replace(videoBlockRegex, (match, encoded: string) => {
+    const source = decodeHtmlEntities(encoded)
+    const parsed = parseVideoData(source)
+    const blockIndex = index++
+    if (parsed.isErr()) {
+      const key = `video-${blockIndex}:${parsed.error.reason}`
+      if (!reportedRejections.has(key)) {
+        reportedRejections.add(key)
+        logger.warn('Rejected video block', { reason: parsed.error.reason, blockIndex })
+      }
+      return match
+    }
+    const id = `${instancePrefix}-video-${blockIndex}`
+    entries.push({ id, data: parsed.value, source, blockIndex })
+    return `<div class="video-placeholder" data-video-id="${id}"></div>`
+  })
+  return { html: replaced, entries }
+}
+
+const applyVideoBlocks = (html: string): string => {
+  if (!hasVideoBlocks(props.content)) {
+    videoEntries.value = []
+    return html
+  }
+  const result = extractVideoBlocks(html)
+  videoEntries.value = result.entries
+  return result.html
+}
+
 const extractMarkdownTables = (html: string): { html: string; entries: MdTableEntry[] } => {
   const entries: MdTableEntry[] = []
   let index = 0
@@ -579,6 +711,8 @@ const renderContent = () => {
     cytoscapeEntries.value = []
     mapEntries.value = []
     svgEntries.value = []
+    mermaidEntries.value = []
+    videoEntries.value = []
     mdTableEntries.value = []
     return
   }
@@ -627,6 +761,8 @@ const renderContent = () => {
     html = applyCytoscapeBlocks(html)
     html = applyLeafletBlocks(html)
     html = applySvgBlocks(html)
+    html = applyVideoBlocks(html)
+    html = applyMermaidBlocks(html)
 
     const mdTableResult = extractMarkdownTables(html)
     html = mdTableResult.html
@@ -647,6 +783,8 @@ const renderContent = () => {
     cytoscapeEntries.value = []
     mapEntries.value = []
     svgEntries.value = []
+    mermaidEntries.value = []
+    videoEntries.value = []
     mdTableEntries.value = []
   }
 }
@@ -689,6 +827,12 @@ watch(leafletLoaded, (loaded) => {
   }
 })
 
+watch(mermaidLoaded, (loaded) => {
+  if (loaded && mermaidEntries.value.length > 0) {
+    renderContent()
+  }
+})
+
 onMounted(() => {
   if (hasCodeBlocks(props.content)) {
     void loadHighlighter()
@@ -704,6 +848,9 @@ onMounted(() => {
   }
   if (hasLeafletBlocks(props.content)) {
     void loadLeaflet()
+  }
+  if (hasMermaidBlocks(props.content)) {
+    void loadMermaid()
   }
 })
 </script>

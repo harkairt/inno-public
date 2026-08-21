@@ -224,6 +224,16 @@
       "loading": "Loading illustration…",
       "renderFailed": "This illustration could not be displayed.",
       "altText": "SVG illustration"
+    },
+    "mermaid": {
+      "loading": "Loading diagram…",
+      "renderFailed": "This diagram could not be displayed.",
+      "altText": "Mermaid diagram"
+    },
+    "video": {
+      "renderFailed": "This video could not be displayed.",
+      "defaultLabel": "Video player",
+      "unsupported": "Your browser does not support HTML5 video."
     }
   },
   "errors": {

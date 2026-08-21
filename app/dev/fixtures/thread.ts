@@ -263,6 +263,16 @@ const fixtureGroups: FixtureGroup[] = [
     description: 'validated, isolated SVG images',
     fixtures: markdownFixturesFor('md-svg'),
   },
+  {
+    fenceType: 'video',
+    description: 'native HTML5 video players and rejected external sources',
+    fixtures: markdownFixturesFor('md-video', 'md-video-rejected'),
+  },
+  {
+    fenceType: 'mermaid',
+    description: 'static, isolated Mermaid diagrams and rejected interactive input',
+    fixtures: markdownFixturesFor('md-mermaid', 'md-mermaid-rejected'),
+  },
 ]
 
 const fixtureMessages = fixtureGroups
