@@ -18,14 +18,25 @@
     "searchUsers": "Search users...",
     "searchSessions": "Search sessions...",
     "noUsersFound": "No users found",
-    "noSessionsFound": "No chat sessions found",
+    "noSessionsFound": "No previous conversations found",
+    "noFilterResults": "No results",
     "draftChats": "Drafts",
     "clearDraft": "Clear draft",
     "justNow": "Just now",
     "hoursAgo": "{hours}h ago",
     "daysAgo": "{days}d ago",
     "agent": "Agent {id}",
-    "you": "You"
+    "you": "You",
+    "filters": {
+      "heading": "Filter",
+      "all": "All",
+      "ai": "AI",
+      "people": "People",
+      "unread": "Unread",
+      "favorites": "Favorites",
+      "clearAll": "Clear",
+      "clearFilters": "Clear filters"
+    }
   },
   "navigation": {
     "chats": "Chats",

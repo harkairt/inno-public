@@ -18,14 +18,25 @@
     "searchUsers": "Felhasználók keresése...",
     "searchSessions": "Munkamenetek keresése...",
     "noUsersFound": "Nem található felhasználó",
-    "noSessionsFound": "Nem található chat munkamenet",
+    "noSessionsFound": "Nem található korábbi beszélgetés",
+    "noFilterResults": "Nincs találat",
     "draftChats": "Piszkozatok",
     "clearDraft": "Piszkozat törlése",
     "justNow": "Most",
     "hoursAgo": "{hours} órája",
     "daysAgo": "{days} napja",
     "agent": "Ügynök {id}",
-    "you": "Te"
+    "you": "Te",
+    "filters": {
+      "heading": "Szűrő",
+      "all": "Mind",
+      "ai": "AI",
+      "people": "Emberek",
+      "unread": "Olvasatlan",
+      "favorites": "Kedvencek",
+      "clearAll": "Törlés",
+      "clearFilters": "Szűrők törlése"
+    }
   },
   "navigation": {
     "chats": "Csevegések",
