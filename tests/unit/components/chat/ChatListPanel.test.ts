@@ -1,11 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import { ref, type Component } from 'vue'
+import { nextTick, ref, type Component } from 'vue'
 import type { AISessionHeaderDTO } from '@/types/api/schemas'
 import { makeSession } from '../../../utils/factories'
+import { resetChatListFilters } from '@/app/composables/useChatListFilters'
 
 const clearDraftConversationMock = vi.fn()
 const navigateToMock = vi.fn()
+const favoriteIdsRef = ref<number[]>([])
+
+vi.mock('~/composables/useUserFavorites', () => ({
+  useUserFavorites: () => ({
+    favoriteIds: favoriteIdsRef,
+    isFavorite: (id: number) => favoriteIdsRef.value.includes(id),
+    toggleFavorite: vi.fn(),
+  }),
+}))
 
 const listDataMock = {
   users: ref([{ id: 10, email: 'alice@example.com', name: 'Alice Agent', isVirtual: false }]),
@@ -24,6 +34,7 @@ const listDataMock = {
   isLoadingSessions: ref(false),
   sessionsError: ref(null),
   sessionSearchQuery: ref(''),
+  totalUnreadCount: ref(0),
   getUnreadCount: vi.fn(() => 0),
   getOtherMembers: vi.fn((members: string[]) => members),
   getMemberNames: vi.fn(() => 'Alice'),
@@ -74,13 +85,17 @@ describe('ChatListPanel drafts', () => {
         stubs: {
           UInput: { template: '<input />' },
           UButton: {
-            props: ['ariaLabel'],
+            props: ['ariaLabel', 'label', 'color', 'variant'],
             template:
-              '<button :aria-label="ariaLabel" @click="$emit(\'click\', $event)"><slot /></button>',
+              '<button :aria-label="ariaLabel" :data-color="color" :data-variant="variant" @click="$emit(\'click\', $event)">{{ label }}<slot /></button>',
           },
+          UFieldGroup: { template: '<div data-testid="button-group"><slot /></div>' },
           USkeleton: { template: '<div />' },
           UAlert: { template: '<div><slot /></div>' },
-          UEmpty: { template: '<div data-testid="empty"></div>' },
+          UEmpty: {
+            props: ['description'],
+            template: '<div data-testid="empty">{{ description }}</div>',
+          },
           SessionItemMenu: { template: '<div />' },
           SessionMembers: { template: '<div data-testid="session-members"></div>' },
           SessionListItem: {
@@ -174,5 +189,186 @@ describe('ChatListPanel drafts', () => {
 
     expect(screen.getByTestId('session-item-session-a')).toBeTruthy()
     expect(screen.getByTestId('session-item-session-b')).toBeTruthy()
+  })
+})
+
+describe('ChatListPanel filters', () => {
+  beforeEach(() => {
+    clearDraftConversationMock.mockReset()
+    navigateToMock.mockReset()
+    resetChatListFilters()
+    ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
+      params: {},
+      path: '/chats',
+      fullPath: '/chats',
+      query: {},
+    })
+    ;(global.navigateTo as ReturnType<typeof vi.fn>).mockImplementation(navigateToMock)
+    listDataMock.filteredSessions.value = [makeSession({ sessionId: 'session-a' })]
+    listDataMock.filteredDraftSessions.value = []
+    listDataMock.sessionSearchQuery.value = ''
+  })
+
+  async function renderPanel() {
+    const mod = (await import('~/components/chat/ChatListPanel.vue')) as { default: Component }
+    return render(mod.default, {
+      global: {
+        stubs: {
+          UInput: { template: '<input />' },
+          UButton: {
+            props: ['ariaLabel', 'label', 'color', 'variant'],
+            template:
+              '<button :aria-label="ariaLabel" :data-color="color" :data-variant="variant" @click="$emit(\'click\', $event)">{{ label }}<slot /></button>',
+          },
+          UFieldGroup: { template: '<div data-testid="button-group"><slot /></div>' },
+          USkeleton: { template: '<div />' },
+          UAlert: { template: '<div><slot /></div>' },
+          UEmpty: {
+            props: ['description'],
+            template: '<div data-testid="empty">{{ description }}</div>',
+          },
+          SessionItemMenu: { template: '<div />' },
+          SessionMembers: { template: '<div data-testid="session-members"></div>' },
+          SessionListItem: {
+            props: [
+              'session',
+              'users',
+              'isActive',
+              'unreadCount',
+              'displayName',
+              'memberNames',
+              'otherMembers',
+              'isPrimarySession',
+              'isMobile',
+            ],
+            template:
+              '<div :data-testid="`session-item-${session.sessionId}`" :data-session-id="session.sessionId"></div>',
+          },
+          NuxtLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+        },
+      },
+    })
+  }
+
+  it('renders three participant segment buttons', async () => {
+    await renderPanel()
+
+    expect(screen.getByTestId('filter-participant-all')).toBeTruthy()
+    expect(screen.getByTestId('filter-participant-ai')).toBeTruthy()
+    expect(screen.getByTestId('filter-participant-people')).toBeTruthy()
+  })
+
+  it('highlights the active segment button with primary/subtle', async () => {
+    await renderPanel()
+
+    const allBtn = screen.getByTestId('filter-participant-all')
+    expect(allBtn.getAttribute('data-color')).toBe('primary')
+    expect(allBtn.getAttribute('data-variant')).toBe('subtle')
+
+    const aiBtn = screen.getByTestId('filter-participant-ai')
+    expect(aiBtn.getAttribute('data-color')).toBe('neutral')
+    expect(aiBtn.getAttribute('data-variant')).toBe('outline')
+  })
+
+  it('switches active segment on click', async () => {
+    await renderPanel()
+
+    await fireEvent.click(screen.getByTestId('filter-participant-ai'))
+
+    const aiBtn = screen.getByTestId('filter-participant-ai')
+    expect(aiBtn.getAttribute('data-color')).toBe('primary')
+    expect(aiBtn.getAttribute('data-variant')).toBe('subtle')
+
+    const allBtn = screen.getByTestId('filter-participant-all')
+    expect(allBtn.getAttribute('data-color')).toBe('neutral')
+    expect(allBtn.getAttribute('data-variant')).toBe('outline')
+  })
+
+  it('renders unread and favorites toggle buttons', async () => {
+    await renderPanel()
+
+    expect(screen.getByTestId('filter-unread')).toBeTruthy()
+    expect(screen.getByTestId('filter-favorites')).toBeTruthy()
+  })
+
+  it('toggles unread button on click', async () => {
+    const { useChatListFilters } = await import('~/composables/useChatListFilters')
+    const filters = useChatListFilters()
+
+    await renderPanel()
+
+    const btn = screen.getByTestId('filter-unread')
+    expect(btn.getAttribute('data-color')).toBe('neutral')
+
+    filters.unreadOnly.value = true
+    await nextTick()
+    expect(btn.getAttribute('data-color')).toBe('primary')
+    expect(btn.getAttribute('data-variant')).toBe('subtle')
+
+    filters.unreadOnly.value = false
+    await nextTick()
+    expect(btn.getAttribute('data-color')).toBe('neutral')
+  })
+
+  it('toggles favorites button independently of unread', async () => {
+    const { useChatListFilters } = await import('~/composables/useChatListFilters')
+    const filters = useChatListFilters()
+
+    await renderPanel()
+
+    filters.unreadOnly.value = true
+    filters.favoritesOnly.value = true
+    await nextTick()
+
+    expect(screen.getByTestId('filter-unread').getAttribute('data-color')).toBe('primary')
+    expect(screen.getByTestId('filter-favorites').getAttribute('data-color')).toBe('primary')
+  })
+
+  it('hides clear-all button when no filters are active', async () => {
+    await renderPanel()
+
+    expect(screen.queryByTestId('filter-clear-all')).toBeNull()
+  })
+
+  it('shows clear-all button when a filter is active', async () => {
+    await renderPanel()
+
+    await fireEvent.click(screen.getByTestId('filter-participant-ai'))
+    expect(screen.getByTestId('filter-clear-all')).toBeTruthy()
+  })
+
+  it('clicking clear-all resets all filters', async () => {
+    await renderPanel()
+
+    await fireEvent.click(screen.getByTestId('filter-participant-ai'))
+    await fireEvent.click(screen.getByTestId('filter-unread'))
+    await fireEvent.click(screen.getByTestId('filter-favorites'))
+
+    await fireEvent.click(screen.getByTestId('filter-clear-all'))
+
+    expect(screen.getByTestId('filter-participant-all').getAttribute('data-color')).toBe('primary')
+    expect(screen.getByTestId('filter-unread').getAttribute('data-color')).toBe('neutral')
+    expect(screen.getByTestId('filter-favorites').getAttribute('data-color')).toBe('neutral')
+    expect(screen.queryByTestId('filter-clear-all')).toBeNull()
+  })
+
+  it('shows clear-filters button in empty state when filters are active', async () => {
+    listDataMock.filteredSessions.value = []
+    listDataMock.filteredDraftSessions.value = []
+    await renderPanel()
+
+    await fireEvent.click(screen.getByTestId('filter-participant-ai'))
+    expect(screen.getByTestId('empty-clear-filters')).toBeTruthy()
+  })
+
+  it('hides clear-filters button in empty state when no filters are active', async () => {
+    listDataMock.filteredSessions.value = []
+    listDataMock.filteredDraftSessions.value = []
+    await renderPanel()
+
+    expect(screen.queryByTestId('empty-clear-filters')).toBeNull()
   })
 })

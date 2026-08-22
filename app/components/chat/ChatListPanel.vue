@@ -25,6 +25,72 @@
         :placeholder="t('sidebar.searchSessions')"
         data-testid="session-search-input"
       />
+
+      <div class="mt-3">
+        <div class="flex items-center justify-between mb-2 min-h-[28px]">
+          <span class="text-xs font-semibold uppercase tracking-wide text-muted">
+            {{ t('sidebar.filters.heading') }}
+          </span>
+          <Transition name="fade">
+            <UButton
+              v-if="hasActiveFilters"
+              :label="t('sidebar.filters.clearAll')"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              icon="i-heroicons-x-mark"
+              trailing
+              data-testid="filter-clear-all"
+              @click="clearAll"
+            />
+          </Transition>
+        </div>
+
+        <UFieldGroup
+          class="w-full"
+          size="sm"
+        >
+          <UButton
+            v-for="option in participantOptions"
+            :key="option.value"
+            :label="t(option.label)"
+            :color="participantType === option.value ? 'primary' : 'neutral'"
+            :variant="participantType === option.value ? 'subtle' : 'outline'"
+            class="flex-1 justify-center"
+            :data-testid="`filter-participant-${option.value}`"
+            @click="participantType = option.value"
+          />
+        </UFieldGroup>
+
+        <div class="flex gap-2 mt-2">
+          <UButton
+            size="sm"
+            :color="unreadOnly ? 'primary' : 'neutral'"
+            :variant="unreadOnly ? 'subtle' : 'outline'"
+            :disabled="totalUnreadCount === 0"
+            class="flex-1 justify-center disabled:!opacity-40"
+            data-testid="filter-unread"
+            @click="unreadOnly = !unreadOnly"
+          >
+            <span
+              v-if="totalUnreadCount > 0"
+              class="unread-badge mr-1"
+              >{{ totalUnreadCount }}</span
+            >
+            {{ t('sidebar.filters.unread') }}
+          </UButton>
+          <UButton
+            :label="t('sidebar.filters.favorites')"
+            size="sm"
+            :color="favoritesOnly ? 'primary' : 'neutral'"
+            :variant="favoritesOnly ? 'subtle' : 'outline'"
+            :disabled="!hasFavorites"
+            class="flex-1 justify-center disabled:!opacity-40"
+            data-testid="filter-favorites"
+            @click="favoritesOnly = !favoritesOnly"
+          />
+        </div>
+      </div>
     </div>
 
     <div
@@ -47,11 +113,27 @@
       {{ sessionsError.message }}
     </UAlert>
 
-    <UEmpty
+    <div
       v-else-if="filteredSessions.length === 0 && filteredDraftSessions.length === 0"
-      :description="t('sidebar.noSessionsFound')"
-      class="py-8"
-    />
+      class="px-5 py-8"
+    >
+      <UEmpty
+        :description="t(hasActiveFilters ? 'sidebar.noFilterResults' : 'sidebar.noSessionsFound')"
+      />
+      <div
+        v-if="hasActiveFilters"
+        class="flex justify-center mt-3"
+      >
+        <UButton
+          :label="t('sidebar.filters.clearFilters')"
+          size="sm"
+          color="primary"
+          variant="outline"
+          data-testid="empty-clear-filters"
+          @click="clearAll"
+        />
+      </div>
+    </div>
 
     <div
       v-else
@@ -148,6 +230,8 @@
 import { ref, onMounted, watch } from 'vue'
 import { useScroll } from '@vueuse/core'
 import { useChatListData } from '~/composables/useChatListData'
+import { useChatListFilters, type ParticipantType } from '~/composables/useChatListFilters'
+import { useUserFavorites } from '~/composables/useUserFavorites'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import SessionMembers from '~/components/chat/SessionMembers.vue'
 import SessionListItem from '~/components/chat/SessionListItem.vue'
@@ -163,6 +247,7 @@ const {
   isLoadingSessions,
   sessionsError,
   sessionSearchQuery,
+  totalUnreadCount,
   getUnreadCount,
   getOtherMembers,
   getMemberNames,
@@ -171,7 +256,30 @@ const {
   clearDraftConversation,
 } = useChatListData()
 
+const { participantType, unreadOnly, favoritesOnly, hasActiveFilters, clearAll } =
+  useChatListFilters()
+const { favoriteIds } = useUserFavorites()
+const hasFavorites = computed(() => favoriteIds.value.length > 0)
+
+const participantOptions: { value: ParticipantType; label: string }[] = [
+  { value: 'all', label: 'sidebar.filters.all' },
+  { value: 'ai', label: 'sidebar.filters.ai' },
+  { value: 'people', label: 'sidebar.filters.people' },
+]
+
 const activeSessionId = computed(() => route.params.sessionId as string)
+
+watch(totalUnreadCount, (count) => {
+  if (count === 0 && unreadOnly.value) {
+    unreadOnly.value = false
+  }
+})
+
+watch(hasFavorites, (has) => {
+  if (!has && favoritesOnly.value) {
+    favoritesOnly.value = false
+  }
+})
 
 async function handleClearDraft(draftKey: string, draftRoute: string) {
   clearDraftConversation(draftKey)
@@ -205,3 +313,14 @@ watch(scrollY, (newY) => {
   }
 })
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

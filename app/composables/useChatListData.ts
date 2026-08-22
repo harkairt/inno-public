@@ -2,6 +2,8 @@ import { computed, ref } from 'vue'
 import { useSelectableUsers } from '~/composables/useUsers'
 import { useChatSessions, useUnreadMessageCounts } from '~/composables/useChatQueries'
 import { useClientSideUserSearch } from '~/composables/useClientSideUserSearch'
+import { useChatListFilters, type ParticipantType } from '~/composables/useChatListFilters'
+import { useUserFavorites } from '~/composables/useUserFavorites'
 import { useAuthStore } from '~/stores/auth'
 import { useChatStore } from '~/stores/chat'
 import { useRelativeDate } from '~/composables/useRelativeDate'
@@ -21,6 +23,17 @@ export interface DraftConversationListItem {
   userEmail: string
   preview: string
   route: string
+}
+
+interface ChatListFilterContext {
+  query: string
+  participantType: ParticipantType
+  unreadOnly: boolean
+  favoritesOnly: boolean
+  currentUserEmail: string
+  users: UserDTO[] | undefined
+  unreadCounts: GetUnreadMessagesDTO[] | undefined
+  favoriteIds: readonly number[]
 }
 
 function getUnreadCountFromEntries(
@@ -98,6 +111,22 @@ function buildDraftItems(
   )
 }
 
+function getSessionPrimaryMemberInfo(
+  session: AISessionHeaderDTO,
+  currentEmail: string,
+  allUsers: UserDTO[] | undefined,
+): { isVirtual: boolean; userId: number | undefined } {
+  const otherMembers = session.members.filter((m) => m !== currentEmail)
+  const primaryEmail = otherMembers[0]
+  if (!primaryEmail) return { isVirtual: false, userId: undefined }
+  const detail = session.memberDetails?.find((m) => m.email === primaryEmail)
+  const user = allUsers?.find((u) => u.email === primaryEmail)
+  return {
+    isVirtual: detail?.isVirtual ?? user?.isVirtual ?? false,
+    userId: user?.id,
+  }
+}
+
 function sortAndFilterSessions(
   sessions: AISessionHeaderDTO[] | undefined,
   query: string,
@@ -119,6 +148,60 @@ function sortAndFilterSessions(
   )
 }
 
+function applySessionFilters(
+  sessions: AISessionHeaderDTO[] | undefined,
+  filters: ChatListFilterContext,
+): AISessionHeaderDTO[] {
+  const result = sortAndFilterSessions(sessions, filters.query)
+  if (filters.participantType === 'all' && !filters.unreadOnly && !filters.favoritesOnly) {
+    return result
+  }
+
+  return result.filter((session) => {
+    if (filters.participantType !== 'all' || filters.favoritesOnly) {
+      const primary = getSessionPrimaryMemberInfo(session, filters.currentUserEmail, filters.users)
+      if (filters.participantType === 'ai' && !primary.isVirtual) return false
+      if (filters.participantType === 'people' && primary.isVirtual) return false
+      if (
+        filters.favoritesOnly &&
+        (primary.userId === undefined || !filters.favoriteIds.includes(primary.userId))
+      ) {
+        return false
+      }
+    }
+
+    if (
+      filters.unreadOnly &&
+      getUnreadCountFromEntries(filters.unreadCounts, session.sessionId) <= 0
+    ) {
+      return false
+    }
+
+    return true
+  })
+}
+
+function applyDraftFilters(
+  draftMessages: Record<string, string>,
+  filters: ChatListFilterContext,
+): DraftConversationListItem[] {
+  if (filters.unreadOnly) return []
+
+  const result = buildDraftItems(draftMessages, filters.users, filters.query)
+  if (filters.participantType === 'all' && !filters.favoritesOnly) return result
+
+  return result.filter((draft) => {
+    if (filters.participantType !== 'all') {
+      const user = filters.users?.find((candidate) => candidate.id === draft.userId)
+      const isVirtual = user?.isVirtual ?? false
+      if (filters.participantType === 'ai' && !isVirtual) return false
+      if (filters.participantType === 'people' && isVirtual) return false
+    }
+
+    return !filters.favoritesOnly || filters.favoriteIds.includes(draft.userId)
+  })
+}
+
 export function useChatListData() {
   const authStore = useAuthStore()
   const chatStore = useChatStore()
@@ -130,21 +213,32 @@ export function useChatListData() {
   const { data: sessions, isLoading: isLoadingSessions, error: sessionsError } = useChatSessions()
   const { data: unreadCounts } = useUnreadMessageCounts()
 
+  const {
+    searchQuery: sessionSearchQuery,
+    participantType,
+    unreadOnly,
+    favoritesOnly,
+  } = useChatListFilters()
+  const { favoriteIds } = useUserFavorites()
+
   const userSearchQuery = ref('')
-  const sessionSearchQuery = ref('')
 
   const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
 
-  const filteredSessions = computed(() =>
-    sortAndFilterSessions(sessions.value, sessionSearchQuery.value.toLowerCase()),
-  )
+  const filterContext = computed<ChatListFilterContext>(() => ({
+    query: sessionSearchQuery.value.trim().toLowerCase(),
+    participantType: participantType.value,
+    unreadOnly: unreadOnly.value,
+    favoritesOnly: favoritesOnly.value,
+    currentUserEmail: currentUserEmail.value,
+    users: users.value,
+    unreadCounts: unreadCounts.value,
+    favoriteIds: favoriteIds.value,
+  }))
 
-  const filteredDraftSessions = computed<DraftConversationListItem[]>(() =>
-    buildDraftItems(
-      chatStore.draftMessages,
-      users.value,
-      sessionSearchQuery.value.toLowerCase().trim(),
-    ),
+  const filteredSessions = computed(() => applySessionFilters(sessions.value, filterContext.value))
+  const filteredDraftSessions = computed(() =>
+    applyDraftFilters(chatStore.draftMessages, filterContext.value),
   )
 
   const totalUnreadCount = computed(
@@ -156,9 +250,8 @@ export function useChatListData() {
   const getOtherMembers = (members: string[]) =>
     getOtherMembersForEmail(members, authStore.user?.email)
 
-  function getMemberNames(members: string[]): string {
-    return getMemberNamesFromList(members, authStore.user?.email, users.value, useI18n().t)
-  }
+  const getMemberNames = (members: string[]) =>
+    getMemberNamesFromList(members, authStore.user?.email, users.value, useI18n().t)
 
   type SessionHeader = Parameters<typeof getSessionDisplayName>[0]
   type PrimaryCheckSession = Parameters<typeof checkIsPrimarySession>[0]
