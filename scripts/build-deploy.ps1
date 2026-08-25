@@ -4,26 +4,28 @@
 
 .DESCRIPTION
   Syncs the develop branch, then for every requested environment writes the matching .env and
-  produces both artifacts, each from a clean tree and each verified against the expected base URL:
+  produces the artifact from a clean tree, verified against the expected base URL:
 
     generate -> `npm run generate`, static preset, copies .output\public
                 into <DeployRoot>\<Tag>\<environment>\generate\
-    build    -> `npm run build`, node-server preset, copies the whole .output
-                into <DeployRoot>\<Tag>\<environment>\build\ (start with `node server\index.mjs`)
-
-  Only the build artifact runs a Nitro server, so the /api, /chatHub and /assets proxy rules
-  from nuxt.config.ts are live there; the generate artifact is a plain static bundle.
 
   The repository .env is backed up before the first build and restored afterwards, even if a
   build fails or the run is interrupted.
 
-.EXAMPLE
-  .\scripts\build-deploy.ps1
-  Builds both artifacts for dev, staging and prod into .\deploy\<today>\.
+  The `build` artifact (`npm run build`, node-server preset) is currently DISABLED - see the
+  commented-out blocks marked "build artifact disabled". It produced the whole .output, started
+  with `node server\index.mjs`, and was the only artifact that served the /api, /chatHub and
+  /assets proxy rules plus the security headers (CSP, HSTS, ...) from nuxt.config.ts routeRules.
+  Note that a static deployment of the generate artifact does NOT send those headers unless the
+  web server is configured to. Re-enable by uncommenting those blocks.
 
 .EXAMPLE
-  .\scripts\build-deploy.ps1 -Environments prod -Artifacts build -SkipGit
-  Rebuilds only the prod server bundle from the current working tree.
+  .\scripts\build-deploy.ps1
+  Builds dev, staging and prod into .\deploy\<today>\.
+
+.EXAMPLE
+  .\scripts\build-deploy.ps1 -Environments prod -SkipGit
+  Rebuilds only prod from the current working tree.
 #>
 [CmdletBinding()]
 param(
@@ -32,8 +34,11 @@ param(
   [string[]]$Environments = @('dev', 'staging', 'prod'),
 
   # Which artifacts to produce per environment.
-  [ValidateSet('generate', 'build')]
-  [string[]]$Artifacts = @('generate', 'build'),
+  # build artifact disabled: add 'build' back to the ValidateSet and the default to re-enable.
+  # [ValidateSet('generate', 'build')]
+  # [string[]]$Artifacts = @('generate', 'build'),
+  [ValidateSet('generate')]
+  [string[]]$Artifacts = @('generate'),
 
   # Deploy root. Defaults to <repo>\deploy. Relative paths are resolved against the repo root.
   [string]$DeployRoot,
@@ -134,11 +139,13 @@ $expectedBase = @{
 }
 
 # What each artifact runs and which directory is the deployable payload. `generate` ships only
-# the static public tree; `build` ships the whole .output because the Nitro server lives in
+# the static public tree. `build` shipped the whole .output, because the Nitro server lives in
 # .output\server and is launched via the commands in .output\nitro.json.
 $artifactSpec = @{
   generate = @{ NpmScript = 'generate'; SourceKey = 'public'; Describes = '.output\public (static)' }
-  build    = @{ NpmScript = 'build'; SourceKey = 'output'; Describes = '.output (node-server)' }
+  # build artifact disabled: uncomment this line, the $Artifacts param above, and the server
+  # bundle check in the build loop below to re-enable.
+  # build  = @{ NpmScript = 'build'; SourceKey = 'output'; Describes = '.output (node-server)' }
 }
 
 # --- helpers -----------------------------------------------------------------
@@ -160,7 +167,19 @@ function Invoke-Native {
     [string[]]$Arguments = @()
   )
   Write-Detail "$Command $($Arguments -join ' ')"
-  & $Command @Arguments
+  # Exit code is the only failure signal we trust here, so stderr must not be one. Under
+  # PowerShell 5.1, if the caller pipes this script with `2>&1` (e.g. into a CI log), each
+  # stderr line from npm/nuxt comes back as a NativeCommandError ErrorRecord, and with
+  # $ErrorActionPreference = 'Stop' that aborts a perfectly healthy build - nuxt.config.ts
+  # alone writes to stderr whenever its getGitInfo() call fails.
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & $Command @Arguments
+  }
+  finally {
+    $ErrorActionPreference = $previous
+  }
   if ($LASTEXITCODE -ne 0) {
     throw "'$Command $($Arguments -join ' ')' failed with exit code $LASTEXITCODE."
   }
@@ -168,7 +187,14 @@ function Invoke-Native {
 
 function Get-GitOutput {
   param([string[]]$Arguments)
-  $output = & git -C $repoRoot @Arguments
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $output = & git -C $repoRoot @Arguments
+  }
+  finally {
+    $ErrorActionPreference = $previous
+  }
   if ($LASTEXITCODE -ne 0) {
     throw "'git $($Arguments -join ' ')' failed with exit code $LASTEXITCODE."
   }
@@ -384,9 +410,10 @@ try {
       Write-DevArtifactWarning -PublicDir $publicDir -EnvName "$name/$artifact"
 
       if ($spec.SourceKey -eq 'public') { $source = $publicDir } else { $source = $outputDir }
-      if ($artifact -eq 'build' -and -not (Test-Path -LiteralPath (Join-Path $outputDir 'server\index.mjs'))) {
-        throw "[$name/$artifact] .output\server\index.mjs is missing - the server bundle was not produced."
-      }
+      # build artifact disabled: uncomment together with the $artifactSpec entry.
+      # if ($artifact -eq 'build' -and -not (Test-Path -LiteralPath (Join-Path $outputDir 'server\index.mjs'))) {
+      #   throw "[$name/$artifact] .output\server\index.mjs is missing - the server bundle was not produced."
+      # }
 
       $target = Join-Path $envRoot $artifact
       Remove-DirectoryIfPresent $target
