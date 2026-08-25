@@ -86,8 +86,6 @@ describe('ManageSessionUsers', () => {
   ]
 
   beforeEach(() => {
-    vi.clearAllMocks()
-
     vi.mocked(useSelectableUsers).mockReturnValue({
       data: ref(allUsers),
       isLoading: ref(false),

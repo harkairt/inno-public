@@ -46,18 +46,18 @@ describe('UserAvatar — initials fallback', () => {
 
 describe('UserAvatar — image path', () => {
   it('uses the light image by default', () => {
-    renderAvatar({ image: 'light.png', darkImage: 'dark.png' }, {}, 'light')
-    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('light.png')
+    renderAvatar({ image: '/light.png', darkImage: '/dark.png' }, {}, 'light')
+    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('/light.png')
   })
 
   it('uses the dark image in dark mode when provided', () => {
-    renderAvatar({ image: 'light.png', darkImage: 'dark.png' }, {}, 'dark')
-    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('dark.png')
+    renderAvatar({ image: '/light.png', darkImage: '/dark.png' }, {}, 'dark')
+    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('/dark.png')
   })
 
   it('falls back to the light image in dark mode when darkImage is absent', () => {
-    renderAvatar({ image: 'light.png' }, {}, 'dark')
-    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('light.png')
+    renderAvatar({ image: '/light.png' }, {}, 'dark')
+    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('/light.png')
   })
 })
 

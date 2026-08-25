@@ -1,9 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import type { Mock } from 'vitest'
 import { render, screen, type RenderResult } from '@testing-library/vue'
 import type { Component } from 'vue'
+import { useAuthStore } from '@/app/stores/auth'
 
 function setRoute(path: string) {
-  ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
+  ;(global.useRoute as Mock).mockReturnValue({
     path,
     fullPath: path,
     params: {},
@@ -34,8 +36,8 @@ async function renderRail(): Promise<RenderResult> {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
   setRoute('/chats')
+  useAuthStore().$patch({ user: { name: 'Unknown User' } as never })
 })
 
 describe('AppRail', () => {

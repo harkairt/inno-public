@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { waitFor } from '@testing-library/vue'
 import FilePreviewSidebar from '~/components/chat/FilePreviewSidebar.vue'
 import type { PreviewedFile } from '@/types/filePreview'
@@ -14,10 +14,6 @@ const pdfFile: PreviewedFile = {
   messageDate: '2026-08-23T08:00:00Z',
   previewedAt: 1,
 }
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
 
 describe('FilePreviewSidebar', () => {
   it('fetches an attachment PDF and previews it from a blob URL', async () => {
@@ -51,10 +47,12 @@ describe('FilePreviewSidebar', () => {
 
     await waitFor(() => {
       expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob))
-      expect(getByTestId('file-preview-pdf').getAttribute('src')).toBe('about:blank#pdf-preview')
+      expect(getByTestId('file-preview-pdf').getAttribute('src')).toBe(
+        'about:blank#pdf-preview#navpanes=0&view=FitH',
+      )
     })
 
     unmount()
-    expect(revokeObjectURL).toHaveBeenCalledWith('about:blank#pdf-preview')
+    expect(revokeObjectURL).toHaveBeenCalledWith('about:blank#pdf-preview#navpanes=0&view=FitH')
   })
 })

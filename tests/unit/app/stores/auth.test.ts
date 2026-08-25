@@ -77,7 +77,6 @@ Object.defineProperty(global, 'localStorage', { value: mockStorage, writable: tr
 describe('Auth Store — login', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 
@@ -170,7 +169,6 @@ describe('Auth Store — login', () => {
 describe('Auth Store — logout', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 
@@ -208,7 +206,6 @@ describe('Auth Store — logout', () => {
 describe('Auth Store — clearAuth', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 
@@ -240,7 +237,6 @@ describe('Auth Store — clearAuth', () => {
 describe('Auth Store — computed getters', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 
@@ -306,7 +302,6 @@ describe('Auth Store — computed getters', () => {
 describe('Auth Store — remembered email', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 
@@ -327,7 +322,6 @@ describe('Auth Store — remembered email', () => {
 describe('Auth Store — storage hydration type guards', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 
@@ -364,7 +358,6 @@ describe('Auth Store — storage hydration type guards', () => {
 describe('Auth Store — login edge cases', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockStorage.clear()
   })
 

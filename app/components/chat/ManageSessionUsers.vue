@@ -15,14 +15,9 @@
       <div class="w-[400px] max-w-[90vw]">
         <!-- Search Input -->
         <div class="p-3 border-b border-border">
-          <UInput
+          <SearchInput
             v-model="searchQuery"
             :placeholder="t('chat.manageUsers.searchPlaceholder')"
-            icon="i-heroicons-magnifying-glass-20-solid"
-            autocomplete="off"
-            size="lg"
-            class="w-full"
-            :ui="{ root: 'w-full' }"
           />
         </div>
 
@@ -84,7 +79,9 @@
                 :dark-image="user.darkImage"
                 :alt="user.name || user.email"
                 :round="user.isVirtual"
-                :style="!hasAvatar(user.image) ? getAvatarStyle(user.email) : undefined"
+                :style="
+                  !hasAvatar(user.image) && user.email ? getAvatarStyle(user.email) : undefined
+                "
                 size="sm"
               >
                 {{ getInitials(user.name || user.email) }}

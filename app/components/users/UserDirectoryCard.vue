@@ -4,48 +4,23 @@
     :data-testid="`user-item-${user.id}`"
   >
     <div class="flex min-w-0 items-center gap-3">
-      <div class="relative shrink-0">
-        <UserAvatar
-          :image="user.image"
-          :dark-image="user.darkImage"
-          :alt="user.name"
-          size="xl"
-          :round="user.isVirtual"
-          :style="!hasAvatar(user.image) ? avatarStyle : undefined"
-          class="directory-avatar size-[50px]! transition-transform duration-200"
-        >
-          {{ initials }}
-        </UserAvatar>
-        <span
-          v-if="favorite"
-          class="absolute -right-0.5 -top-0.5 grid size-4 place-items-center rounded-full border-2 border-[hsl(var(--card))] bg-[hsl(var(--amber))]"
-          role="img"
-          :aria-label="t('users.favorite')"
-        >
-          <UIcon
-            name="i-heroicons-star-solid"
-            class="size-2 text-white"
-            aria-hidden="true"
-          />
-        </span>
-        <span
-          v-if="user.isVirtual"
-          class="absolute -right-0.5 -bottom-0.5 grid size-4 place-items-center rounded-full border-2 border-[hsl(var(--card))] bg-[hsl(var(--success))]"
-          role="img"
-          :aria-label="t('users.aiAgent')"
-          :data-testid="`user-availability-${user.id}`"
-        >
-          <SparkleIcon class="size-2 text-white" />
-        </span>
-        <span
-          v-else
-          class="absolute -right-0.5 -bottom-0.5 size-4 rounded-full border-2 border-[hsl(var(--card))]"
-          :class="user.isAvailable ? 'bg-[hsl(var(--success))]' : 'bg-[hsl(var(--ink-3))]'"
-          role="img"
-          :aria-label="user.isAvailable ? t('users.available') : t('users.unavailable')"
-          :data-testid="`user-availability-${user.id}`"
-        />
-      </div>
+      <UserAvatarWithBadges
+        :image="user.image"
+        :dark-image="user.darkImage"
+        :alt="user.name"
+        :is-virtual="user.isVirtual"
+        avatar-size="xl"
+        :avatar-style="!hasAvatar(user.image) ? avatarStyle : undefined"
+        avatar-class="directory-avatar size-[50px]! transition-transform duration-200"
+        :is-favorite="favorite"
+        :is-available="user.isAvailable"
+        :compact="false"
+        border-token="card"
+        :status-test-id="`user-availability-${user.id}`"
+        class="shrink-0"
+      >
+        {{ initials }}
+      </UserAvatarWithBadges>
 
       <div class="min-w-0 flex-1">
         <div class="flex min-w-0 items-center gap-1.5">
@@ -98,8 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import UserAvatar from '~/components/UserAvatar.vue'
-import SparkleIcon from '~/components/icons/SparkleIcon.vue'
+import UserAvatarWithBadges from '~/components/UserAvatarWithBadges.vue'
 import type { UserDTO } from '@/types/api/schemas'
 import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 

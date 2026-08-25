@@ -38,6 +38,7 @@ const stubs = {
   NuxtErrorBoundary: { template: '<div><slot /></div>' },
   MessageInput: { template: '<div data-testid="message-input-stub" />' },
   TypingIndicator: { template: '<div data-testid="typing-indicator-stub" />' },
+  ScrollToBottomButton: { template: '<div />' },
   MarkdownContent: { props: ['content'], template: '<div class="markdown">{{ content }}</div>' },
   MessageRating: { template: '<div />' },
   OptionsMessage: { template: '<div />' },

@@ -28,6 +28,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    restoreMocks: true,
+    unstubEnvs: true,
+
+    expect: {
+      requireAssertions: true,
+    },
 
     // Setup files to run before each test file
     setupFiles: ['./tests/setup.ts'],

@@ -6,45 +6,20 @@
       :class="{ 'sidebar-item-active': isActive }"
       :data-testid="`session-item-${session.sessionId}`"
     >
-      <div class="relative flex-shrink-0">
-        <UserAvatar
-          :image="primaryMember?.image"
-          :dark-image="primaryMember?.darkImage"
-          :alt="primaryMemberName"
-          :round="isVirtual"
-          size="md"
-          :style="!hasAvatar(primaryMember?.image) ? avatarStyle : undefined"
-        >
-          {{ initials }}
-        </UserAvatar>
-        <span
-          v-if="primaryMember && isFavoriteMember"
-          class="absolute -right-0.5 -top-0.5 grid size-3.5 place-items-center rounded-full border-2 border-[hsl(var(--background))] bg-[hsl(var(--amber))]"
-          role="img"
-          :aria-label="t('users.favorite')"
-        >
-          <UIcon
-            name="i-heroicons-star-solid"
-            class="size-[7px] text-white"
-            aria-hidden="true"
-          />
-        </span>
-        <span
-          v-if="primaryMember && isVirtual"
-          class="absolute -right-0.5 -bottom-0.5 grid size-3.5 place-items-center rounded-full border-2 border-[hsl(var(--background))] bg-[hsl(var(--success))]"
-          role="img"
-          :aria-label="t('users.aiAgent')"
-        >
-          <SparkleIcon class="size-[7px] text-white" />
-        </span>
-        <span
-          v-else-if="primaryMember"
-          class="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 border-[hsl(var(--background))]"
-          :class="primaryMember.isAvailable ? 'bg-[hsl(var(--success))]' : 'bg-[hsl(var(--ink-3))]'"
-          role="img"
-          :aria-label="primaryMember.isAvailable ? t('users.available') : t('users.unavailable')"
-        />
-      </div>
+      <UserAvatarWithBadges
+        :image="primaryMember?.image"
+        :dark-image="primaryMember?.darkImage"
+        :alt="primaryMemberName"
+        :is-virtual="isVirtual"
+        avatar-size="md"
+        :avatar-style="!hasAvatar(primaryMember?.image) ? avatarStyle : undefined"
+        :is-favorite="!!primaryMember && isFavoriteMember"
+        :is-available="primaryMember?.isAvailable"
+        :compact="true"
+        class="flex-shrink-0"
+      >
+        {{ initials }}
+      </UserAvatarWithBadges>
 
       <div class="flex-1 min-w-0">
         <div class="relative">
@@ -95,9 +70,8 @@ import type { AISessionHeaderDTO, UserDTO } from '@/types/api/schemas'
 import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 import { getSessionActivityDate } from '@/app/utils/session'
 import { useRelativeDate } from '~/composables/useRelativeDate'
-import UserAvatar from '~/components/UserAvatar.vue'
+import UserAvatarWithBadges from '~/components/UserAvatarWithBadges.vue'
 import SessionItemMenu from '~/components/chat/SessionItemMenu.vue'
-import SparkleIcon from '~/components/icons/SparkleIcon.vue'
 import { useUserFavorites } from '~/composables/useUserFavorites'
 
 const props = defineProps<{
@@ -112,7 +86,6 @@ const props = defineProps<{
   isMobile: boolean
 }>()
 
-const { t } = useI18n()
 const { formatSessionDate } = useRelativeDate()
 const { isFavorite } = useUserFavorites()
 

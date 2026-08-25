@@ -92,6 +92,7 @@
     "skipToContent": "Ugrás a tartalomhoz"
   },
   "chat": {
+    "scrollToBottom": "Ugrás a legújabb üzenetekhez",
     "messageInput": {
       "placeholderReply": "Írj üzenetet...",
       "placeholderWithAgent": "Írj üzenetet — {agentName}...",

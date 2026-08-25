@@ -113,44 +113,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import UserAvatar from '~/components/UserAvatar.vue'
-import { useAuthStore } from '~/stores/auth'
-import { useChatStore } from '~/stores/chat'
-import { getInitials } from '@/app/utils/user'
+import { useNavigation } from '~/composables/useNavigation'
 
 const { t } = useI18n()
-const route = useRoute()
-const authStore = useAuthStore()
-const chatStore = useChatStore()
-
-const chatsLink = computed(() =>
-  chatStore.activeSessionId ? `/chats/${chatStore.activeSessionId}` : '/chats',
-)
-
-const navItems = computed(() => [
-  {
-    key: 'chats',
-    to: chatsLink.value,
-    activePrefix: '/chats',
-    icon: 'i-ph-chats',
-    activeIcon: 'i-ph-chats-fill',
-    label: t('navigation.conversations'),
-  },
-  {
-    key: 'users',
-    to: '/users',
-    activePrefix: '/users',
-    icon: 'i-ph-users-three',
-    activeIcon: 'i-ph-users-three-fill',
-    label: t('navigation.users'),
-  },
-])
-
-const userInitials = computed(() => getInitials(authStore.user?.name))
-const profileLabel = computed(() => `${authStore.userDisplayName} — ${t('navigation.profile')}`)
-
-function isActive(to: string): boolean {
-  return route.path.startsWith(to)
-}
+const { navItems, userInitials, profileLabel, isActive, authStore } = useNavigation()
 </script>

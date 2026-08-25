@@ -26,7 +26,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-02-26',
 
   $production: {
-    ignore: ['app/pages/dev/**', 'app/plugins/dev-gallery.client.ts', 'app/dev/**'],
+    ignore: process.env.NUXT_ENABLE_DEV_GALLERY
+      ? []
+      : ['app/pages/dev/**', 'app/plugins/dev-gallery.client.ts', 'app/dev/**'],
   },
 
   devServer: {

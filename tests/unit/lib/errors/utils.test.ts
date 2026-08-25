@@ -403,10 +403,6 @@ describe('logError', () => {
     vi.mocked(reportToSentry).mockClear()
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it('logs error to console', () => {
     const error = new AppError(ErrorCode.SERVER_ERROR, 'Server error', 500)
     logError(error)
@@ -434,10 +430,6 @@ describe('logValidationError', () => {
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.mocked(reportToSentry).mockClear()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   it('includes validation errors in context', () => {
@@ -630,10 +622,6 @@ describe('handleBoundaryError', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.mocked(reportToSentry).mockClear()
     globalErrorTracker.reset()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
   })
 
   it('returns boundary state with AppError directly', () => {

@@ -24,7 +24,6 @@ const scope = {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
   vi.mocked(Sentry.withScope).mockImplementation((cb: (s: unknown) => unknown) => {
     cb(scope)
   })

@@ -11,7 +11,6 @@ vi.mock('@/lib/api/services/ConfigService', () => ({
 describe('Config Store — loadConfig', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
   })
 
   it('initializes with defaults before loading', () => {

@@ -29,17 +29,11 @@
         class="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border)/0.5)] divide-y divide-[hsl(var(--border)/0.3)]"
       >
         <!-- Locale Toggle -->
-        <div
-          class="flex items-center justify-between px-4 py-3.5"
+        <SettingsRow
+          icon="i-heroicons-language"
+          :label="t('profile.language')"
           data-testid="profile-locale-toggle"
         >
-          <div class="flex items-center gap-3">
-            <UIcon
-              name="i-heroicons-language"
-              class="size-5 text-[hsl(var(--muted-foreground))]"
-            />
-            <span class="text-sm font-medium">{{ t('profile.language') }}</span>
-          </div>
           <USelect
             :model-value="locale"
             :items="localeOptions"
@@ -47,20 +41,14 @@
             class="w-28"
             @update:model-value="setLocale($event as 'en' | 'hu')"
           />
-        </div>
+        </SettingsRow>
 
         <!-- Color Mode Toggle -->
-        <div
-          class="flex items-center justify-between px-4 py-3.5"
+        <SettingsRow
+          :icon="colorMode.value === 'dark' ? 'i-heroicons-moon' : 'i-heroicons-sun'"
+          :label="t('profile.colorMode')"
           data-testid="profile-color-mode-toggle"
         >
-          <div class="flex items-center gap-3">
-            <UIcon
-              :name="colorMode.value === 'dark' ? 'i-heroicons-moon' : 'i-heroicons-sun'"
-              class="size-5 text-[hsl(var(--muted-foreground))]"
-            />
-            <span class="text-sm font-medium">{{ t('profile.colorMode') }}</span>
-          </div>
           <USelect
             :model-value="colorMode.preference"
             :items="colorModeOptions"
@@ -68,20 +56,14 @@
             class="w-28"
             @update:model-value="colorMode.preference = $event as string"
           />
-        </div>
+        </SettingsRow>
 
         <!-- Chat Font Face -->
-        <div
-          class="flex items-center justify-between px-4 py-3.5"
+        <SettingsRow
+          icon="i-heroicons-pencil-square"
+          :label="t('profile.chatFont')"
           data-testid="profile-font-face"
         >
-          <div class="flex items-center gap-3">
-            <UIcon
-              name="i-heroicons-pencil-square"
-              class="size-5 text-[hsl(var(--muted-foreground))]"
-            />
-            <span class="text-sm font-medium">{{ t('profile.chatFont') }}</span>
-          </div>
           <UTabs
             :model-value="activeFontFaceTab"
             :items="fontFaceTabs"
@@ -90,20 +72,14 @@
             size="xs"
             @update:model-value="handleFontFaceChange"
           />
-        </div>
+        </SettingsRow>
 
         <!-- Chat Font Size -->
-        <div
-          class="flex items-center justify-between px-4 py-3.5"
+        <SettingsRow
+          icon="i-heroicons-arrows-up-down"
+          :label="t('profile.chatFontSize')"
           data-testid="profile-font-size"
         >
-          <div class="flex items-center gap-3">
-            <UIcon
-              name="i-heroicons-arrows-up-down"
-              class="size-5 text-[hsl(var(--muted-foreground))]"
-            />
-            <span class="text-sm font-medium">{{ t('profile.chatFontSize') }}</span>
-          </div>
           <div class="inline-flex items-baseline gap-0.5 rounded-lg bg-(--ui-bg-elevated) p-1">
             <button
               v-for="opt in FONT_SIZE_OPTIONS"
@@ -121,20 +97,14 @@
               A
             </button>
           </div>
-        </div>
+        </SettingsRow>
 
         <!-- SignalR Connection Status -->
-        <div
-          class="flex items-center justify-between px-4 py-3.5"
+        <SettingsRow
+          icon="i-heroicons-signal"
+          :label="t('profile.connectionStatus')"
           data-testid="profile-signalr-status"
         >
-          <div class="flex items-center gap-3">
-            <UIcon
-              name="i-heroicons-signal"
-              class="size-5 text-[hsl(var(--muted-foreground))]"
-            />
-            <span class="text-sm font-medium">{{ t('profile.connectionStatus') }}</span>
-          </div>
           <div class="flex items-center gap-2">
             <span
               class="size-2 rounded-full"
@@ -147,20 +117,14 @@
               {{ statusMessage }}
             </span>
           </div>
-        </div>
+        </SettingsRow>
 
         <!-- Build Info -->
-        <div
-          class="flex items-center justify-between px-4 py-3.5"
+        <SettingsRow
+          icon="i-heroicons-information-circle"
+          :label="t('profile.build-info')"
           data-testid="profile-build-info"
         >
-          <div class="flex items-center gap-3">
-            <UIcon
-              name="i-heroicons-information-circle"
-              class="size-5 text-[hsl(var(--muted-foreground))]"
-            />
-            <span class="text-sm font-medium">{{ t('profile.build-info') }}</span>
-          </div>
           <div class="flex flex-col items-end">
             <span class="text-sm text-[hsl(var(--muted-foreground))] font-mono">
               {{ runtimeConfig.public.buildVersion }}
@@ -169,7 +133,7 @@
               {{ formattedBuildTimestamp }}
             </span>
           </div>
-        </div>
+        </SettingsRow>
       </div>
 
       <!-- Logout -->
@@ -204,6 +168,7 @@ import {
 } from '~/composables/useUiPreferences'
 import { useConfigStore } from '~/stores/config'
 import UserAvatar from '~/components/UserAvatar.vue'
+import SettingsRow from '~/components/SettingsRow.vue'
 
 const { t, locale, setLocale } = useI18n()
 const colorMode = useColorMode()
