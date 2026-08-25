@@ -271,7 +271,7 @@ const fixtureGroups: FixtureGroup[] = [
   {
     fenceType: 'mermaid',
     description: 'static, isolated Mermaid diagrams and rejected interactive input',
-    fixtures: markdownFixturesFor('md-mermaid', 'md-mermaid-rejected'),
+    fixtures: markdownFixturesFor('md-mermaid', 'md-mermaid-gantt', 'md-mermaid-rejected'),
   },
 ]
 

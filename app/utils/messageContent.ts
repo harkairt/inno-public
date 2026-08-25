@@ -14,6 +14,7 @@ const WIDE_CONTENT_MARKERS = [
   '```mermaid',
   '```video',
 ]
+const FULL_WIDTH_CONTENT_MARKERS = ['```mermaid']
 const MD_TABLE_RE = /^\|.+\|/m
 
 export function hasWideContent(message: AISessionMessageDTO): boolean {
@@ -23,4 +24,9 @@ export function hasWideContent(message: AISessionMessageDTO): boolean {
   const text = message.messageText
   if (!text) return false
   return WIDE_CONTENT_MARKERS.some((marker) => text.includes(marker)) || MD_TABLE_RE.test(text)
+}
+
+export function hasFullWidthContent(message: AISessionMessageDTO): boolean {
+  const text = message.messageText
+  return !!text && FULL_WIDTH_CONTENT_MARKERS.some((marker) => text.includes(marker))
 }

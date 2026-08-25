@@ -2,7 +2,7 @@
   <div
     class="message-bubble px-2.5 py-2.5"
     :class="[
-      wide ? 'max-w-full' : maxWidthClass,
+      fullWidth ? 'w-full max-w-full' : wide ? 'max-w-full' : maxWidthClass,
       {
         'rounded-br-md': isOwn,
         'rounded-bl-md': !isOwn,
@@ -29,6 +29,7 @@
       v-else-if="message.messageType === AIAnswerType.File"
       :message-text="message.messageText"
       :interactive="interactive"
+      @preview-file="(file) => emit('previewFile', file, message.messageID, message.sendDate)"
     />
     <MarkdownContent
       v-else
@@ -39,11 +40,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AISessionMessageDTO } from '@/types/api/schemas'
+import type { AISessionMessageDTO, ReceivedFile } from '@/types/api/schemas'
 import { parseOptionsPayload } from '@/types/api/schemas'
 import { AIAnswerType } from '@/types/enums'
 import { useMessagePresentation } from '@/app/composables/useMessagePresentation'
-import { hasWideContent } from '@/app/utils/messageContent'
+import { hasFullWidthContent, hasWideContent } from '@/app/utils/messageContent'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import OptionsMessage from '@/app/components/chat/OptionsMessage.vue'
 import FileMessage from '@/app/components/chat/FileMessage.vue'
@@ -68,10 +69,12 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   optionSubmitted: [answer: string]
+  previewFile: [file: ReceivedFile, messageId: string, messageDate: string]
 }>()
 
 const isOwn = computed(() => isUserMessage(props.message))
 const wide = computed(() => hasWideContent(props.message))
+const fullWidth = computed(() => hasFullWidthContent(props.message))
 </script>
 
 <style scoped>

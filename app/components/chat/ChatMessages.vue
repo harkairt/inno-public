@@ -56,6 +56,9 @@
               "
               :class="{ 'opacity-70': props.failedIds.has(message.messageID) }"
               @option-submitted="(answer) => emit('optionSubmitted', answer)"
+              @preview-file="
+                (file, messageId, messageDate) => emit('previewFile', file, messageId, messageDate)
+              "
             >
               <template #header>
                 <div
@@ -193,7 +196,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import type { AISessionMessageDTO } from '@/types/api/schemas'
+import type { AISessionMessageDTO, ReceivedFile } from '@/types/api/schemas'
 import { useAuthStore } from '@/app/stores/auth'
 import { useMessagePresentation } from '@/app/composables/useMessagePresentation'
 import MessageRating from '@/app/components/chat/MessageRating.vue'
@@ -238,6 +241,7 @@ const emit = defineEmits<{
   toggleFocus: [messageId: string]
   retryMessage: [messageId: string]
   discardMessage: [messageId: string]
+  previewFile: [file: ReceivedFile, messageId: string, messageDate: string]
 }>()
 
 const authStore = useAuthStore()

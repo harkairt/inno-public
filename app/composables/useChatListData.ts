@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { refDebounced } from '@vueuse/core'
 import { useSelectableUsers } from '~/composables/useUsers'
 import { useChatSessions, useUnreadMessageCounts } from '~/composables/useChatQueries'
 import { useClientSideUserSearch } from '~/composables/useClientSideUserSearch'
@@ -208,7 +209,6 @@ export function useChatListData() {
   const { formatRelativeDate, formatSessionDate } = useRelativeDate()
 
   const currentUserEmail = computed(() => authStore.user?.email ?? '')
-
   const { data: users, isLoading: isLoadingUsers, error: usersError } = useSelectableUsers()
   const { data: sessions, isLoading: isLoadingSessions, error: sessionsError } = useChatSessions()
   const { data: unreadCounts } = useUnreadMessageCounts()
@@ -220,13 +220,12 @@ export function useChatListData() {
     favoritesOnly,
   } = useChatListFilters()
   const { favoriteIds } = useUserFavorites()
-
   const userSearchQuery = ref('')
-
   const { filteredUsers } = useClientSideUserSearch(users, userSearchQuery)
+  const debouncedSearchQuery = refDebounced(sessionSearchQuery, 150)
 
   const filterContext = computed<ChatListFilterContext>(() => ({
-    query: sessionSearchQuery.value.trim().toLowerCase(),
+    query: debouncedSearchQuery.value.trim().toLowerCase(),
     participantType: participantType.value,
     unreadOnly: unreadOnly.value,
     favoritesOnly: favoritesOnly.value,
@@ -249,7 +248,6 @@ export function useChatListData() {
     getUnreadCountFromEntries(unreadCounts.value, sessionId)
   const getOtherMembers = (members: string[]) =>
     getOtherMembersForEmail(members, authStore.user?.email)
-
   const getMemberNames = (members: string[]) =>
     getMemberNamesFromList(members, authStore.user?.email, users.value, useI18n().t)
 

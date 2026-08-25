@@ -4,6 +4,11 @@ import type { AISessionHeaderDTO, GetUnreadMessagesDTO } from '@/types/api/schem
 import { makeSession } from '../../utils/factories'
 import { resetChatListFilters } from '@/app/composables/useChatListFilters'
 
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@vueuse/core')>()
+  return { ...actual, refDebounced: <T>(source: import('vue').Ref<T>) => source }
+})
+
 const usersRef = ref([
   { id: 10, name: 'Alice Agent', email: 'alice@example.com', isVirtual: false },
   { id: 11, name: 'Bob Bot', email: 'bob@example.com', isVirtual: true },

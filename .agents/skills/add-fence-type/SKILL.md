@@ -366,7 +366,24 @@ Cover:
 - Invalid block left as `<pre><code>` (rejected by validator)
 - Library not imported when no `{tag}` blocks present
 
-### 10. Dev gallery and thread — `app/dev/fixtures/markdown.ts` + `app/dev/fixtures/thread.ts`
+### 10. Fence documentation — `docs/fence/{tag}.md`
+
+Create a comprehensive reference document for agents that generate this fence type. These agents have **no internet access**, so the document must be fully self-contained — it replaces the library's online docs.
+
+Use `docs/fence/leaflet.md` as the canonical example. The document must cover:
+
+- **Fence tag** — the exact language identifier (e.g. ` ```leaflet `).
+- **Top-level JSON schema** — every field, its type, whether it's required/optional, and its default value.
+- **Every feature type** — complete field tables with types, constraints, and defaults.
+- **All styling options** — allowed formats (hex, rgb, named colors, etc.) with examples.
+- **Coordinate system** — axis order, ranges, reference coordinates for common cities.
+- **Validation limits** — every constant from the validation file in one summary table.
+- **Rejection reasons** — every reason and what triggers it, in a table.
+- **Auto-fit / viewport behavior** — what happens when center/zoom are omitted.
+- **Complete examples** — at least 5, progressing from minimal to complex mixed usage. Wrap each in a quadruple-backtick fence so the inner triple-backtick block renders correctly in markdown.
+- **Unsupported features** — what the underlying library supports but this fence type does not expose.
+
+### 11. Dev gallery and thread — `app/dev/fixtures/markdown.ts` + `app/dev/fixtures/thread.ts`
 
 Every new fence type must include at least one representative, valid fenced example in
 `markdownScenarios`. Build it with the existing `fence()` helper so `/dev/gallery` exercises the

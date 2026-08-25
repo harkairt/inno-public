@@ -12,20 +12,29 @@
     >
       {{ error }}
     </div>
-    <img
+    <button
       v-else
-      class="mermaid-image"
-      :src="dataUrl"
-      :alt="t('chat.mermaid.altText')"
-      @load="handleLoad"
-      @error="handleImageError"
-    />
+      type="button"
+      class="mermaid-lightbox-trigger"
+      :class="{ 'mermaid-lightbox-trigger--hidden': isLightboxOpen }"
+      :aria-label="t('chat.mermaid.altText')"
+      @click.stop="openLightbox"
+    >
+      <img
+        class="mermaid-image"
+        :src="dataUrl"
+        :alt="t('chat.mermaid.altText')"
+        @load="handleLoad"
+        @error="handleImageError"
+      />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { api as viewerApi } from 'v-viewer'
 import { useMermaid } from '~/composables/useMermaid'
 import type { MermaidData } from '@/lib/validation/mermaid'
 
@@ -43,6 +52,7 @@ const { isLoaded, loadMermaid, renderMermaid } = useMermaid()
 
 const svg = ref<string | null>(null)
 const error = ref<string | null>(null)
+const isLightboxOpen = ref(false)
 let renderVersion = 0
 
 const isDark = computed(() => colorMode.value === 'dark')
@@ -50,6 +60,35 @@ const showLoading = computed(() => !svg.value && !error.value)
 const dataUrl = computed(() =>
   svg.value ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.value)}` : '',
 )
+const lightboxDataUrl = computed(() => {
+  if (!svg.value) return ''
+
+  const viewBox = svg.value.match(/\bviewBox=(["'])\s*[\d.-]+\s+[\d.-]+\s+([\d.]+)\s+[\d.]+\s*\1/i)
+  const fullSizeSvg = viewBox?.[2]
+    ? svg.value.replace(/\bwidth=(["'])100%\1/i, `width="${viewBox[2]}"`)
+    : svg.value
+  const lightboxSvg = fullSizeSvg.replace(
+    /(<svg\b[^>]*>)/i,
+    '$1<rect width="100%" height="100%" fill="#fff"/>',
+  )
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(lightboxSvg)}`
+})
+
+const openLightbox = () => {
+  if (!lightboxDataUrl.value) return
+
+  isLightboxOpen.value = true
+  viewerApi({
+    images: [lightboxDataUrl.value],
+    options: {
+      initialCoverage: 1,
+      hidden: () => {
+        isLightboxOpen.value = false
+      },
+    },
+  })
+}
 
 const render = async () => {
   if (!isLoaded.value) return
@@ -116,6 +155,24 @@ onMounted(async () => {
   width: 100%;
   max-height: min(70vh, 720px);
   object-fit: contain;
+}
+
+.mermaid-lightbox-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.mermaid-lightbox-trigger:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 4px;
+}
+
+.mermaid-lightbox-trigger--hidden {
+  visibility: hidden;
 }
 
 .mermaid-loading,

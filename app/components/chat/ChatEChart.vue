@@ -66,7 +66,7 @@ const handleClick = (params: unknown) => {
   chatStore.requestComposerText(prompt)
 }
 
-const applyCurrent = () => {
+const applyCurrent = async () => {
   if (!instance) return
 
   const { height, ...optionWithoutHeight } = props.option
@@ -79,7 +79,7 @@ const applyCurrent = () => {
     }
   }
 
-  if (applyOption(instance, optionWithoutHeight, isDark.value, props.blockIndex)) {
+  if (await applyOption(instance, optionWithoutHeight, isDark.value, props.blockIndex)) {
     error.value = null
   } else {
     error.value = t('chat.echart.renderFailed')
@@ -100,7 +100,7 @@ const render = () => {
     instance.on('click', handleClick)
   }
 
-  applyCurrent()
+  void applyCurrent()
 }
 
 watch(
@@ -113,7 +113,7 @@ watch(
 
 watch(() => props.source, render)
 
-watch(isDark, applyCurrent)
+watch(isDark, () => void applyCurrent())
 
 useResizeObserver(containerRef, () => {
   if (instance) instance.resize()

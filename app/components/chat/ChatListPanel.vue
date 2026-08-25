@@ -58,7 +58,7 @@
             :variant="participantType === option.value ? 'subtle' : 'outline'"
             class="flex-1 justify-center"
             :data-testid="`filter-participant-${option.value}`"
-            @click="participantType = option.value"
+            @click="participantType = participantType === option.value ? 'all' : option.value"
           />
         </UFieldGroup>
 
@@ -203,32 +203,42 @@
           {{ t('sidebar.chatSessions') }}
         </h2>
       </div>
-      <TransitionGroup
-        name="session-list"
-        tag="div"
-        class="flex flex-col gap-0.5"
-      >
-        <SessionListItem
-          v-for="session in filteredSessions"
-          :key="session.sessionId"
-          :session="session"
-          :users="users || []"
-          :is-active="session.sessionId === activeSessionId"
-          :unread-count="getUnreadCount(session.sessionId)"
-          :display-name="getDisplayName(session)"
-          :member-names="getMemberNames(session.members)"
-          :other-members="getOtherMembers(session.members)"
-          :is-primary-session="isPrimarySessionCheck(session)"
-          :is-mobile="isMobile"
-        />
-      </TransitionGroup>
+      <div :style="{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }">
+        <template
+          v-for="virtualRow in virtualizer.getVirtualItems()"
+          :key="filteredSessions[virtualRow.index]!.sessionId"
+        >
+          <SessionListItem
+            :data-index="virtualRow.index"
+            :class="{
+              'session-fade-in': shouldAnimate(filteredSessions[virtualRow.index]!.sessionId),
+            }"
+            :style="{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              transform: `translateY(${virtualRow.start}px)`,
+            }"
+            :session="filteredSessions[virtualRow.index]!"
+            :users="users || []"
+            :is-active="filteredSessions[virtualRow.index]!.sessionId === activeSessionId"
+            :unread-count="getUnreadCount(filteredSessions[virtualRow.index]!.sessionId)"
+            :display-name="getDisplayName(filteredSessions[virtualRow.index]!)"
+            :member-names="getMemberNames(filteredSessions[virtualRow.index]!.members)"
+            :other-members="getOtherMembers(filteredSessions[virtualRow.index]!.members)"
+            :is-primary-session="isPrimarySessionCheck(filteredSessions[virtualRow.index]!)"
+            :is-mobile="isMobile"
+          />
+        </template>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { useScroll } from '@vueuse/core'
+import { ref, shallowRef, onMounted, watch } from 'vue'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { useChatListData } from '~/composables/useChatListData'
 import { useChatListFilters, type ParticipantType } from '~/composables/useChatListFilters'
 import { useUserFavorites } from '~/composables/useUserFavorites'
@@ -288,8 +298,38 @@ async function handleClearDraft(draftKey: string, draftRoute: string) {
   }
 }
 
-// Scroll position persistence
 const scrollContainer = ref<HTMLElement>()
+
+const newSessionIds = shallowRef(new Set<string>())
+let prevSessionIds = new Set<string>()
+
+watch(filteredSessions, (sessions) => {
+  const currentIds = new Set(sessions.map((s) => s.sessionId))
+  const entering = new Set<string>()
+  for (const id of currentIds) {
+    if (!prevSessionIds.has(id)) entering.add(id)
+  }
+  newSessionIds.value = entering
+  prevSessionIds = currentIds
+  if (entering.size > 0) {
+    setTimeout(() => {
+      newSessionIds.value = new Set()
+    }, 300)
+  }
+})
+
+function shouldAnimate(sessionId: string) {
+  return newSessionIds.value.has(sessionId)
+}
+
+const virtualizer = useVirtualizer(
+  computed(() => ({
+    count: filteredSessions.value.length,
+    getScrollElement: () => scrollContainer.value ?? null,
+    estimateSize: () => 54,
+    overscan: 5,
+  })),
+)
 
 onMounted(() => {
   if (scrollContainer.value) {
@@ -299,18 +339,25 @@ onMounted(() => {
         scrollContainer.value.scrollTop = parseInt(savedPosition, 10)
       }
     } catch {
-      // Blocked Storage — skip scroll restore.
+      /* blocked storage */
     }
   }
+  scrollContainer.value?.addEventListener('scroll', persistScroll, { passive: true })
 })
 
-const { y: scrollY } = useScroll(scrollContainer)
-watch(scrollY, (newY) => {
+function persistScroll() {
   try {
-    sessionStorage.setItem('chat-sessions-scroll-position', newY.toString())
+    sessionStorage.setItem(
+      'chat-sessions-scroll-position',
+      String(scrollContainer.value?.scrollTop ?? 0),
+    )
   } catch {
-    // Blocked Storage — skip scroll persistence.
+    /* blocked storage */
   }
+}
+
+onBeforeUnmount(() => {
+  scrollContainer.value?.removeEventListener('scroll', persistScroll)
 })
 </script>
 
@@ -322,5 +369,15 @@ watch(scrollY, (newY) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.session-fade-in {
+  animation: session-enter 0.2s ease both;
+}
+
+@keyframes session-enter {
+  from {
+    opacity: 0;
+  }
 }
 </style>

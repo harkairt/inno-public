@@ -30,6 +30,7 @@
         :file="file"
         mode="chip"
         :interactive="interactive"
+        @preview-file="(f) => emit('previewFile', f)"
       />
     </div>
 
@@ -42,6 +43,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { ReceivedFile } from '@/types/api/schemas'
 import { FileMessagePayloadSchema } from '@/types/api/schemas'
 import MarkdownContent from '@/app/components/chat/MarkdownContent.vue'
 import FileEntry from '@/app/components/chat/FileEntry.vue'
@@ -53,6 +55,10 @@ const props = withDefaults(
   }>(),
   { interactive: true },
 )
+
+const emit = defineEmits<{
+  previewFile: [file: ReceivedFile]
+}>()
 
 const payload = computed(() => {
   if (!props.messageText) return null

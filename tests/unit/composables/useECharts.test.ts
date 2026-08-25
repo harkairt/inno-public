@@ -88,7 +88,7 @@ async function applyTo(option: EChartsOption, isDark = false) {
   const engine = await importECharts()
   await engine.loadECharts()
   const instance = engine.initChart(document.createElement('div'))!
-  const applied = engine.applyOption(instance, option, isDark, 0)
+  const applied = await engine.applyOption(instance, option, isDark, 0)
   return { engine, instance: lastInstance!, applied }
 }
 

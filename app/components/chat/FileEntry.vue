@@ -56,38 +56,54 @@
     />
   </component>
 
-  <component
-    :is="interactive ? 'a' : 'div'"
+  <div
     v-else-if="mode === 'chip'"
-    v-bind="
-      interactive
-        ? {
-            href: fullResUrl,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-            title: t('chat.messages.openFile'),
-          }
-        : {}
-    "
-    class="flex items-center gap-2 px-2.5 h-10 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] transition-colors text-sm max-w-[240px] text-[inherit]"
+    class="flex items-center gap-2 px-2.5 h-10 rounded-lg border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--muted)/0.3)] transition-colors text-sm max-w-[280px] text-[inherit]"
     :class="{ 'hover:bg-[hsl(var(--muted)/0.5)]': interactive }"
   >
-    <img
-      v-if="isImage && imgSrc"
-      :src="imgSrc"
-      :data-source="interactive ? fullResUrl : undefined"
-      :alt="sanitizedFileName"
-      class="w-7 h-7 object-cover rounded shrink-0"
-      loading="lazy"
-      @error="onImgError"
-    />
-    <UIcon
-      v-else
-      :name="fileTypeIcon(file)"
-      class="w-7 h-7 shrink-0"
-    />
-    <span class="truncate flex-1 min-w-0">{{ sanitizedFileName }}</span>
-  </component>
+    <component
+      :is="interactive ? 'a' : 'div'"
+      v-bind="
+        interactive
+          ? {
+              href: fullResUrl,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              title: t('chat.messages.openFile'),
+            }
+          : {}
+      "
+      class="flex items-center gap-2 min-w-0 flex-1 text-[inherit]"
+    >
+      <img
+        v-if="isImage && imgSrc"
+        :src="imgSrc"
+        :data-source="interactive ? fullResUrl : undefined"
+        :alt="sanitizedFileName"
+        class="w-7 h-7 object-cover rounded shrink-0"
+        loading="lazy"
+        @error="onImgError"
+      />
+      <UIcon
+        v-else
+        :name="fileTypeIcon(file)"
+        class="w-7 h-7 shrink-0"
+      />
+      <span class="truncate flex-1 min-w-0">{{ sanitizedFileName }}</span>
+    </component>
+    <button
+      v-if="interactive && canPreview"
+      class="text-current hover:opacity-70 transition-opacity rounded shrink-0 flex items-center justify-center size-7"
+      :aria-label="t('chat.filePreview.previewFile')"
+      data-testid="file-preview-button"
+      @click.stop="emit('previewFile', file)"
+    >
+      <UIcon
+        name="i-heroicons-document-magnifying-glass"
+        class="size-4"
+      />
+    </button>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -95,6 +111,7 @@ import { computed, ref } from 'vue'
 import type { ReceivedFile } from '@/types/api/schemas'
 import { sanitizeFileUrl } from '@/app/utils/url'
 import { fileTypeIcon } from '@/app/utils/fileIcon'
+import { isPreviewableFile } from '@/types/filePreview'
 
 const { t } = useI18n()
 const {
@@ -109,6 +126,12 @@ const props = withDefaults(
   }>(),
   { interactive: true },
 )
+
+const emit = defineEmits<{
+  previewFile: [file: ReceivedFile]
+}>()
+
+const canPreview = computed(() => isPreviewableFile(props.file.mimeType, props.file.fileName))
 
 const thumbnailFailed = ref(false)
 

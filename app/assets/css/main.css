@@ -399,25 +399,6 @@
     background: hsl(var(--brand-soft));
   }
 
-  .session-list-move {
-    transition: transform 0.3s ease;
-  }
-
-  .session-list-enter-active,
-  .session-list-leave-active {
-    transition: all 0.2s ease;
-  }
-
-  .session-list-enter-from,
-  .session-list-leave-to {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-
-  .session-list-leave-active {
-    position: absolute;
-    width: 100%;
-  }
 
   /* Olvasatlan jelző — Elemtár: piros számláló-badge */
   .unread-dot {

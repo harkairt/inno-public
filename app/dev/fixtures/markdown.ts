@@ -112,6 +112,18 @@ const mermaidFlowchart = `flowchart TB
   Approval --> Booking
   Booking --> ERP[(ERP könyvelés)]`
 
+const mermaidGantt = `gantt
+    title Release Plan
+    dateFormat YYYY-MM-DD
+    section Backend
+        API design       :a1, 2024-03-01, 7d
+        Implementation   :a2, after a1, 14d
+        Testing          :a3, after a2, 7d
+    section Frontend
+        UI mockups       :b1, 2024-03-01, 5d
+        Components       :b2, after b1, 14d
+        Integration      :b3, after a2, 7d`
+
 export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
   { id: 'md-prose', title: 'Prose — headings, lists, blockquote, rule', props: { content: prose } },
   { id: 'md-links', title: 'Links, linkified URL, image', props: { content: linksAndImages } },
@@ -298,6 +310,11 @@ export const markdownScenarios: Scenario<MarkdownContentProps>[] = [
     id: 'md-mermaid',
     title: 'Embedded ```mermaid block → isolated Mermaid diagram',
     props: { content: fence('mermaid', mermaidFlowchart) },
+  },
+  {
+    id: 'md-mermaid-gantt',
+    title: 'Gantt release plan → isolated Mermaid diagram',
+    props: { content: fence('mermaid', mermaidGantt) },
   },
   {
     id: 'md-mermaid-rejected',

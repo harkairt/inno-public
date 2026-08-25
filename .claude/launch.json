@@ -5,7 +5,6 @@
       "name": "innochat-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:clean"],
-      "port": 3000,
       "autoPort": true
     }
   ]
