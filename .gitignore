@@ -10,7 +10,8 @@ dist
 deploy
 
 # Netlify build output (only root-level, not pages/chats/public/)
-/public
+/public/*
+!/public/icons/
 
 # Node dependencies
 node_modules

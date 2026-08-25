@@ -36,6 +36,8 @@ export default defineNuxtConfig({
     baseURL,
     head: {
       link: [
+        { rel: 'manifest', href: `${baseURL}manifest.webmanifest` },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: `${baseURL}icons/apple-touch-icon.png` },
         // Google Fonts: Bricolage Grotesque (headings) + Figtree (body)
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
@@ -52,6 +54,8 @@ export default defineNuxtConfig({
             'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content',
         },
         { name: 'color-scheme', content: 'light dark' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],
     },
   },
@@ -152,6 +156,7 @@ export default defineNuxtConfig({
   // PWA Configuration
   pwa: {
     registerType: 'prompt',
+    devOptions: { enabled: true },
 
     workbox: {
       navigateFallback: `${baseURL}index.html`,
@@ -231,6 +236,7 @@ export default defineNuxtConfig({
           src: 'icons/icon-192x192.png',
           sizes: '192x192',
           type: 'image/png',
+          purpose: 'any maskable',
         },
         {
           src: 'icons/icon-384x384.png',
@@ -241,6 +247,7 @@ export default defineNuxtConfig({
           src: 'icons/icon-512x512.png',
           sizes: '512x512',
           type: 'image/png',
+          purpose: 'any maskable',
         },
       ],
       categories: ['productivity', 'business', 'utilities'],
