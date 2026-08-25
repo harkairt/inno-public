@@ -1,5 +1,10 @@
 import { ref } from 'vue'
-import type { LeafletMapData, LeafletMarker } from '@/lib/validation/leaflet'
+import type {
+  LeafletMapData,
+  LeafletMarker,
+  LeafletGeoJSONDataItem,
+} from '@/lib/validation/leaflet'
+import { loadGeoJSON } from '@/lib/geo/registry'
 import { createLogger } from '@/lib/utils/logger'
 
 const logger = createLogger('useLeaflet')
@@ -34,11 +39,25 @@ function buildPopupHtml(marker: LeafletMarker): string | null {
   return parts.join('<br>')
 }
 
-function addFeatures(
+function buildGeoJSONPopupHtml(
+  featureName: string | undefined,
+  item: LeafletGeoJSONDataItem | undefined,
+): string | null {
+  if (!item) return null
+  const title = item.title ?? featureName
+  const desc = item.description
+  if (!title && !desc) return null
+  const parts: string[] = []
+  if (title) parts.push(`<strong>${escapeHtml(title)}</strong>`)
+  if (desc) parts.push(escapeHtml(desc))
+  return parts.join('<br>')
+}
+
+async function addFeatures(
   L: LeafletModule,
   map: LeafletMapInstance,
   data: LeafletMapData,
-): [number, number][] {
+): Promise<[number, number][]> {
   const allBounds: [number, number][] = []
 
   for (const marker of data.markers) {
@@ -61,8 +80,51 @@ function addFeatures(
       color: polygon.color ?? '#10b981',
       fillColor: polygon.fillColor ?? (polygon.color ? polygon.color + '33' : '#10b98133'),
       weight: polygon.weight ?? 2,
+      fillOpacity: 1,
     }).addTo(map)
     allBounds.push(...polygon.coordinates)
+  }
+
+  if (data.geojson) {
+    const geoJSON = await loadGeoJSON(data.geojson.map)
+    if (geoJSON) {
+      const styleMap = new Map<string, LeafletGeoJSONDataItem>()
+      for (const item of data.geojson.data ?? []) {
+        styleMap.set(item.name, item)
+      }
+      const ds = data.geojson.defaultStyle ?? {}
+
+      const featureName = (feature: GeoJSON.Feature | undefined): string | undefined => {
+        const props = feature?.properties as Record<string, unknown> | undefined
+        const n = props?.name
+        return typeof n === 'string' ? n : undefined
+      }
+
+      const layer = L.geoJSON(geoJSON as GeoJSON.GeoJsonObject, {
+        style: (feature) => {
+          const name = featureName(feature)
+          const item = name ? styleMap.get(name) : undefined
+          return {
+            color: item?.color ?? ds.color ?? '#10b981',
+            fillColor: item?.fillColor ?? ds.fillColor ?? '#10b98133',
+            weight: item?.weight ?? ds.weight ?? 1,
+            fillOpacity: 1,
+          }
+        },
+        onEachFeature: (feature, featureLayer) => {
+          const name = featureName(feature)
+          const item = name ? styleMap.get(name) : undefined
+          const popup = buildGeoJSONPopupHtml(name, item)
+          if (popup) featureLayer.bindPopup(popup)
+        },
+      }).addTo(map)
+
+      const bounds = layer.getBounds()
+      if (bounds.isValid()) {
+        allBounds.push([bounds.getSouthWest().lat, bounds.getSouthWest().lng])
+        allBounds.push([bounds.getNorthEast().lat, bounds.getNorthEast().lng])
+      }
+    }
   }
 
   return allBounds
@@ -102,7 +164,10 @@ export const useLeaflet = () => {
     return loadingPromise
   }
 
-  const createMap = (el: HTMLElement, data: LeafletMapData): LeafletMapInstance | null => {
+  const createMap = async (
+    el: HTMLElement,
+    data: LeafletMapData,
+  ): Promise<LeafletMapInstance | null> => {
     if (!leafletModule) return null
 
     const L = leafletModule
@@ -111,7 +176,7 @@ export const useLeaflet = () => {
       const map = L.map(el, { attributionControl: true })
       L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 19 }).addTo(map)
 
-      const allBounds = addFeatures(L, map, data)
+      const allBounds = await addFeatures(L, map, data)
 
       if (data.center) {
         map.setView(data.center, data.zoom ?? 13)

@@ -53,13 +53,13 @@ const destroyMap = () => {
   instance = null
 }
 
-const render = () => {
+const render = async () => {
   destroyMap()
 
   if (!containerRef.value || !isLoaded.value) return
   if (!containerRef.value.offsetWidth) return
 
-  instance = createMap(containerRef.value, props.data)
+  instance = await createMap(containerRef.value, props.data)
   if (!instance) {
     error.value = t('chat.map.renderFailed')
   } else {
@@ -70,21 +70,24 @@ const render = () => {
 watch(
   isLoaded,
   (loaded) => {
-    if (loaded) render()
+    if (loaded) void render()
   },
   { flush: 'post' },
 )
 
-watch(() => props.source, render)
+watch(
+  () => props.source,
+  () => void render(),
+)
 
 useResizeObserver(containerRef, () => {
   if (instance) instance.invalidateSize()
-  else render()
+  else void render()
 })
 
 onMounted(async () => {
   if (isLoaded.value) {
-    render()
+    void render()
     return
   }
 

@@ -88,11 +88,11 @@ const sliderValue = computed(() => {
   return Math.round((progress.value / lastFrameIndex.value) * SLIDER_RESOLUTION)
 })
 
-const applyFrame = (idx: number) => {
+const applyFrame = async (idx: number) => {
   if (!instance || idx === appliedFrameIndex) return
   appliedFrameIndex = idx
   const option = buildBarRaceOption(props.data, idx)
-  if (!applyOption(instance, option, isDark.value, props.blockIndex)) {
+  if (!(await applyOption(instance, option, isDark.value, props.blockIndex))) {
     error.value = t('chat.barRace.renderFailed')
   }
 }
@@ -112,13 +112,13 @@ const tick = (timestamp: number) => {
   const next = progress.value + delta
   if (next >= lastFrameIndex.value) {
     progress.value = lastFrameIndex.value
-    applyFrame(lastFrameIndex.value)
+    void applyFrame(lastFrameIndex.value)
     pause()
     return
   }
 
   progress.value = next
-  applyFrame(Math.floor(next))
+  void applyFrame(Math.floor(next))
   rafId = requestAnimationFrame(tick)
 }
 
@@ -134,7 +134,7 @@ const pause = () => {
 const play = () => {
   if (progress.value >= lastFrameIndex.value) {
     progress.value = 0
-    applyFrame(0)
+    void applyFrame(0)
   }
   isPlaying.value = true
   lastTimestamp = null
@@ -152,7 +152,7 @@ const seekSlider = (val: number | undefined) => {
   const mapped = lastFrameIndex.value > 0 ? (val / SLIDER_RESOLUTION) * lastFrameIndex.value : 0
   const frameIdx = Math.min(Math.round(mapped), lastFrameIndex.value)
   progress.value = frameIdx
-  applyFrame(frameIdx)
+  void applyFrame(frameIdx)
 }
 
 const render = () => {
@@ -165,7 +165,7 @@ const render = () => {
       return
     }
   }
-  applyFrame(currentFrameIndex.value)
+  void applyFrame(currentFrameIndex.value)
 }
 
 watch(
@@ -188,7 +188,7 @@ watch(
 
 watch(isDark, () => {
   appliedFrameIndex = -1
-  applyFrame(currentFrameIndex.value)
+  void applyFrame(currentFrameIndex.value)
 })
 
 useResizeObserver(containerRef, () => {

@@ -1,9 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
-import { nextTick, ref, type Component } from 'vue'
+import { nextTick, ref, computed, type Component } from 'vue'
 import type { AISessionHeaderDTO } from '@/types/api/schemas'
 import { makeSession } from '../../../utils/factories'
 import { resetChatListFilters } from '@/app/composables/useChatListFilters'
+
+vi.mock('@tanstack/vue-virtual', () => ({
+  useVirtualizer: (optionsRef: { value: { count: number } }) => {
+    return computed(() => ({
+      getTotalSize: () => optionsRef.value.count * 54,
+      getVirtualItems: () =>
+        Array.from({ length: optionsRef.value.count }, (_, i) => ({
+          index: i,
+          start: i * 54,
+          size: 62,
+          key: i,
+        })),
+      measureElement: () => {},
+    }))
+  },
+}))
 
 const clearDraftConversationMock = vi.fn()
 const navigateToMock = vi.fn()

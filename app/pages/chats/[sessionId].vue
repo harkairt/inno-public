@@ -98,6 +98,27 @@
           <USkeleton class="h-4 w-32" />
         </div>
 
+        <!-- File preview sidebar toggle (desktop only) -->
+        <UButton
+          v-if="!isMobile && session"
+          variant="ghost"
+          color="neutral"
+          square
+          size="sm"
+          :aria-label="t('chat.filePreview.toggleSidebar')"
+          data-testid="file-preview-sidebar-toggle"
+          @click="toggleFilePreviewSidebar"
+        >
+          <UIcon
+            :name="
+              filePreviewOpen
+                ? 'i-heroicons-document-magnifying-glass-20-solid'
+                : 'i-heroicons-document-magnifying-glass'
+            "
+            class="size-5"
+          />
+        </UButton>
+
         <!-- Focus sidebar toggle (desktop only) -->
         <UButton
           v-if="!isMobile && session"
@@ -107,12 +128,12 @@
           size="sm"
           :aria-label="t('chat.focus.toggleSidebar')"
           data-testid="focus-sidebar-toggle"
-          @click="focusSidebarOpen = !focusSidebarOpen"
+          @click="toggleFocusSidebar"
         >
           <div class="relative flex items-center justify-center">
             <UIcon
               :name="focusSidebarOpen ? 'i-heroicons-bookmark-solid' : 'i-heroicons-bookmark'"
-              class="size-6"
+              class="size-5"
             />
             <span
               v-if="focusedIds.length > 0"
@@ -131,18 +152,12 @@
 
         <!-- Session Members Avatar Stack (hidden for primary sessions) -->
         <SessionMembers
-          v-if="session && session.members.length > 0 && selectableUsers && !isPrimarySession"
+          v-if="session && session.members.length > 2 && selectableUsers && !isPrimarySession"
           :members="session.members"
           :selectable-users="selectableUsers"
         />
 
-        <!-- Manage Session Members Button (hidden for primary sessions) -->
-        <ManageSessionUsers
-          v-if="session && !isPrimarySession"
-          :session-id="session.sessionId"
-          :agent-id="session.agentId"
-          :members="session.members"
-        />
+        <!-- ManageSessionUsers deliberately hidden — backend add-member endpoint is bugged -->
 
         <!-- Create new session button (shown only for primary sessions) -->
         <UButton
@@ -295,6 +310,7 @@
                     @toggle-focus="toggleFocus"
                     @retry-message="handleRetryMessage"
                     @discard-message="handleDiscardMessage"
+                    @preview-file="handlePreviewFile"
                   />
                 </Transition>
               </div>
@@ -328,14 +344,43 @@
           />
         </div>
 
-        <FocusedMessagesSidebar
+        <div
           v-if="!isMobile"
-          v-model:sidebar-open="focusSidebarOpen"
-          :messages="messages"
-          :focused-ids="focusedIds"
-          @toggle-focus="toggleFocus"
-          @clear-all="(clearAll(), (focusSidebarOpen = false))"
-        />
+          class="flex h-full flex-shrink-0 overflow-hidden bg-background border-l"
+          :class="[
+            activeSidebar ? 'border-[hsl(var(--border)/0.5)]' : 'border-transparent',
+            !sidebarIsResizing && 'transition-[width,border-color] duration-300 ease-in-out',
+            sidebarIsResizing && '[&_iframe]:pointer-events-none',
+          ]"
+          :style="{ width: activeSidebar ? `${sidebarWidth}px` : '0px' }"
+        >
+          <div
+            class="w-1 cursor-col-resize hover:bg-[hsl(var(--primary)/0.3)] active:bg-[hsl(var(--primary)/0.5)] transition-colors flex-shrink-0"
+            @mousedown="onSidebarResizeStart"
+            @touchstart="onSidebarResizeStart"
+          />
+
+          <FocusedMessagesSidebar
+            v-if="activeSidebar === 'focus'"
+            :messages="messages"
+            :focused-ids="focusedIds"
+            :content-width="sidebarWidth - 4"
+            @toggle-focus="toggleFocus"
+            @clear-all="(clearAll(), (focusSidebarOpen = false))"
+            @close="focusSidebarOpen = false"
+          />
+
+          <FilePreviewSidebar
+            v-if="activeSidebar === 'files'"
+            :active-file="filePreviewActiveFile"
+            :previewed-files="previewedFiles"
+            :content-width="sidebarWidth - 4"
+            @close="closeFilePreview"
+            @go-to-list="filePreviewGoToList"
+            @open-file-detail="filePreviewOpenDetail"
+            @scroll-to-message="scrollToMessage"
+          />
+        </div>
       </div>
 
       <!-- Session Not Found -->
@@ -420,17 +465,19 @@ import { useChatStore } from '@/app/stores/chat'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { usePrimarySession } from '@/app/composables/usePrimarySession'
 import { AIQuestionType } from '@/types/enums'
-import type { AiQuestionRequestDTO } from '@/types/api/schemas'
+import type { AiQuestionRequestDTO, ReceivedFile } from '@/types/api/schemas'
 import { resolveWelcomeAgent } from '@/app/utils/welcomeAgent'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
-import ManageSessionUsers from '@/app/components/chat/ManageSessionUsers.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 import { useMessageFocus } from '@/app/composables/useMessageFocus'
+import { useFilePreview } from '@/app/composables/useFilePreview'
+import { usePanelResize } from '~/composables/usePanelResize'
 import FocusedMessagesSidebar from '@/app/components/chat/FocusedMessagesSidebar.vue'
+import FilePreviewSidebar from '@/app/components/chat/FilePreviewSidebar.vue'
 import { createLogger } from '@/lib/utils/logger'
 
 const logger = createLogger('ChatSession')
@@ -446,13 +493,75 @@ const chatStore = useChatStore()
 const { focusedIds, toggleFocus: rawToggleFocus, clearAll } = useMessageFocus(sessionId)
 const focusSidebarOpen = ref(false)
 
+const {
+  previewedFiles,
+  isOpen: filePreviewOpen,
+  activeFile: filePreviewActiveFile,
+  previewFile,
+  openFileDetail: filePreviewOpenDetail,
+  goToList: filePreviewGoToList,
+  closePreview: closeFilePreview,
+  toggleOpen: toggleFilePreviewOpen,
+} = useFilePreview(sessionId)
+
+const {
+  width: sidebarWidth,
+  isResizing: sidebarIsResizing,
+  onResizeStart: onSidebarResizeStart,
+} = usePanelResize({
+  defaultWidth: 400,
+  minWidth: 280,
+  maxWidthFraction: 0.5,
+  direction: 'right',
+})
+
+const activeSidebar = computed((): 'focus' | 'files' | null => {
+  if (focusSidebarOpen.value) return 'focus'
+  if (filePreviewOpen.value) return 'files'
+  return null
+})
+
+function toggleFocusSidebar(): void {
+  if (focusSidebarOpen.value) {
+    focusSidebarOpen.value = false
+  } else {
+    filePreviewOpen.value = false
+    focusSidebarOpen.value = true
+  }
+}
+
+function toggleFilePreviewSidebar(): void {
+  if (filePreviewOpen.value) {
+    toggleFilePreviewOpen()
+  } else {
+    focusSidebarOpen.value = false
+    toggleFilePreviewOpen()
+  }
+}
+
 function toggleFocus(messageId: string): void {
   const wasEmpty = focusedIds.value.length === 0
   rawToggleFocus(messageId)
   if (wasEmpty && focusedIds.value.length > 0 && !focusSidebarOpen.value) {
+    filePreviewOpen.value = false
     focusSidebarOpen.value = true
   }
 }
+
+function handlePreviewFile(file: ReceivedFile, messageId: string, messageDate: string): void {
+  focusSidebarOpen.value = false
+  previewFile(file, messageId, messageDate)
+}
+
+function scrollToMessage(messageId: string): void {
+  scrollToElement(`[data-testid="message-${messageId}"]`)
+}
+
+onKeyStroke('Escape', () => {
+  if (filePreviewOpen.value) {
+    closeFilePreview()
+  }
+})
 
 // Consume one-shot flag: skip entrance animation when arriving from /chats/new/*
 chatStore.setActiveSession(sessionId)

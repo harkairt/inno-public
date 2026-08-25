@@ -3,6 +3,7 @@ import { nextTick, ref } from 'vue'
 import type { Component } from 'vue'
 import { renderWithProviders } from '@/tests/utils/render'
 
+const viewerApiSpy = vi.hoisted(() => vi.fn())
 const initializeSpy = vi.fn()
 const renderSpy = vi.fn(async (id: string) => ({ svg: `<svg id="${id}"></svg>` }))
 const colorMode = ref('light')
@@ -11,6 +12,8 @@ vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: (key: string) => key, locale: ref('en') }),
 }))
 
+vi.mock('v-viewer', () => ({ api: viewerApiSpy }))
+
 beforeEach(() => {
   vi.resetModules()
   vi.doMock('mermaid', () => ({
@@ -18,6 +21,7 @@ beforeEach(() => {
   }))
   initializeSpy.mockClear()
   renderSpy.mockClear()
+  viewerApiSpy.mockClear()
   renderSpy.mockImplementation(async (id: string) => ({ svg: `<svg id="${id}"></svg>` }))
   colorMode.value = 'light'
   vi.stubGlobal('useColorMode', () => colorMode)
@@ -58,6 +62,41 @@ describe('ChatMermaid', () => {
     expect(initializeSpy).toHaveBeenCalledWith(
       expect.objectContaining({ securityLevel: 'strict', htmlLabels: false, startOnLoad: false }),
     )
+  })
+
+  it('opens the full-size Mermaid SVG in the lightbox', async () => {
+    renderSpy.mockImplementation(async (id: string) => ({
+      svg: `<svg id="${id}" width="100%" viewBox="0 0 1600 240"></svg>`,
+    }))
+
+    const { container } = await renderMermaid()
+    await settle()
+
+    const parentClick = vi.fn()
+    container.addEventListener('click', parentClick)
+    container.querySelector<HTMLImageElement>('.mermaid-image')?.click()
+
+    const options = viewerApiSpy.mock.calls[0]?.[0]
+    expect(parentClick).not.toHaveBeenCalled()
+    const lightboxSvg = decodeURIComponent(options.images[0])
+    expect(lightboxSvg).toContain('width="1600"')
+    expect(lightboxSvg).toContain('<rect width="100%" height="100%" fill="#fff"/>')
+    expect(options).toMatchObject({ options: { initialCoverage: 1 } })
+    await nextTick()
+    expect(
+      container
+        .querySelector('.mermaid-lightbox-trigger')
+        ?.classList.contains('mermaid-lightbox-trigger--hidden'),
+    ).toBe(true)
+
+    options.options.hidden()
+    await nextTick()
+
+    expect(
+      container
+        .querySelector('.mermaid-lightbox-trigger')
+        ?.classList.contains('mermaid-lightbox-trigger--hidden'),
+    ).toBe(false)
   })
 
   it('re-renders when the source or theme changes', async () => {

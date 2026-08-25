@@ -140,6 +140,20 @@
       "emptyTitle": "Nincsenek kiemelt üzenetek",
       "emptyDescription": "Kattintson a könyvjelző ikonra egy üzenetnél a kiemeléséhez"
     },
+    "filePreview": {
+      "toggleSidebar": "Fájl előnézet megjelenítése",
+      "sidebarTitle": "Korábban megnyitott fájlok",
+      "emptyTitle": "Nincsenek megtekintett fájlok",
+      "emptyDescription": "Kattintson az előnézet ikonra egy fájlnál a megtekintéséhez",
+      "previewFile": "Fájl előnézet",
+      "scrollToMessage": "Ugrás az üzenethez",
+      "openInNewTab": "Megnyitás új lapon",
+      "download": "Letöltés",
+      "back": "Vissza a fájllistához",
+      "loading": "Előnézet betöltése…",
+      "errorTitle": "Az előnézet nem elérhető",
+      "errorDescription": "A fájl előnézete nem tölthető be"
+    },
     "typing": {
       "single": "{name} gépel",
       "double": "{name1} és {name2} gépelnek",

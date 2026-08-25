@@ -109,6 +109,76 @@ const echartsScatter: EChartsOption = {
   ],
 }
 
+const echartsHungaryMap: EChartsOption = {
+  title: { text: 'Kukorica termésátlaga vármegyénként, 2025', left: 'center' },
+  tooltip: { trigger: 'item', formatter: '{b}: {c} kg/ha' },
+  visualMap: {
+    min: 2500,
+    max: 8000,
+    text: ['Magas', 'Alacsony'],
+    calculable: true,
+    inRange: { color: ['#bae4bc', '#2b8cbe', '#084081'] },
+  },
+  series: [
+    {
+      type: 'map',
+      map: 'hungary',
+      label: { show: true, fontSize: 10 },
+      data: [
+        { name: 'Bács-Kiskun', value: 4250 },
+        { name: 'Baranya', value: 6000 },
+        { name: 'Békés', value: 2720 },
+        { name: 'Borsod-Abaúj-Zemplén', value: 6350 },
+        { name: 'Budapest', value: 5850 },
+        { name: 'Csongrád-Csanád', value: 3570 },
+        { name: 'Fejér', value: 4650 },
+        { name: 'Győr-Moson-Sopron', value: 7630 },
+        { name: 'Hajdú-Bihar', value: 5400 },
+        { name: 'Heves', value: 3750 },
+        { name: 'Jász-Nagykun-Szolnok', value: 3750 },
+        { name: 'Komárom-Esztergom', value: 5260 },
+        { name: 'Nógrád', value: 4400 },
+        { name: 'Pest', value: 3610 },
+        { name: 'Somogy', value: 5910 },
+        { name: 'Szabolcs-Szatmár-Bereg', value: 5980 },
+        { name: 'Tolna', value: 5980 },
+        { name: 'Vas', value: 7360 },
+        { name: 'Veszprém', value: 5470 },
+        { name: 'Zala', value: 7120 },
+      ],
+    },
+  ],
+}
+
+const echartsHungaryRegions: EChartsOption = {
+  title: { text: 'GDP per capita by region, 2024', left: 'center' },
+  tooltip: { trigger: 'item', formatter: '{b}: {c} EUR' },
+  visualMap: {
+    min: 8000,
+    max: 40000,
+    text: ['High', 'Low'],
+    calculable: true,
+    inRange: { color: ['#fee8c8', '#e34a33'] },
+  },
+  series: [
+    {
+      type: 'map',
+      map: 'hungary-regions',
+      label: { show: true, fontSize: 11 },
+      data: [
+        { name: 'Budapest', value: 38200 },
+        { name: 'Pest', value: 14500 },
+        { name: 'Közép-Dunántúl', value: 15800 },
+        { name: 'Nyugat-Dunántúl', value: 16200 },
+        { name: 'Dél-Dunántúl', value: 10300 },
+        { name: 'Észak-Magyarország', value: 9800 },
+        { name: 'Észak-Alföld', value: 9200 },
+        { name: 'Dél-Alföld', value: 10600 },
+      ],
+    },
+  ],
+}
+
 const scenarioSource = (option: EChartsOption) => JSON.stringify(option, null, 2)
 
 export const echartsScenarios: Scenario<ChatEChartProps>[] = [
@@ -145,5 +215,23 @@ export const echartsScenarios: Scenario<ChatEChartProps>[] = [
     id: 'echart-scatter',
     title: 'Scatter chart with numeric axes',
     props: { option: echartsScatter, blockIndex: 5, source: scenarioSource(echartsScatter) },
+  },
+  {
+    id: 'echart-hungary-map',
+    title: 'Choropleth map — Hungarian counties',
+    props: {
+      option: echartsHungaryMap,
+      blockIndex: 6,
+      source: scenarioSource(echartsHungaryMap),
+    },
+  },
+  {
+    id: 'echart-hungary-regions',
+    title: 'Choropleth map — Hungarian regions',
+    props: {
+      option: echartsHungaryRegions,
+      blockIndex: 7,
+      source: scenarioSource(echartsHungaryRegions),
+    },
   },
 ]

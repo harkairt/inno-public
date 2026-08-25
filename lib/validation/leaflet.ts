@@ -20,12 +20,31 @@ export interface LeafletPolygon {
   weight?: number
 }
 
+export interface LeafletGeoJSONStyle {
+  color?: string
+  fillColor?: string
+  weight?: number
+}
+
+export interface LeafletGeoJSONDataItem extends LeafletGeoJSONStyle {
+  name: string
+  title?: string
+  description?: string
+}
+
+export interface LeafletGeoJSON {
+  map: string
+  data?: LeafletGeoJSONDataItem[]
+  defaultStyle?: LeafletGeoJSONStyle
+}
+
 export interface LeafletMapData {
   center?: [number, number]
   zoom?: number
   markers: LeafletMarker[]
   polylines: LeafletPolyline[]
   polygons: LeafletPolygon[]
+  geojson?: LeafletGeoJSON
 }
 
 export type LeafletRejectionReason =
@@ -38,6 +57,7 @@ export type LeafletRejectionReason =
   | 'invalid-markers'
   | 'invalid-polylines'
   | 'invalid-polygons'
+  | 'invalid-geojson'
   | 'too-many-features'
   | 'coordinate-out-of-range'
   | 'html-in-text'
@@ -50,6 +70,7 @@ const MAX_JSON_SIZE = 100_000
 const MAX_MARKERS = 200
 const MAX_POLYLINES = 20
 const MAX_POLYGONS = 20
+const MAX_GEOJSON_DATA_ITEMS = 200
 const MAX_POLYLINE_POINTS = 2000
 const MAX_POLYGON_VERTICES = 2000
 const MAX_TITLE_LENGTH = 200
@@ -208,6 +229,77 @@ function validatePolygons(raw: unknown): Result<LeafletPolygon[], LeafletRejecti
   return ok(polygons)
 }
 
+function validateGeoJSONStyle(item: Record<string, unknown>): LeafletGeoJSONStyle | 'invalid' {
+  const color = validateColor(item.color)
+  if (color === 'invalid') return 'invalid'
+  const fillColor = validateColor(item.fillColor)
+  if (fillColor === 'invalid') return 'invalid'
+  const weight = validateWeight(item.weight)
+  if (weight === 'invalid') return 'invalid'
+
+  const style: LeafletGeoJSONStyle = {}
+  if (color !== undefined) style.color = color
+  if (fillColor !== undefined) style.fillColor = fillColor
+  if (weight !== undefined) style.weight = weight
+  return style
+}
+
+function validateGeoJSON(raw: unknown): Result<LeafletGeoJSON | undefined, LeafletRejection> {
+  if (raw === undefined || raw === null) return ok(undefined)
+  if (!isPlainObject(raw)) return err({ reason: 'invalid-geojson' })
+
+  const { map, data, defaultStyle } = raw
+  if (typeof map !== 'string' || map.trim().length === 0) return err({ reason: 'invalid-geojson' })
+
+  const result: LeafletGeoJSON = { map: map.trim() }
+
+  if (defaultStyle !== undefined && defaultStyle !== null) {
+    if (!isPlainObject(defaultStyle)) return err({ reason: 'invalid-geojson' })
+    const style = validateGeoJSONStyle(defaultStyle)
+    if (style === 'invalid') return err({ reason: 'invalid-geojson' })
+    result.defaultStyle = style
+  }
+
+  if (data !== undefined && data !== null) {
+    if (!Array.isArray(data)) return err({ reason: 'invalid-geojson' })
+    if (data.length > MAX_GEOJSON_DATA_ITEMS) return err({ reason: 'too-many-features' })
+
+    const items: LeafletGeoJSONDataItem[] = []
+    for (const item of data) {
+      if (!isPlainObject(item)) return err({ reason: 'invalid-geojson' })
+      if (typeof item.name !== 'string' || item.name.trim().length === 0)
+        return err({ reason: 'invalid-geojson' })
+
+      const style = validateGeoJSONStyle(item)
+      if (style === 'invalid') return err({ reason: 'invalid-geojson' })
+
+      const entry: LeafletGeoJSONDataItem = { name: item.name, ...style }
+
+      if (item.title !== undefined && item.title !== null) {
+        if (typeof item.title !== 'string' || item.title.length > MAX_TITLE_LENGTH)
+          return err({ reason: 'invalid-geojson' })
+        if (containsHtml(item.title)) return err({ reason: 'html-in-text' })
+        entry.title = item.title
+      }
+
+      if (item.description !== undefined && item.description !== null) {
+        if (
+          typeof item.description !== 'string' ||
+          item.description.length > MAX_DESCRIPTION_LENGTH
+        )
+          return err({ reason: 'invalid-geojson' })
+        if (containsHtml(item.description)) return err({ reason: 'html-in-text' })
+        entry.description = item.description
+      }
+
+      items.push(entry)
+    }
+    result.data = items
+  }
+
+  return ok(result)
+}
+
 export const parseLeafletData = (json: string): Result<LeafletMapData, LeafletRejection> => {
   if (json.length > MAX_JSON_SIZE) return err({ reason: 'oversize' })
 
@@ -238,17 +330,22 @@ export const parseLeafletData = (json: string): Result<LeafletMapData, LeafletRe
   const polygonsResult = validatePolygons(parsed.polygons)
   if (polygonsResult.isErr()) return err(polygonsResult.error)
 
+  const geojsonResult = validateGeoJSON(parsed.geojson)
+  if (geojsonResult.isErr()) return err(geojsonResult.error)
+
   const markers = markersResult.value
   const polylines = polylinesResult.value
   const polygons = polygonsResult.value
+  const geojson = geojsonResult.value
 
-  if (markers.length === 0 && polylines.length === 0 && polygons.length === 0) {
+  if (markers.length === 0 && polylines.length === 0 && polygons.length === 0 && !geojson) {
     return err({ reason: 'no-features' })
   }
 
   const data: LeafletMapData = { markers, polylines, polygons }
   if (center !== undefined) data.center = center
   if (zoom !== undefined) data.zoom = zoom
+  if (geojson !== undefined) data.geojson = geojson
 
   return ok(data)
 }

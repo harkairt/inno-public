@@ -140,6 +140,20 @@
       "emptyTitle": "No focused messages",
       "emptyDescription": "Click the bookmark icon on a message to focus it here"
     },
+    "filePreview": {
+      "toggleSidebar": "Toggle file preview",
+      "sidebarTitle": "Previously opened files",
+      "emptyTitle": "No previewed files",
+      "emptyDescription": "Click the preview icon on a file to see it here",
+      "previewFile": "Preview file",
+      "scrollToMessage": "Scroll to message",
+      "openInNewTab": "Open in new tab",
+      "download": "Download",
+      "back": "Back to file list",
+      "loading": "Loading preview…",
+      "errorTitle": "Preview unavailable",
+      "errorDescription": "Could not load file preview"
+    },
     "typing": {
       "single": "{name} is typing",
       "double": "{name1} and {name2} are typing",

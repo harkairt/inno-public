@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { EChartsOption } from '@/lib/validation/echarts'
+import { loadGeoJSON } from '@/lib/geo/registry'
 import { createLogger } from '@/lib/utils/logger'
 
 const logger = createLogger('useECharts')
@@ -10,6 +11,7 @@ export type EChartsInstance = ReturnType<EChartsModule['init']>
 
 let echartsModule: EChartsModule | null = null
 let loadingPromise: Promise<boolean> | null = null
+const registeredMaps = new Set<string>()
 
 const isLoading = ref(false)
 const isLoaded = ref(false)
@@ -63,6 +65,30 @@ const themeBase = (option: EChartsOption, isDark: boolean): Record<string, unkno
   return base
 }
 
+function extractMapNames(option: EChartsOption): string[] {
+  const series = option.series
+  if (!Array.isArray(series)) return []
+  const names: string[] = []
+  for (const s of series) {
+    if (isPlainObject(s) && s.type === 'map' && typeof s.map === 'string') {
+      names.push(s.map)
+    }
+  }
+  return names
+}
+
+async function ensureMapsRegistered(option: EChartsOption): Promise<void> {
+  if (!echartsModule) return
+  const names = extractMapNames(option)
+  for (const name of names) {
+    if (registeredMaps.has(name)) continue
+    const geoJSON = await loadGeoJSON(name)
+    if (!geoJSON) continue
+    echartsModule.registerMap(name, geoJSON as Parameters<EChartsModule['registerMap']>[1])
+    registeredMaps.add(name)
+  }
+}
+
 export const useECharts = () => {
   const loadECharts = (): Promise<boolean> => {
     if (echartsModule) return Promise.resolve(true)
@@ -92,13 +118,14 @@ export const useECharts = () => {
     return echartsModule.init(el, null, { renderer: 'canvas' })
   }
 
-  const applyOption = (
+  const applyOption = async (
     instance: EChartsInstance,
     option: EChartsOption,
     isDark: boolean,
     blockIndex: number,
-  ): boolean => {
+  ): Promise<boolean> => {
     try {
+      await ensureMapsRegistered(option)
       instance.setOption(themeBase(option, isDark))
       instance.setOption(harden(option) as EChartsOption)
       return true
