@@ -2,29 +2,33 @@
   <div class="flex flex-col h-full min-h-0 overflow-hidden">
     <!-- Chat Content -->
     <template v-if="session">
-      <div
-        ref="messagesContainer"
-        class="flex-1 overflow-y-auto min-h-0 py-4 flex flex-col"
-      >
-        <div class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1">
-          <div class="flex-1" />
-          <ChatMessages
-            :messages="messages"
-            :welcome-message="trimmedWelcomeMessage"
-            :welcome-message-date="welcomeMessageDate"
-            :agent-id="agentId"
-            :agent-name="agentName"
-            :hide-sender-names="true"
-            :active-options-message-id="lastUnansweredOptionsMessageId"
-            :skip-entrance-animation="skipEntranceAnimation"
-            :pending-ids="pendingIds"
-            :failed-ids="failedIds"
-            @option-submitted="handleOptionSubmitted"
-            @retry-message="handleRetryMessage"
-            @discard-message="handleDiscardMessage"
+      <div class="relative flex-1 overflow-hidden min-h-0">
+        <div
+          ref="messagesContainer"
+          class="h-full overflow-y-auto py-4 flex flex-col"
+        >
+          <div
+            class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
           >
-            <template #empty />
-          </ChatMessages>
+            <div class="flex-1" />
+            <ChatMessages
+              :messages="messages"
+              :welcome-message="trimmedWelcomeMessage"
+              :welcome-message-date="welcomeMessageDate"
+              :agent-id="agentId"
+              :agent-name="agentName"
+              :hide-sender-names="true"
+              :active-options-message-id="lastUnansweredOptionsMessageId"
+              :skip-entrance-animation="skipEntranceAnimation"
+              :pending-ids="pendingIds"
+              :failed-ids="failedIds"
+              @option-submitted="handleOptionSubmitted"
+              @retry-message="handleRetryMessage"
+              @discard-message="handleDiscardMessage"
+            >
+              <template #empty />
+            </ChatMessages>
+          </div>
         </div>
       </div>
 
@@ -33,6 +37,15 @@
         :typing-users="typingUsers"
         :thinking-agents="thinkingAgents"
       />
+
+      <div class="relative z-10 pointer-events-none">
+        <div class="absolute bottom-2 left-0 right-0">
+          <ScrollToBottomButton
+            :visible="!isAtBottom"
+            @click="scrollToBottom()"
+          />
+        </div>
+      </div>
 
       <!-- Message Input -->
       <MessageInput
@@ -68,6 +81,7 @@ import { useSendMessage } from '@/app/composables/useChatMutations'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
+import { useChatActions } from '~/composables/useChatActions'
 import { usePublicMode } from '@/app/composables/usePublicMode'
 import { usePublicChatAgent } from '@/app/composables/usePublicChatAgent'
 import { AIAnswerType, AIQuestionType } from '@/types/enums'
@@ -75,6 +89,7 @@ import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+import ScrollToBottomButton from '@/app/components/chat/ScrollToBottomButton.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -201,19 +216,6 @@ async function handleOptionSubmitted(answer: string) {
   }
 }
 
-function handleRetryMessage(messageId: string) {
-  const entry = chatStore
-    .getFailedEntries(sessionId)
-    .find((e) => e.optimisticDisplay.messageID === messageId)
-  if (!entry) return
-  chatStore.removeFailedMessage(sessionId, messageId)
-  mutation.mutateAsync({ request: entry.request }).finally(() => scrollToBottom())
-}
-
-function handleDiscardMessage(messageId: string) {
-  chatStore.removeFailedMessage(sessionId, messageId)
-}
-
 const typingUsers = computed(() => chatStore.getTypingUsers(sessionId))
 const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId))
 
@@ -221,7 +223,9 @@ const thinkingAgents = computed(() => chatStore.getThinkingAgents(sessionId))
 const messagesContainer = ref<HTMLElement | null>(null)
 
 // Use the same auto-scroll composable as the private chat
-const { scrollToBottom } = useChatAutoScroll(messagesContainer)
+const { isAtBottom, scrollToBottom } = useChatAutoScroll(messagesContainer)
+
+const { handleRetryMessage, handleDiscardMessage } = useChatActions(sessionId, scrollToBottom)
 
 // Scroll to bottom on initial render so the page doesn't show the top of the thread
 onMounted(() => {

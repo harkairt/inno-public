@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/vue'
 import type { Component } from 'vue'
 import type { AISessionMessageDTO } from '@/types/api/schemas'
@@ -82,10 +82,6 @@ async function renderMessages(props: Record<string, unknown> = {}) {
 // ---------------------------------------------------------------------------
 
 describe('ChatMessages — container', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('renders messages container', async () => {
     await renderMessages({ messages: [] })
     expect(screen.getByTestId('messages-container')).toBeTruthy()
@@ -98,10 +94,6 @@ describe('ChatMessages — container', () => {
 })
 
 describe('ChatMessages — empty state', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('shows empty state when no messages', async () => {
     await renderMessages({ messages: [] })
     expect(screen.getByTestId('empty-state')).toBeTruthy()
@@ -114,10 +106,6 @@ describe('ChatMessages — empty state', () => {
 })
 
 describe('ChatMessages — message rendering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('renders message text content', async () => {
     const messages = [makeMessage({ messageText: 'Hello world' })]
     await renderMessages({ messages })
@@ -154,10 +142,6 @@ describe('ChatMessages — message rendering', () => {
 })
 
 describe('ChatMessages — user vs partner alignment', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('aligns own messages to the right', async () => {
     const messages = [makeMessage({ senderUserCode: 'user@test.com', messageID: 'own-msg' })]
     await renderMessages({ messages })
@@ -174,10 +158,6 @@ describe('ChatMessages — user vs partner alignment', () => {
 })
 
 describe('ChatMessages — sender name', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('shows sender name for partner messages when memberCount > 2', async () => {
     const messages = [makeMessage({ senderUserCode: 'partner@test.com', senderName: 'Alice' })]
     await renderMessages({ messages, memberCount: 3 })
@@ -204,10 +184,6 @@ describe('ChatMessages — sender name', () => {
 })
 
 describe('ChatMessages — welcome message', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('prepends welcome message when provided', async () => {
     const messages = [makeMessage({ messageText: 'Regular message' })]
     await renderMessages({ messages, welcomeMessage: 'Welcome! How can I help?' })
@@ -230,10 +206,6 @@ describe('ChatMessages — welcome message', () => {
 })
 
 describe('ChatMessages — entrance animation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('does not animate pre-existing messages when skipEntranceAnimation is true', async () => {
     // Arriving from /chats/new/* — messages already on screen must not replay.
     const messages = [makeMessage({ senderUserCode: 'partner@test.com', messageID: 'seeded' })]
@@ -318,10 +290,6 @@ describe('ChatMessages — entrance animation', () => {
 })
 
 describe('ChatMessages — date grouping', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('shows date heading for message groups', async () => {
     const messages = [makeMessage({ sendDate: new Date('2024-01-15T10:00:00Z').toISOString() })]
     await renderMessages({ messages })

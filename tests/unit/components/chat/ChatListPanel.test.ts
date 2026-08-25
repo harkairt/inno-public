@@ -102,6 +102,7 @@ describe('ChatListPanel drafts', () => {
           UInput: { template: '<input />' },
           UButton: {
             props: ['ariaLabel', 'label', 'color', 'variant'],
+            emits: ['click'],
             template:
               '<button :aria-label="ariaLabel" :data-color="color" :data-variant="variant" @click="$emit(\'click\', $event)">{{ label }}<slot /></button>',
           },
@@ -233,6 +234,7 @@ describe('ChatListPanel filters', () => {
           UInput: { template: '<input />' },
           UButton: {
             props: ['ariaLabel', 'label', 'color', 'variant'],
+            emits: ['click'],
             template:
               '<button :aria-label="ariaLabel" :data-color="color" :data-variant="variant" @click="$emit(\'click\', $event)">{{ label }}<slot /></button>',
           },

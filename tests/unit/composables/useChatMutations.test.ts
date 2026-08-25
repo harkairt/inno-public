@@ -5,7 +5,7 @@
  * onMutate / onSuccess / onError / onSettled hooks — NOT that the composable
  * delegates to the service (that's tested in ChatService.test.ts).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
 import { mount } from '@vue/test-utils'
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query'
@@ -187,10 +187,6 @@ function createWrapper<T>(queryClient: QueryClient, setup: () => T) {
 // ---------------------------------------------------------------------------
 
 describe('useDeleteSession — cache management', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('removes deleted session from sessions list cache on success', async () => {
     const { chatService } = await import('@/lib/api/services/ChatService')
     const { useDeleteSession } = await import('~/composables/useChatMutations')
@@ -275,10 +271,6 @@ describe('useDeleteSession — cache management', () => {
 // ---------------------------------------------------------------------------
 
 describe('useUpdateSessionName — cache management', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('updates session name in sessions list cache on success', async () => {
     const { chatService } = await import('@/lib/api/services/ChatService')
     const { useUpdateSessionName } = await import('~/composables/useChatMutations')
@@ -353,10 +345,6 @@ describe('useUpdateSessionName — cache management', () => {
 // ---------------------------------------------------------------------------
 
 describe('useRateMessage — optimistic updates', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('optimistically marks message as rated in session cache', async () => {
     const { chatService } = await import('@/lib/api/services/ChatService')
     const { useRateMessage } = await import('~/composables/useChatMutations')
@@ -446,10 +434,6 @@ describe('useRateMessage — optimistic updates', () => {
 // ---------------------------------------------------------------------------
 
 describe('useSendMessage — new session cache update', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('merges the server answer onto a SignalR-populated cache without clobbering', async () => {
     const { chatService } = await import('@/lib/api/services/ChatService')
     const { useSendMessage } = await import('~/composables/useChatMutations')
@@ -517,10 +501,6 @@ describe('useSendMessage — new session cache update', () => {
 })
 
 describe('useSendMessage — synthetic agent-thinking state', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('shows thinking while awaiting a virtual agent response, then clears it', async () => {
     const { chatService } = await import('@/lib/api/services/ChatService')
     const { useSendMessage } = await import('~/composables/useChatMutations')
@@ -561,10 +541,6 @@ describe('useSendMessage — synthetic agent-thinking state', () => {
 // ---------------------------------------------------------------------------
 
 describe('useSendMessage — optimistic sidebar header', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   // Hangs the service so we can inspect the cache after onMutate but before the reply.
   function pendingSendMutation(queryClient: QueryClient) {
     return async () => {
@@ -730,10 +706,6 @@ describe('useSendMessage — optimistic sidebar header', () => {
 // ---------------------------------------------------------------------------
 
 describe('useMarkMessagesRead — optimistic updates', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('optimistically sets unread count to 0 for the session', async () => {
     const { chatService } = await import('@/lib/api/services/ChatService')
     const { useMarkMessagesRead } = await import('~/composables/useChatMutations')

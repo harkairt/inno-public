@@ -40,7 +40,6 @@ Object.defineProperty(global, 'localStorage', {
 describe('Auth Store Token Refresh', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockLocalStorage.clear()
   })
 
@@ -352,7 +351,6 @@ describe('Auth Store Token Refresh', () => {
 describe('setTokens Method', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockLocalStorage.clear()
   })
 
@@ -448,7 +446,6 @@ describe('Auth Store — SignalR + chat side effects', () => {
 
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
     mockLocalStorage.clear()
   })
 

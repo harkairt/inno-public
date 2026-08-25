@@ -81,10 +81,6 @@ async function renderMenu(props = {}) {
 // ---------------------------------------------------------------------------
 
 describe('SessionItemMenu — rendering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('renders the dropdown trigger', async () => {
     await renderMenu()
 
@@ -111,10 +107,6 @@ describe('SessionItemMenu — rendering', () => {
 })
 
 describe('SessionItemMenu — rename', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('opens edit modal when edit option is clicked', async () => {
     await renderMenu()
 
@@ -161,7 +153,6 @@ describe('SessionItemMenu — rename', () => {
 
 describe('SessionItemMenu — delete', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
     ;(global.useRoute as ReturnType<typeof vi.fn>).mockReturnValue({
       params: {},
       query: {},

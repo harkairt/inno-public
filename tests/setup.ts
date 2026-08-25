@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, afterAll, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { VueQueryPlugin } from '@tanstack/vue-query'
+import { useChatStore } from '@/app/stores/chat'
 import { server } from './msw/server'
 import {
   createApp,
@@ -80,6 +81,7 @@ global.onBeforeUnmount = onBeforeUnmount
 // -----------------------------------------------------------------------
 // Nuxt-specific auto-imports
 // -----------------------------------------------------------------------
+global.useChatStore = useChatStore
 global.definePageMeta = vi.fn()
 global.defineNuxtRouteMiddleware = vi.fn()
 global.defineNuxtPlugin = (p: unknown) => p
@@ -116,6 +118,7 @@ global.useWindowSize = vi.fn(() => ({
 }))
 
 global.watchDebounced = vi.fn()
+global.onKeyStroke = vi.fn()
 
 global.useNavigationVisibility = vi.fn(() => ({
   isMobile: ref(false),

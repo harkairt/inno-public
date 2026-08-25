@@ -2,14 +2,10 @@
  * Tests for createLogger — verifies each level delegates to the matching console
  * method and prefixes every line with the scope namespace.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createLogger } from '@/lib/utils/logger'
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
 
 describe('createLogger', () => {
   it.each(LEVELS)('%s routes to console.%s with the [scope] prefix', (level) => {

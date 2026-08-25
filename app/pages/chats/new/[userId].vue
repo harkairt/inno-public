@@ -41,20 +41,7 @@
         v-if="isLoadingUsers"
         class="flex items-center justify-center h-full p-4"
       >
-        <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
-          <div class="flex justify-end">
-            <USkeleton
-              class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-              style="border-radius: var(--config-message-border-radius)"
-            />
-          </div>
-          <div class="flex justify-start">
-            <USkeleton
-              class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-              style="border-radius: var(--config-message-border-radius)"
-            />
-          </div>
-        </div>
+        <ChatMessagesSkeleton />
       </div>
 
       <!-- Chat Content -->
@@ -66,34 +53,29 @@
         @dragover.prevent="onDragOver"
         @drop.prevent="onDrop"
       >
-        <div
-          v-if="isDraggingOver"
-          class="absolute inset-0 z-10 flex items-center justify-center bg-[hsl(var(--primary)/0.1)] border-2 border-dashed border-[hsl(var(--primary))] rounded-lg pointer-events-none"
-        >
-          <span class="text-sm font-medium text-[hsl(var(--primary))]">
-            {{ t('chat.messageInput.dropZone') }}
-          </span>
-        </div>
-        <div
-          ref="messagesContainer"
-          class="flex-1 overflow-y-auto min-h-0 py-4 flex flex-col"
-        >
+        <FileDropOverlay :visible="isDraggingOver" />
+        <div class="relative flex-1 overflow-hidden min-h-0">
           <div
-            class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
+            ref="messagesContainer"
+            class="h-full overflow-y-auto py-4 flex flex-col"
           >
-            <div class="flex-1" />
-            <ChatMessages
-              :messages="messages"
-              :welcome-message="trimmedWelcomeMessage"
-              :agent-id="agentId"
-              :agent-name="selectedUser.name || selectedUser.email"
-              :active-options-message-id="lastUnansweredOptionsMessageId"
-              :pending-ids="pendingIds"
-              :failed-ids="failedIds"
-              @option-submitted="handleOptionSubmitted"
-              @retry-message="handleRetryMessage"
-              @discard-message="handleDiscardMessage"
-            />
+            <div
+              class="max-w-(--container-chat) mx-auto w-full px-4 md:px-[26px] flex flex-col flex-1"
+            >
+              <div class="flex-1" />
+              <ChatMessages
+                :messages="messages"
+                :welcome-message="trimmedWelcomeMessage"
+                :agent-id="agentId"
+                :agent-name="selectedUser.name || selectedUser.email"
+                :active-options-message-id="lastUnansweredOptionsMessageId"
+                :pending-ids="pendingIds"
+                :failed-ids="failedIds"
+                @option-submitted="handleOptionSubmitted"
+                @retry-message="handleRetryMessage"
+                @discard-message="handleDiscardMessage"
+              />
+            </div>
           </div>
         </div>
 
@@ -102,6 +84,15 @@
           :typing-users="typingUsers"
           :thinking-agents="thinkingAgents"
         />
+
+        <div class="relative z-10 pointer-events-none">
+          <div class="absolute bottom-2 left-0 right-0">
+            <ScrollToBottomButton
+              :visible="!isAtBottom"
+              @click="scrollToBottom()"
+            />
+          </div>
+        </div>
 
         <MessageInput
           v-if="!isOptionsMode"
@@ -121,39 +112,13 @@
     </div>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
-      <div class="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div class="text-center max-w-md">
-          <UAlert
-            variant="soft"
-            :title="t('errors.unexpectedError')"
-            :description="getUserFriendlyMessage(error)"
-            class="mb-4"
-          >
-            <template #actions>
-              <div class="flex space-x-2">
-                <UButton
-                  size="xs"
-                  variant="outline"
-                  @click="clearError"
-                >
-                  {{ t('errors.tryAgain') }}
-                </UButton>
-                <UButton
-                  size="xs"
-                  variant="outline"
-                  @click="
-                    () => {
-                      navigateTo('/chats')
-                    }
-                  "
-                >
-                  {{ t('errors.backToChats') }}
-                </UButton>
-              </div>
-            </template>
-          </UAlert>
-        </div>
-      </div>
+      <ChatErrorFallback
+        :title="t('errors.unexpectedError')"
+        :description="getUserFriendlyMessage(error, t('errors.unexpectedCreateError'))"
+        :full-screen="true"
+        :show-retry="true"
+        @retry="clearError"
+      />
     </template>
   </NuxtErrorBoundary>
 </template>
@@ -161,7 +126,6 @@
 <script setup lang="ts">
 import { useChatSession } from '@/app/composables/useChatQueries'
 import { useSendMessage } from '@/app/composables/useChatMutations'
-import { revokeBlobUrls } from '@/app/composables/sendMessageOptimistic'
 import { useChatMessages } from '@/app/composables/useChatMessages'
 import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
 import { useFileDrop } from '@/app/composables/useFileDrop'
@@ -169,12 +133,18 @@ import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import { useSelectableUsers } from '@/app/composables/useUsers'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
+import { useChatActions } from '~/composables/useChatActions'
+import { getUserFriendlyMessage } from '@/app/utils/error'
 import { generateUUID } from '@/lib/utils/uuid'
 import { AIQuestionType } from '@/types/enums'
 import type { AiQuestionRequestDTO } from '@/types/api/schemas'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
 import ChatMessages from '@/app/components/chat/ChatMessages.vue'
+import ChatMessagesSkeleton from '@/app/components/chat/ChatMessagesSkeleton.vue'
+import ChatErrorFallback from '@/app/components/chat/ChatErrorFallback.vue'
+import FileDropOverlay from '@/app/components/chat/FileDropOverlay.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+import ScrollToBottomButton from '@/app/components/chat/ScrollToBottomButton.vue'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { createLogger } from '@/lib/utils/logger'
 
@@ -277,27 +247,6 @@ async function handleOptionSubmitted(answer: string) {
   }
 }
 
-const sendMutation = useSendMessage()
-
-function handleRetryMessage(messageId: string) {
-  const entry = chatStore
-    .getFailedEntries(sessionId.value)
-    .find((e) => e.optimisticDisplay.messageID === messageId)
-  if (!entry) return
-  chatStore.removeFailedMessage(sessionId.value, messageId)
-  void sendMutation
-    .mutateAsync({ request: entry.request, attachments: entry.attachments })
-    .finally(() => scrollToBottom())
-}
-
-function handleDiscardMessage(messageId: string) {
-  const entry = chatStore
-    .getFailedEntries(sessionId.value)
-    .find((e) => e.optimisticDisplay.messageID === messageId)
-  if (entry) revokeBlobUrls(entry.optimisticDisplay)
-  chatStore.removeFailedMessage(sessionId.value, messageId)
-}
-
 // Check if single virtual agent session - hide buttons if so
 const isSingleVirtualAgentSession = computed(() => {
   return members.value.length === 2 && selectedUser.value?.isVirtual
@@ -337,17 +286,12 @@ const { isDraggingOver, onDragEnter, onDragLeave, onDragOver, onDrop } = useFile
   messageInputRef.value?.handleDroppedFiles(files),
 )
 
-const { scrollToBottom } = useChatAutoScroll(messagesContainer)
+const { isAtBottom, scrollToBottom } = useChatAutoScroll(messagesContainer)
+
+const { handleRetryMessage, handleDiscardMessage } = useChatActions(sessionId, scrollToBottom)
 
 function handleError(error: unknown) {
   logger.error('New chat error:', error)
-}
-
-function getUserFriendlyMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  return t('errors.unexpectedCreateError')
 }
 
 definePageMeta({

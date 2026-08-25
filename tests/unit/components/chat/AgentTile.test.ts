@@ -52,12 +52,12 @@ describe('AgentTile — rendering', () => {
 
 describe('AgentTile — avatar source', () => {
   it('uses image in light mode', () => {
-    renderTile(makeUser({ image: 'light.png', darkImage: 'dark.png' }), 'light')
-    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('light.png')
+    renderTile(makeUser({ image: '/light.png', darkImage: '/dark.png' }), 'light')
+    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('/light.png')
   })
 
   it('uses darkImage in dark mode', () => {
-    renderTile(makeUser({ image: 'light.png', darkImage: 'dark.png' }), 'dark')
-    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('dark.png')
+    renderTile(makeUser({ image: '/light.png', darkImage: '/dark.png' }), 'dark')
+    expect(screen.getByTestId('u-avatar').getAttribute('data-src')).toBe('/dark.png')
   })
 })

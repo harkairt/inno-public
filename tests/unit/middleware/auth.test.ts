@@ -51,7 +51,6 @@ describe('auth middleware', () => {
 
   beforeEach(() => {
     setActivePinia(createPinia())
-    vi.clearAllMocks()
 
     mockAuthStore = {
       isAuthenticated: false,

@@ -92,6 +92,7 @@
     "skipToContent": "Skip to content"
   },
   "chat": {
+    "scrollToBottom": "Scroll to latest messages",
     "messageInput": {
       "placeholderReply": "Write a message...",
       "placeholderWithAgent": "Write a message — {agentName}...",

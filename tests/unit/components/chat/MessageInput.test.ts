@@ -2,7 +2,7 @@
  * MessageInput component tests.
  * Tests input behavior, submit, and voice button visibility.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/vue'
 import { ref, nextTick, type Component } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
@@ -119,10 +119,6 @@ async function renderMessageInput(props = {}, beforeRender?: () => void) {
 // ---------------------------------------------------------------------------
 
 describe('MessageInput — rendering', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('renders the message input textarea', async () => {
     await renderMessageInput()
 
@@ -154,10 +150,6 @@ describe('MessageInput — rendering', () => {
 })
 
 describe('MessageInput — submit behavior', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('calls mutation on form submit with text', async () => {
     await renderMessageInput()
 
@@ -201,10 +193,6 @@ describe('MessageInput — submit behavior', () => {
 })
 
 describe('MessageInput — voice button', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('hides voice button when disableVoice is true', async () => {
     await renderMessageInput({ disableVoice: true })
 
@@ -224,10 +212,6 @@ describe('MessageInput — voice button', () => {
 })
 
 describe('S46–S51 MessageInput — composer requests from a chart click', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   const textarea = () => screen.getByTestId('message-input') as HTMLTextAreaElement
 
   it('S46 inserts the request text into an empty composer and focuses it', async () => {

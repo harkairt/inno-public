@@ -56,7 +56,7 @@
             <button
               v-if="canEditTitle"
               type="button"
-              class="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-[hsl(var(--accent))] rounded-md flex-shrink-0"
+              class="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:bg-[hsl(var(--accent))] rounded-md flex-shrink-0 translate-y-0.5"
               :aria-label="t('chat.sessionMenu.editName')"
               data-testid="edit-title-button"
               @click="startEditingTitle"
@@ -74,7 +74,8 @@
             ref="titleInputRef"
             v-model="editedTitle"
             type="text"
-            class="text-xl font-semibold text-foreground bg-transparent border-none outline-none w-full p-0 m-0 focus:ring-0"
+            class="inline-title-edit text-xl font-semibold text-foreground bg-transparent border-none outline-none w-full p-0 m-0"
+            style="font-family: var(--font-display); letter-spacing: -0.025em"
             data-testid="session-title-input"
             :disabled="isUpdatingTitle"
             @keydown="handleTitleKeydown"
@@ -181,63 +182,17 @@
         v-if="isLoading"
         class="flex items-center justify-center h-full p-4"
       >
-        <div class="w-full max-w-md space-y-3 animate-[fade-in_0.4s_ease_both]">
-          <div class="flex justify-end">
-            <USkeleton
-              class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-              style="border-radius: var(--config-message-border-radius)"
-            />
-          </div>
-          <div class="flex justify-start">
-            <USkeleton
-              class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-              style="border-radius: var(--config-message-border-radius)"
-            />
-          </div>
-        </div>
+        <ChatMessagesSkeleton />
       </div>
 
       <!-- Error State -->
-      <div
+      <ChatErrorFallback
         v-else-if="isError"
-        class="flex items-center justify-center p-6 h-full"
-      >
-        <div class="text-center max-w-md">
-          <UAlert
-            variant="soft"
-            :title="t('errors.sessionNotFound')"
-            :description="errorMessage"
-            class="mb-4"
-          >
-            <template #actions>
-              <div class="flex space-x-2">
-                <UButton
-                  size="xs"
-                  variant="outline"
-                  @click="
-                    () => {
-                      refetch()
-                    }
-                  "
-                >
-                  {{ t('errors.tryAgain') }}
-                </UButton>
-                <UButton
-                  size="xs"
-                  variant="outline"
-                  @click="
-                    () => {
-                      navigateTo('/chats')
-                    }
-                  "
-                >
-                  {{ t('errors.backToChats') }}
-                </UButton>
-              </div>
-            </template>
-          </UAlert>
-        </div>
-      </div>
+        :title="t('errors.sessionNotFound')"
+        :description="errorMessage"
+        :show-retry="true"
+        @retry="refetch()"
+      />
 
       <!-- Chat Content -->
       <div
@@ -248,14 +203,7 @@
         @dragover.prevent="onDragOver"
         @drop.prevent="onDrop"
       >
-        <div
-          v-if="isDraggingOver"
-          class="absolute inset-0 z-10 flex items-center justify-center bg-[hsl(var(--primary)/0.1)] border-2 border-dashed border-[hsl(var(--primary))] rounded-lg pointer-events-none"
-        >
-          <span class="text-sm font-medium text-[hsl(var(--primary))]">
-            {{ t('chat.messageInput.dropZone') }}
-          </span>
-        </div>
+        <FileDropOverlay :visible="isDraggingOver" />
         <div class="flex flex-col flex-1 min-w-0 h-full relative">
           <div class="relative flex-1 overflow-hidden min-h-0">
             <div
@@ -273,25 +221,11 @@
                   @after-enter="onMessagesEntered"
                 >
                   <!-- Show bubble-shaped skeletons while waiting for real data -->
-                  <div
+                  <ChatMessagesSkeleton
                     v-if="!isMessagesReady"
                     key="shimmer"
                     data-testid="messages-shimmer"
-                    class="space-y-3 animate-[fade-in_0.4s_ease_both]"
-                  >
-                    <div class="flex justify-end">
-                      <USkeleton
-                        class="h-12 w-[50%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-                        style="border-radius: var(--config-message-border-radius)"
-                      />
-                    </div>
-                    <div class="flex justify-start">
-                      <USkeleton
-                        class="h-28 w-[70%] !bg-[hsl(var(--muted-foreground)/0.08)]"
-                        style="border-radius: var(--config-message-border-radius)"
-                      />
-                    </div>
-                  </div>
+                  />
                   <ChatMessages
                     v-else
                     key="messages"
@@ -326,6 +260,15 @@
             :typing-users="typingUsers"
             :thinking-agents="thinkingAgents"
           />
+
+          <div class="relative z-10 pointer-events-none">
+            <div class="absolute bottom-2 left-0 right-0">
+              <ScrollToBottomButton
+                :visible="!isAtBottom && isMessagesReady"
+                @click="scrollToBottom()"
+              />
+            </div>
+          </div>
 
           <MessageInput
             v-if="!isOptionsMode"
@@ -384,69 +327,21 @@
       </div>
 
       <!-- Session Not Found -->
-      <div
+      <ChatErrorFallback
         v-else
-        class="flex items-center justify-center p-6 h-full"
-      >
-        <div class="text-center max-w-md">
-          <UAlert
-            variant="soft"
-            :title="t('errors.sessionNotFound')"
-            :description="t('errors.accessDenied')"
-            class="mb-4"
-          >
-            <template #actions>
-              <UButton
-                size="xs"
-                variant="outline"
-                @click="
-                  () => {
-                    navigateTo('/chats')
-                  }
-                "
-              >
-                {{ t('errors.backToChats') }}
-              </UButton>
-            </template>
-          </UAlert>
-        </div>
-      </div>
+        :title="t('errors.sessionNotFound')"
+        :description="t('errors.accessDenied')"
+      />
     </main>
     <!-- Error Boundary Fallback -->
     <template #error="{ error, clearError }">
-      <div class="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div class="text-center max-w-md">
-          <UAlert
-            variant="soft"
-            :title="t('errors.unexpectedError')"
-            :description="getUserFriendlyMessage(error)"
-            class="mb-4"
-          >
-            <template #actions>
-              <div class="flex space-x-2">
-                <UButton
-                  size="xs"
-                  variant="outline"
-                  @click="clearError"
-                >
-                  {{ t('errors.tryAgain') }}
-                </UButton>
-                <UButton
-                  size="xs"
-                  variant="outline"
-                  @click="
-                    () => {
-                      navigateTo('/chats')
-                    }
-                  "
-                >
-                  {{ t('errors.backToChats') }}
-                </UButton>
-              </div>
-            </template>
-          </UAlert>
-        </div>
-      </div>
+      <ChatErrorFallback
+        :title="t('errors.unexpectedError')"
+        :description="getUserFriendlyMessage(error, t('errors.unexpectedCreateError'))"
+        :full-screen="true"
+        :show-retry="true"
+        @retry="clearError"
+      />
     </template>
   </NuxtErrorBoundary>
 </template>
@@ -454,7 +349,6 @@
 <script setup lang="ts">
 import { useChatSession, useChatSessions } from '@/app/composables/useChatQueries'
 import { useMarkMessagesRead, useSendMessage } from '@/app/composables/useChatMutations'
-import { revokeBlobUrls } from '@/app/composables/sendMessageOptimistic'
 import { useChatMessages } from '@/app/composables/useChatMessages'
 import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
 import { useFileDrop } from '@/app/composables/useFileDrop'
@@ -464,13 +358,19 @@ import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
 import { useNavigationVisibility } from '~/composables/useNavigationVisibility'
 import { usePrimarySession } from '@/app/composables/usePrimarySession'
+import { useChatActions } from '~/composables/useChatActions'
+import { getUserFriendlyMessage } from '@/app/utils/error'
 import { AIQuestionType } from '@/types/enums'
 import type { AiQuestionRequestDTO, ReceivedFile } from '@/types/api/schemas'
 import { resolveWelcomeAgent } from '@/app/utils/welcomeAgent'
 import { useChatAutoScroll } from '@/app/composables/useChatAutoScroll'
 import MessageInput from '@/app/components/chat/MessageInput.vue'
+import ChatMessagesSkeleton from '@/app/components/chat/ChatMessagesSkeleton.vue'
+import ChatErrorFallback from '@/app/components/chat/ChatErrorFallback.vue'
+import FileDropOverlay from '@/app/components/chat/FileDropOverlay.vue'
 import SessionMembers from '@/app/components/chat/SessionMembers.vue'
 import TypingIndicator from '@/app/components/chat/TypingIndicator.vue'
+import ScrollToBottomButton from '@/app/components/chat/ScrollToBottomButton.vue'
 import UserAvatar from '~/components/UserAvatar.vue'
 import { getInitials, getAvatarStyle, hasAvatar } from '@/app/utils/user'
 import { useMessageFocus } from '@/app/composables/useMessageFocus'
@@ -739,26 +639,7 @@ async function handleOptionSubmitted(answer: string) {
   }
 }
 
-const sendMutation = useSendMessage()
-
-function handleRetryMessage(messageId: string) {
-  const entry = chatStore
-    .getFailedEntries(sessionId)
-    .find((e) => e.optimisticDisplay.messageID === messageId)
-  if (!entry) return
-  chatStore.removeFailedMessage(sessionId, messageId)
-  void sendMutation
-    .mutateAsync({ request: entry.request, attachments: entry.attachments })
-    .finally(() => scrollToBottom())
-}
-
-function handleDiscardMessage(messageId: string) {
-  const entry = chatStore
-    .getFailedEntries(sessionId)
-    .find((e) => e.optimisticDisplay.messageID === messageId)
-  if (entry) revokeBlobUrls(entry.optimisticDisplay)
-  chatStore.removeFailedMessage(sessionId, messageId)
-}
+const { handleRetryMessage, handleDiscardMessage } = useChatActions(sessionId, scrollToBottom)
 
 // Detect virtual agent for welcome message display (member-based → stable across GetSessionById)
 const virtualAgentFromSession = computed(() =>
@@ -905,14 +786,6 @@ useSeoMeta({
 // Error boundary handler
 function handleError(_error: unknown) {
   // Error boundary catches rendering errors
-}
-
-// Error message normalization
-function getUserFriendlyMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  return t('errors.unexpectedCreateError')
 }
 
 // Handle message sent event

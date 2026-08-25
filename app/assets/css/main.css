@@ -210,7 +210,8 @@
     @apply ring-1!;
   }
   .composer-pill textarea:focus-visible,
-  .inline-plain-text input:focus-visible {
+  .inline-plain-text input:focus-visible,
+  .inline-title-edit:focus-visible {
     @apply ring-0!;
   }
 
@@ -324,6 +325,19 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Csökkentett mozgás — 0.01ms, nem 0: a transitionend/animationend
+   eseményeknek tüzelniük kell, különben a Vue <Transition> beragadna */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

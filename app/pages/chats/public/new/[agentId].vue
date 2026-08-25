@@ -53,6 +53,7 @@ import { useChatMessages } from '@/app/composables/useChatMessages'
 import { useTrimmedWelcomeMessage } from '@/app/composables/useTrimmedWelcomeMessage'
 import { useAuthStore } from '@/app/stores/auth'
 import { useChatStore } from '@/app/stores/chat'
+import { useChatActions } from '~/composables/useChatActions'
 import { usePublicMode } from '@/app/composables/usePublicMode'
 import { usePublicChatAgent } from '@/app/composables/usePublicChatAgent'
 import { generateUUID } from '@/lib/utils/uuid'
@@ -145,19 +146,6 @@ const mutation = useSendMessage()
 // Disable send button while waiting for AI response
 const canSend = computed(() => !mutation.isPending.value)
 
-function handleRetryMessage(messageId: string) {
-  const entry = chatStore
-    .getFailedEntries(sessionId.value)
-    .find((e) => e.optimisticDisplay.messageID === messageId)
-  if (!entry) return
-  chatStore.removeFailedMessage(sessionId.value, messageId)
-  mutation.mutateAsync({ request: entry.request }).finally(() => scrollToBottom())
-}
-
-function handleDiscardMessage(messageId: string) {
-  chatStore.removeFailedMessage(sessionId.value, messageId)
-}
-
 // Messages container ref for scrolling
 const messagesContainer = ref<HTMLElement | null>(null)
 
@@ -168,6 +156,8 @@ function scrollToBottom() {
     }
   })
 }
+
+const { handleRetryMessage, handleDiscardMessage } = useChatActions(sessionId, scrollToBottom)
 
 // Page meta
 definePageMeta({
